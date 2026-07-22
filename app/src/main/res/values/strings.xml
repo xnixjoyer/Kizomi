@@ -1284,6 +1284,17 @@
     <string name="nav_calendar_short">Calendar</string>
     <string ns0:ignore="MissingTranslation" name="settings_myanimelist_account">MyAnimeList account</string>
     <string ns0:ignore="MissingTranslation" name="settings_myanimelist_account_desc">Connect securely through your browser and manage the local MAL session.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_policy_section">Tracking providers</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_policy_description">Choose independently where future anime and manga edits are sent. Changing this never deletes existing provider data.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_anime">Anime tracking</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_manga">Manga tracking</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_anilist">AniList only</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_anilist_desc">Send future edits only to the selected AniList account.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_mal">MyAnimeList only</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_mal_desc">Send future edits only to the selected MyAnimeList account.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_dual">AniList and MyAnimeList</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_dual_desc">Create an explicit target for both providers; one provider never silently replaces the other.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_mal_blocked">MyAnimeList writes are explicitly blocked until a public client ID is configured and an account is connected. Your selected mode remains saved.</string>
     <string ns0:ignore="MissingTranslation" name="mal_account_status_section">Connection</string>
     <string ns0:ignore="MissingTranslation" name="mal_login_not_configured">MAL login is not configured</string>
     <string ns0:ignore="MissingTranslation" name="mal_login_not_configured_detail">A public MAL client ID and registered redirect URI are required. No client secret belongs in the app.</string>

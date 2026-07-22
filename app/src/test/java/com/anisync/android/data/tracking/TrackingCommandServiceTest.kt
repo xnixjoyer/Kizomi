@@ -2,7 +2,12 @@ package com.anisync.android.data.tracking
 
 import com.anisync.android.data.identity.LocalMediaIdentity
 import com.anisync.android.data.identity.LocalMediaType
+import com.anisync.android.data.identity.MediaIdentityMappingSource
+import com.anisync.android.data.identity.MediaIdentityProvider
 import com.anisync.android.data.identity.MediaIdentityResult
+import com.anisync.android.data.identity.MediaIdentityVerificationStatus
+import com.anisync.android.data.identity.ProviderMediaIdentity
+import com.anisync.android.domain.tracking.PerMediaTrackingPolicy
 import com.anisync.android.domain.tracking.TrackingCommandDraft
 import com.anisync.android.domain.tracking.TrackingCommand
 import com.anisync.android.domain.tracking.TrackingCommandTarget
@@ -12,6 +17,7 @@ import com.anisync.android.domain.tracking.TrackingEnqueueResult
 import com.anisync.android.domain.tracking.TrackingFailureKind
 import com.anisync.android.domain.tracking.TrackingField
 import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.domain.tracking.TrackingMode
 import com.anisync.android.domain.tracking.TrackingProvider
 import com.anisync.android.domain.tracking.TrackingStatus
 import com.anisync.android.domain.tracking.TrackingTargetState
@@ -146,6 +152,118 @@ class TrackingCommandServiceTest {
         assertEquals(listOf("Owned"), decoded.draft.desired.customLists)
     }
 
+    @Test
+    fun `anime and manga policies route independently across every configured mode`() = runTest {
+        val cases = listOf(
+            PerMediaTrackingPolicy() to mapOf(
+                TrackingMediaType.ANIME to listOf(TrackingProvider.ANILIST),
+                TrackingMediaType.MANGA to listOf(TrackingProvider.ANILIST),
+            ),
+            PerMediaTrackingPolicy(
+                animeMode = TrackingMode.ANILIST_ONLY,
+                mangaMode = TrackingMode.MYANIMELIST_ONLY,
+            ) to mapOf(
+                TrackingMediaType.ANIME to listOf(TrackingProvider.ANILIST),
+                TrackingMediaType.MANGA to listOf(TrackingProvider.MYANIMELIST),
+            ),
+            PerMediaTrackingPolicy(
+                animeMode = TrackingMode.MYANIMELIST_ONLY,
+                mangaMode = TrackingMode.ANILIST_ONLY,
+            ) to mapOf(
+                TrackingMediaType.ANIME to listOf(TrackingProvider.MYANIMELIST),
+                TrackingMediaType.MANGA to listOf(TrackingProvider.ANILIST),
+            ),
+            PerMediaTrackingPolicy(
+                animeMode = TrackingMode.MYANIMELIST_ONLY,
+                mangaMode = TrackingMode.MYANIMELIST_ONLY,
+            ) to mapOf(
+                TrackingMediaType.ANIME to listOf(TrackingProvider.MYANIMELIST),
+                TrackingMediaType.MANGA to listOf(TrackingProvider.MYANIMELIST),
+            ),
+            PerMediaTrackingPolicy(
+                animeMode = TrackingMode.DUAL,
+                mangaMode = TrackingMode.DUAL,
+            ) to mapOf(
+                TrackingMediaType.ANIME to listOf(
+                    TrackingProvider.ANILIST,
+                    TrackingProvider.MYANIMELIST,
+                ),
+                TrackingMediaType.MANGA to listOf(
+                    TrackingProvider.ANILIST,
+                    TrackingProvider.MYANIMELIST,
+                ),
+            ),
+        )
+
+        cases.forEach { (policy, expected) ->
+            TrackingMediaType.entries.forEach { mediaType ->
+                val enqueued = mutableListOf<Pair<TrackingCommandDraft, List<TrackingCommandTarget>>>()
+                routedService(policy = policy, enqueued = enqueued).enqueueAniList(
+                    input(delete = false).copy(mediaType = mediaType)
+                )
+                assertEquals(expected.getValue(mediaType), enqueued.single().second.map { it.provider })
+                assertTrue(enqueued.single().second.all { it.blocker == null })
+            }
+        }
+    }
+
+    @Test
+    fun `MAL configuration logout identity and account switch remain explicit`() = runTest {
+        val policy = PerMediaTrackingPolicy(animeMode = TrackingMode.MYANIMELIST_ONLY)
+
+        val unconfigured = mutableListOf<Pair<TrackingCommandDraft, List<TrackingCommandTarget>>>()
+        routedService(
+            policy = policy,
+            malConfigured = false,
+            enqueued = unconfigured,
+        ).enqueueAniList(input(delete = false))
+        assertEquals(
+            TrackingFailureKind.PROVIDER_NOT_CONFIGURED,
+            unconfigured.single().second.single().blocker,
+        )
+
+        val loggedOut = mutableListOf<Pair<TrackingCommandDraft, List<TrackingCommandTarget>>>()
+        routedService(
+            policy = policy,
+            malAccountId = null,
+            enqueued = loggedOut,
+        ).enqueueAniList(input(delete = false))
+        assertEquals(TrackingFailureKind.MISSING_ACCOUNT, loggedOut.single().second.single().blocker)
+
+        val missingIdentity = mutableListOf<Pair<TrackingCommandDraft, List<TrackingCommandTarget>>>()
+        routedService(
+            policy = PerMediaTrackingPolicy(animeMode = TrackingMode.DUAL),
+            malMediaId = null,
+            enqueued = missingIdentity,
+        ).enqueueAniList(input(delete = false))
+        assertEquals(2, missingIdentity.single().second.size)
+        assertEquals(
+            TrackingFailureKind.MISSING_IDENTITY,
+            missingIdentity.single().second.single {
+                it.provider == TrackingProvider.MYANIMELIST
+            }.blocker,
+        )
+        assertEquals(
+            null,
+            missingIdentity.single().second.single {
+                it.provider == TrackingProvider.ANILIST
+            }.blocker,
+        )
+
+        var selectedAccount = "mal-old"
+        val switched = mutableListOf<Pair<TrackingCommandDraft, List<TrackingCommandTarget>>>()
+        val service = routedService(
+            policy = policy,
+            activeMalAccountId = { selectedAccount },
+            enqueued = switched,
+        )
+        service.enqueueAniList(input(delete = false))
+        selectedAccount = "mal-new"
+        service.enqueueAniList(input(delete = false).copy(aniListMediaId = 43))
+        assertEquals("mal-old", switched[0].second.single().providerAccountId)
+        assertEquals("mal-new", switched[1].second.single().providerAccountId)
+    }
+
     private fun service(
         accountId: String? = "7",
         enqueued: MutableList<Pair<TrackingCommandDraft, List<TrackingCommandTarget>>>,
@@ -159,6 +277,59 @@ class TrackingCommandServiceTest {
         enqueueCommand = { draft, targets ->
             enqueued += draft to targets
             accepted(targets.single().blocker)
+        },
+    )
+
+    private fun routedService(
+        policy: PerMediaTrackingPolicy,
+        malConfigured: Boolean = true,
+        malAccountId: String? = "mal-account",
+        activeMalAccountId: suspend () -> String? = { malAccountId },
+        malMediaId: Long? = 84L,
+        enqueued: MutableList<Pair<TrackingCommandDraft, List<TrackingCommandTarget>>>,
+    ) = TrackingCommandService(
+        ensureLocalIdentity = { type, mediaId ->
+            MediaIdentityResult.Success(LocalMediaIdentity("local-$mediaId", type, 1L, 1L))
+        },
+        activeAniListAccountId = { "7" },
+        getProviderIdentities = { localMediaId ->
+            MediaIdentityResult.Success(
+                malMediaId?.let { id ->
+                    listOf(
+                        ProviderMediaIdentity(
+                            id = 1L,
+                            localMediaId = localMediaId,
+                            provider = MediaIdentityProvider.MYANIMELIST,
+                            providerMediaId = id,
+                            mediaType = LocalMediaType.ANIME,
+                            mappingSource = MediaIdentityMappingSource.ANILIST_ID_MAL,
+                            verificationStatus = MediaIdentityVerificationStatus.EXACT,
+                            createdAtEpochMillis = 1L,
+                            updatedAtEpochMillis = 1L,
+                        )
+                    )
+                }.orEmpty()
+            )
+        },
+        activeMalAccountId = activeMalAccountId,
+        routingPolicy = { policy },
+        isMalConfigured = { malConfigured },
+        enqueueCommand = { draft, targets ->
+            enqueued += draft to targets
+            TrackingEnqueueResult.Accepted(
+                TrackingEnqueueReceipt(
+                    operationId = "operation-${enqueued.size}",
+                    generation = enqueued.size.toLong(),
+                    deduplicated = false,
+                    targetStates = targets.associate { target ->
+                        target.provider to if (target.blocker == null) {
+                            TrackingTargetState.PENDING
+                        } else {
+                            TrackingTargetState.BLOCKED
+                        }
+                    },
+                )
+            )
         },
     )
 

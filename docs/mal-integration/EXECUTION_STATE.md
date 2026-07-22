@@ -1,6 +1,6 @@
 # MAL production completion — execution state
 
-Last updated: 2026-07-22T18:37:41Z
+Last updated: 2026-07-22T18:55:38Z
 
 This is the resumable, public-only checkpoint for the active MAL completion branch. It must be
 updated after every material CI or implementation checkpoint. It intentionally contains no private
@@ -19,7 +19,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 
 - Branch: `test/mal-production-completion`
 - Draft PR: `#2`
-- Current published head: `d6cd0eb8bbeea849019ad2028c8a0d70a1fba60e`
+- Current published head: `ee4710deec4484fddd62012f4747799508c4d377`
 - First CI: run `29937918613`, job `88984135887`, failed in one new unit assertion
 - Failure artifact: `8537181107`, digest
   `sha256:b5f19bcfc8e7db665bd9a567e77f7e8917742f1996085a39c371b51080f8b3c9`
@@ -41,8 +41,8 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 | 5 | Complete and exact-head green | Run `29939518580`; 340 unit tests, lint, Room schema and both APK assemblies passed |
 | 6 | Complete and exact-head green | Run `29944016411`; 357 unit tests, lint, Room schema and both APK assemblies passed |
 | 7 | Complete and exact-head green | Run `29945948142`; 366 unit tests, lint, Room schema and both APK assemblies passed |
-| 8 | Local implementation checkpoint | All tracking writes use one command service; AniList delivery is isolated in one outbox adapter |
-| 9 | Domain resolver added; persistence/UI pending | Defaults remain AniList-only; routing is independent by media type |
+| 8 | Complete and exact-head green | Run `29947715268`; 372 unit tests, lint, Room schema and both APK assemblies passed |
+| 9 | Local implementation checkpoint | Independent persisted anime/manga policy, explicit blockers and accessible mode UI implemented |
 | 10 | Not started | MAL add/update/delete adapter and read-back |
 | 11 | Data foundation added; UI pending | Provider target state never collapses partial success into full success |
 | 12 | Data foundation added; planner pending | Persistent reconciliation plan/item tables exist |
@@ -134,7 +134,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 - APK `Kizomi-d3f1c4a0-run16-diagnostic.apk` is `41961432` bytes; SHA-256:
   `3e0ed521799da570435bc25bde25d6c2b8434ae53fbd6f17373b5d38162bd011`.
 
-## Active local Phase-8 checkpoint
+## Published Phase-8 checkpoint
 
 - `TrackingCommandService` is the sole production ingress for media tracking writes. It resolves an
   immutable local media identity, selects the existing AniList-only default target and commits one
@@ -154,12 +154,36 @@ repository, provider-extension, credential, token, authorization-code, or accoun
   newer target, older failure plus newer target, duplicate enqueue, process death and lease recovery.
   New tests cover exactly-one service ingress, absolute state/custom-field retention, blockers,
   identity failure, cancellation and a source-level no-direct-mutation boundary.
+- Commit `ee4710deec4484fddd62012f4747799508c4d377` passed run `29947715268`, job
+  `89017295939`: all 372 unit tests, Android lint, public-provider boundary, committed Room schema,
+  Stable Debug and AndroidTest assembly passed.
+- Diagnostic artifact `8541081100` contains exactly one APK. Artifact/archive SHA-256:
+  `65ac91f533a41625c65c5d007d7b8a333b481c03928fa3127f6f49101ebc2668`.
+- APK `Kizomi-4e8e492a-run17-diagnostic.apk` is `41977816` bytes; SHA-256:
+  `538cf5af84cc21af18dcca5d861f62cc86afd29d764c7dfd6222c4ad9fea7c09`.
+
+## Active local Phase-9 checkpoint
+
+- `AppSettings` persists independent anime and manga tracking modes. Missing, legacy and malformed
+  values self-heal to `ANILIST_ONLY`, preserving the behavior of every existing installation.
+- `TrackingCommandService` resolves future targets from the stable local identity, provider identity
+  mappings, currently selected accounts and the per-media policy. It never substitutes AniList for
+  a selected MAL target or vice versa.
+- Missing MAL configuration, logout and missing MAL identity are persisted as explicit target
+  blockers. Account selection is captured at command creation, so switching accounts cannot retarget
+  an already-durable command.
+- The MyAnimeList account screen exposes labeled radio rows for both media types, explains that mode
+  changes never delete provider state, and visibly reports when a selected MAL route is blocked by
+  missing public configuration.
+- Tests cover both split policies, both AniList, both MAL, Dual anime/manga, missing configuration,
+  logout, missing identity, account switch, process-style settings recreation and malformed-setting
+  migration.
 
 ## Resume instructions
 
-1. Finish static review of the local Phase-8 files, publish one bounded checkpoint and run the full
+1. Finish static review of the local Phase-9 files, publish one bounded checkpoint and run the full
    gate without weakening tests.
-2. Record exact Phase-8 evidence only after its published head is green.
+2. Record exact Phase-9 evidence only after its published head is green.
 3. Never add secrets, real account identifiers, private provider information, or diagnostic bodies.
 4. Never merge PR `#2` automatically.
 

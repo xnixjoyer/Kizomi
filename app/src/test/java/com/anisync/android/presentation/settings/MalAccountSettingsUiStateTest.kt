@@ -6,6 +6,7 @@ import com.anisync.android.data.mal.account.MalAccountProvider
 import com.anisync.android.data.mal.account.MalTokenStatus
 import com.anisync.android.data.mal.oauth.MalAuthFailureReason
 import com.anisync.android.data.mal.oauth.MalAuthState
+import com.anisync.android.domain.tracking.TrackingMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -50,6 +51,24 @@ class MalAccountSettingsUiStateTest {
         assertEquals(10L, error.retryAfterSeconds)
         assertFalse(error.toString().contains("access-token"))
         assertFalse(error.toString().contains("refresh-token"))
+    }
+
+    @Test
+    fun `authentication state changes preserve independent visible routing choices`() {
+        val routing = MalAccountSettingsUiState(
+            animeTrackingMode = TrackingMode.DUAL,
+            mangaTrackingMode = TrackingMode.MYANIMELIST_ONLY,
+        )
+
+        val connected = MalAuthState.Connected(account())
+            .toMalAccountSettingsUiState(routing)
+        val disconnected = MalAuthState.Disconnected(configured = true)
+            .toMalAccountSettingsUiState(connected)
+
+        assertEquals(TrackingMode.DUAL, connected.animeTrackingMode)
+        assertEquals(TrackingMode.MYANIMELIST_ONLY, connected.mangaTrackingMode)
+        assertEquals(TrackingMode.DUAL, disconnected.animeTrackingMode)
+        assertEquals(TrackingMode.MYANIMELIST_ONLY, disconnected.mangaTrackingMode)
     }
 
     private fun account() = MalAccount(

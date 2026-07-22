@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anisync.android.R
+import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.domain.tracking.TrackingMode
 import com.anisync.android.util.AppLinksUtil
 
 @Composable
@@ -53,6 +55,37 @@ fun MalAccountSettingsScreen(
         onBackClick = onBackClick,
         modifier = modifier,
     ) {
+        SettingsSectionLabel(stringResource(R.string.tracking_provider_policy_section))
+        Text(
+            text = stringResource(R.string.tracking_provider_policy_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TrackingModeGroup(
+            title = stringResource(R.string.tracking_provider_anime),
+            selected = state.animeTrackingMode,
+            onSelected = { mode ->
+                viewModel.setTrackingMode(TrackingMediaType.ANIME, mode)
+            },
+        )
+        TrackingModeGroup(
+            title = stringResource(R.string.tracking_provider_manga),
+            selected = state.mangaTrackingMode,
+            onSelected = { mode ->
+                viewModel.setTrackingMode(TrackingMediaType.MANGA, mode)
+            },
+        )
+        if (!state.configured &&
+            (state.animeTrackingMode != TrackingMode.ANILIST_ONLY ||
+                state.mangaTrackingMode != TrackingMode.ANILIST_ONLY)
+        ) {
+            Text(
+                text = stringResource(R.string.tracking_provider_mal_blocked),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+
         SettingsSectionLabel(stringResource(R.string.mal_account_status_section))
         SettingsItem(
             title = statusTitle(state.connectionState),
@@ -145,6 +178,39 @@ fun MalAccountSettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+private fun TrackingModeGroup(
+    title: String,
+    selected: TrackingMode,
+    onSelected: (TrackingMode) -> Unit,
+) {
+    SettingsSectionLabel(title)
+    SettingsGroup {
+        TrackingMode.entries.forEach { mode ->
+            RadioSettingsItem(
+                title = trackingModeTitle(mode),
+                subtitle = trackingModeDescription(mode),
+                selected = selected == mode,
+                onClick = { onSelected(mode) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun trackingModeTitle(mode: TrackingMode): String = when (mode) {
+    TrackingMode.ANILIST_ONLY -> stringResource(R.string.tracking_mode_anilist)
+    TrackingMode.MYANIMELIST_ONLY -> stringResource(R.string.tracking_mode_mal)
+    TrackingMode.DUAL -> stringResource(R.string.tracking_mode_dual)
+}
+
+@Composable
+private fun trackingModeDescription(mode: TrackingMode): String = when (mode) {
+    TrackingMode.ANILIST_ONLY -> stringResource(R.string.tracking_mode_anilist_desc)
+    TrackingMode.MYANIMELIST_ONLY -> stringResource(R.string.tracking_mode_mal_desc)
+    TrackingMode.DUAL -> stringResource(R.string.tracking_mode_dual_desc)
 }
 
 @Composable
