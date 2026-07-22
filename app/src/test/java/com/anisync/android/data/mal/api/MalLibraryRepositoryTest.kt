@@ -171,12 +171,23 @@ class MalLibraryRepositoryTest {
     @Test
     fun `paging loop fails safely without deleting imported or previous rows`() = runTest {
         val loop = "https://api.myanimelist.net/v2/users/@me/animelist?offset=1"
-        val repository = repository { page(listOf(row(30, "Loop", 1)), next = loop) }
+        val responses = ArrayDeque<MalAuthenticatedResult>(
+            listOf(
+                page(listOf(row(29, "Previous last-good", 2))),
+                page(listOf(row(30, "Loop", 1)), next = loop),
+                page(listOf(row(30, "Loop duplicate", 1)), next = loop),
+            )
+        )
+        val repository = repository { responses.removeFirst() }
+        assertTrue(repository.refresh("account", TrackingMediaType.ANIME) is MalImportResult.Success)
 
         val result = repository.refresh("account", TrackingMediaType.ANIME)
 
         assertEquals(MalApiFailureKind.PAGING_LOOP, (result as MalImportResult.Failure).error.kind)
         assertEquals(1, result.preservedEntryCount)
+        val preserved = repository.observeLibrary("account", TrackingMediaType.ANIME).first()
+        assertEquals(listOf(29L), preserved.map { it.malId })
+        assertEquals("Previous last-good", preserved.single().title)
     }
 
     @Test
