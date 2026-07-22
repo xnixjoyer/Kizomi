@@ -14,7 +14,10 @@ class MalCatalogLayoutTest {
         assertEquals(144, normal)
         assertTrue(large > normal)
         assertTrue(large <= 202)
-        assertEquals(1, 200 / large)
+        // GridCells.Adaptive always emits at least one column even when the requested minimum
+        // exceeds the available width; model that contract instead of allowing integer division
+        // to invent an impossible zero-column layout.
+        assertEquals(1, maxOf(1, 200 / large))
     }
 
     @Test
