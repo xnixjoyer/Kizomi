@@ -1,5 +1,6 @@
 package com.anisync.android.di
 
+import com.anisync.android.data.tracking.AniListTrackingProviderAdapter
 import com.anisync.android.data.tracking.TrackingOutboxScheduler
 import com.anisync.android.domain.tracking.TrackingProviderAdapter
 import com.anisync.android.worker.AndroidTrackingOutboxScheduler
@@ -8,6 +9,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.Multibinds
+import dagger.multibindings.IntoSet
 import javax.inject.Singleton
 
 @Module
@@ -21,4 +23,10 @@ abstract class TrackingModule {
 
     @Multibinds
     abstract fun trackingProviderAdapters(): Set<TrackingProviderAdapter>
+
+    @Binds
+    @IntoSet
+    abstract fun bindAniListTrackingProviderAdapter(
+        implementation: AniListTrackingProviderAdapter,
+    ): TrackingProviderAdapter
 }

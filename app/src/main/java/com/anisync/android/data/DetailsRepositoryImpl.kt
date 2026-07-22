@@ -1,6 +1,5 @@
 package com.anisync.android.data
 
-import com.anisync.android.DeleteMediaListEntryMutation
 import com.anisync.android.GetCharacterDetailsQuery
 import com.anisync.android.GetMediaCharactersQuery
 import com.anisync.android.GetMediaDetailsQuery
@@ -8,15 +7,16 @@ import com.anisync.android.GetMediaStaffQuery
 import com.anisync.android.GetMediaStatsQuery
 import com.anisync.android.GetStaffDetailsQuery
 import com.anisync.android.GetStudioDetailsQuery
-import com.anisync.android.SaveMediaListEntryMutation
 import com.anisync.android.ToggleFavouriteMutation
 import com.anisync.android.data.local.dao.LibraryDao
 import com.anisync.android.data.local.dao.MediaDetailsDao
+import com.anisync.android.data.local.entity.LibraryEntryEntity
 import com.anisync.android.data.local.toDomain
 import com.anisync.android.data.local.toEntity
-import com.anisync.android.data.mapper.toApiStatus
 import com.anisync.android.data.mapper.toDomainStatus
 import com.anisync.android.data.mapper.todayUtcMillis
+import com.anisync.android.data.tracking.AniListTrackingCommandInput
+import com.anisync.android.data.tracking.TrackingCommandService
 import com.anisync.android.data.util.safeApiCall
 import com.anisync.android.domain.CharacterDetails
 import com.anisync.android.domain.CharacterInfo
@@ -39,6 +39,13 @@ import com.anisync.android.domain.MediaTrendPoint
 import com.anisync.android.domain.RecommendedMedia
 import com.anisync.android.domain.RelatedMedia
 import com.anisync.android.domain.Result
+import com.anisync.android.domain.tracking.TrackingDesiredState
+import com.anisync.android.domain.tracking.TrackingEnqueueResult
+import com.anisync.android.domain.tracking.TrackingField
+import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.domain.tracking.TrackingProvider
+import com.anisync.android.domain.tracking.TrackingStatus
+import com.anisync.android.domain.tracking.TrackingTargetState
 import com.anisync.android.domain.StaffDetails
 import com.anisync.android.domain.StudioDetails
 import com.anisync.android.domain.StudioMediaEntry
@@ -55,6 +62,8 @@ import com.apollographql.apollo.cache.normalized.FetchPolicy
 import com.apollographql.apollo.cache.normalized.fetchPolicy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.Instant
+import java.time.ZoneOffset
 import javax.inject.Inject
 
 private const val HOUR_MS = 60L * 60L * 1000L
@@ -90,7 +99,8 @@ class DetailsRepositoryImpl @Inject constructor(
     private val mediaDetailsDao: MediaDetailsDao,
     private val libraryDao: LibraryDao,
     private val favouriteOverrideStore: FavouriteOverrideStore,
-    private val accountStore: com.anisync.android.data.account.AccountStore
+    private val accountStore: com.anisync.android.data.account.AccountStore,
+    private val trackingCommands: TrackingCommandService,
 ) : DetailsRepository {
 
     private fun currentOwnerId(): Int = accountStore.activeAccount.value?.id ?: -1
@@ -377,80 +387,85 @@ class DetailsRepositoryImpl @Inject constructor(
         status: LibraryStatus,
         progress: Int
     ): Result<Unit> {
-        return safeApiCall {
-            val apiStatus = status.toApiStatus()
+        if (mediaId <= 0 || progress < 0) return Result.Error("Invalid tracking state")
+        val cachedMedia = mediaDetailsDao.getById(mediaId)
+            ?: return Result.Error("Media details unavailable")
+        val mediaType = cachedMedia.mediaType.toTrackingMediaType()
+            ?: return Result.Error("Tracking media type unavailable")
+        val owner = currentOwnerId()
+        val existing = libraryDao.getEntry(owner, mediaId)
+        val now = System.currentTimeMillis()
+        val optimisticEntry = existing?.copy(
+            status = status,
+            progress = progress,
+            lastUpdated = now,
+        ) ?: LibraryEntryEntity(
+            // AniList list-entry ids are positive. A deterministic negative key keeps multiple
+            // locally queued additions distinct until the next provider-confirmed refresh.
+            id = -mediaId,
+            ownerId = owner,
+            mediaId = mediaId,
+            malId = cachedMedia.malId,
+            titleRomaji = cachedMedia.titleRomaji,
+            titleEnglish = cachedMedia.titleEnglish,
+            titleNative = cachedMedia.titleNative,
+            titleUserPreferred = cachedMedia.titleUserPreferred,
+            coverUrl = cachedMedia.coverUrl,
+            coverMedium = cachedMedia.coverMedium,
+            coverLarge = cachedMedia.coverLarge,
+            coverExtraLarge = cachedMedia.coverExtraLarge,
+            progress = progress,
+            totalEpisodes = cachedMedia.episodes,
+            totalChapters = cachedMedia.chapters,
+            totalVolumes = cachedMedia.volumes,
+            mediaType = cachedMedia.mediaType,
+            status = status,
+            nextAiringEpisode = cachedMedia.nextAiringEpisode,
+            timeUntilAiring = null,
+            mediaStatus = cachedMedia.status,
+            nextAiringEpisodeTime = cachedMedia.nextAiringEpisodeTime,
+            score = 0.0,
+            rewatches = 0,
+            notes = null,
+            startedAt = if (status == LibraryStatus.CURRENT) todayUtcMillis() else null,
+            completedAt = null,
+            updatedAt = now,
+            createdAt = now,
+            mediaStartDate = null,
+            lastUpdated = now,
+        )
+        libraryDao.insertOrReplace(optimisticEntry)
+        mediaDetailsDao.updateTrackingState(mediaId, status, progress)
 
-            val response = apolloClient.mutation(
-                SaveMediaListEntryMutation(
-                    mediaId = Optional.present(mediaId),
-                    status = Optional.present(apiStatus),
-                    progress = Optional.present(progress)
-                )
-            ).execute()
-
-            if (response.data?.SaveMediaListEntry != null && !response.hasErrors()) {
-                refreshMediaDetails(mediaId)
-                val owner = currentOwnerId()
-                val existingEntry = libraryDao.getEntry(owner, mediaId)
-
-                if (existingEntry != null) {
-                    libraryDao.updateStatusAndProgress(owner, mediaId, status, progress)
-                } else {
-                    val savedEntry = response.data?.SaveMediaListEntry
-                    val cachedMedia = mediaDetailsDao.getById(mediaId)
-
-                    if (cachedMedia != null) {
-                        val newEntry = com.anisync.android.data.local.entity.LibraryEntryEntity(
-                            id = savedEntry?.id ?: 0,
-                            ownerId = owner,
-                            mediaId = mediaId,
-                            titleRomaji = cachedMedia.titleRomaji,
-                            titleEnglish = cachedMedia.titleEnglish,
-                            titleNative = cachedMedia.titleNative,
-                            titleUserPreferred = cachedMedia.titleUserPreferred,
-                            coverUrl = cachedMedia.coverUrl,
-                            progress = progress,
-                            totalEpisodes = cachedMedia.episodes,
-                            totalChapters = cachedMedia.chapters,
-                            totalVolumes = cachedMedia.volumes,
-                            mediaType = cachedMedia.mediaType,
-                            status = status,
-                            nextAiringEpisode = cachedMedia.nextAiringEpisode,
-                            timeUntilAiring = null,
-                            mediaStatus = cachedMedia.status,
-                            nextAiringEpisodeTime = cachedMedia.nextAiringEpisodeTime,
-                            score = 0.0,
-                            rewatches = 0,
-                            notes = null,
-                            startedAt = if (status == LibraryStatus.CURRENT) todayUtcMillis() else null,
-                            completedAt = null,
-                            updatedAt = System.currentTimeMillis(),
-                            createdAt = System.currentTimeMillis(),
-                            mediaStartDate = null
-                        )
-                        libraryDao.insertOrReplace(newEntry)
-                    }
-                }
-            } else {
-                val errorMessage = response.errors?.firstOrNull()?.message ?: "Update failed"
-                throw Exception(errorMessage)
-            }
-        }
+        return trackingCommands.enqueueAniList(
+            AniListTrackingCommandInput(
+                aniListMediaId = mediaId,
+                aniListListEntryId = existing?.id?.takeIf { it > 0 }
+                    ?: cachedMedia.listEntryId?.takeIf { it > 0 },
+                mediaType = mediaType,
+                desired = optimisticEntry.toTrackingDesiredState(),
+                fields = setOf(TrackingField.STATUS, TrackingField.PROGRESS),
+            )
+        ).toDomainResult()
     }
 
     override suspend fun deleteMediaListEntry(entryId: Int, mediaId: Int): Result<Unit> {
-        return safeApiCall {
-            val response = apolloClient.mutation(
-                DeleteMediaListEntryMutation(id = Optional.present(entryId))
-            ).execute()
-
-            if (response.data?.DeleteMediaListEntry?.deleted == true && !response.hasErrors()) {
-                libraryDao.deleteByMediaId(currentOwnerId(), mediaId)
-            } else {
-                val errorMessage = response.errors?.firstOrNull()?.message ?: "Delete failed"
-                throw Exception(errorMessage)
-            }
-        }
+        val owner = currentOwnerId()
+        val mediaType = libraryDao.getEntry(owner, mediaId)?.mediaType?.toTrackingMediaType()
+            ?: mediaDetailsDao.getById(mediaId)?.mediaType.toTrackingMediaType()
+            ?: return Result.Error("Tracking media type unavailable")
+        libraryDao.deleteByMediaId(owner, mediaId)
+        mediaDetailsDao.clearTrackingState(mediaId)
+        return trackingCommands.enqueueAniList(
+            AniListTrackingCommandInput(
+                aniListMediaId = mediaId,
+                aniListListEntryId = entryId.takeIf { it > 0 },
+                mediaType = mediaType,
+                desired = TrackingDesiredState(status = null, progress = 0),
+                fields = setOf(TrackingField.DELETE),
+                deleteIntent = true,
+            )
+        ).toDomainResult()
     }
 
     override suspend fun toggleFavourite(mediaId: Int, mediaType: MediaType): Result<Boolean> {
@@ -1252,5 +1267,51 @@ class DetailsRepositoryImpl @Inject constructor(
                 statusDistribution = statusDistribution
             )
         }
+    }
+}
+
+private fun MediaType?.toTrackingMediaType(): TrackingMediaType? = when (this) {
+    MediaType.ANIME -> TrackingMediaType.ANIME
+    MediaType.MANGA -> TrackingMediaType.MANGA
+    null,
+    MediaType.UNKNOWN__ -> null
+}
+
+private fun LibraryStatus.toTrackingStatus(): TrackingStatus = when (this) {
+    LibraryStatus.CURRENT -> TrackingStatus.CURRENT
+    LibraryStatus.PLANNING -> TrackingStatus.PLANNING
+    LibraryStatus.COMPLETED -> TrackingStatus.COMPLETED
+    LibraryStatus.DROPPED -> TrackingStatus.DROPPED
+    LibraryStatus.PAUSED -> TrackingStatus.PAUSED
+    LibraryStatus.REPEATING -> TrackingStatus.REPEATING
+    LibraryStatus.UNKNOWN -> TrackingStatus.CURRENT
+}
+
+private fun LibraryEntryEntity.toTrackingDesiredState(): TrackingDesiredState =
+    TrackingDesiredState(
+        status = status.toTrackingStatus(),
+        progress = progress.coerceAtLeast(0),
+        score100 = score?.coerceIn(0.0, 100.0),
+        repeatCount = rewatches.coerceAtLeast(0),
+        notes = notes,
+        startedAt = startedAt.toIsoDate(),
+        completedAt = completedAt.toIsoDate(),
+        customLists = customLists.filter(String::isNotBlank).distinct(),
+        isPrivate = isPrivate,
+        hiddenFromStatusLists = hiddenFromStatusLists,
+    )
+
+private fun Long?.toIsoDate(): String? = this?.let { epochMillis ->
+    Instant.ofEpochMilli(epochMillis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+}
+
+private fun TrackingEnqueueResult.toDomainResult(): Result<Unit> = when (this) {
+    is TrackingEnqueueResult.Rejected -> Result.Error("Tracking command rejected: ${reason.name}")
+    is TrackingEnqueueResult.Accepted -> when (receipt.targetStates[TrackingProvider.ANILIST]) {
+        TrackingTargetState.BLOCKED,
+        TrackingTargetState.FAILED,
+        TrackingTargetState.SUPERSEDED,
+        null -> Result.Error("Tracking command blocked")
+        else -> Result.Success(Unit)
     }
 }

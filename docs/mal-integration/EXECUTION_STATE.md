@@ -1,6 +1,6 @@
 # MAL production completion — execution state
 
-Last updated: 2026-07-22T18:15:37Z
+Last updated: 2026-07-22T18:37:41Z
 
 This is the resumable, public-only checkpoint for the active MAL completion branch. It must be
 updated after every material CI or implementation checkpoint. It intentionally contains no private
@@ -19,7 +19,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 
 - Branch: `test/mal-production-completion`
 - Draft PR: `#2`
-- Current published head: `3148fd94b1249df626962b687d2fd0607c14f885`
+- Current published head: `d6cd0eb8bbeea849019ad2028c8a0d70a1fba60e`
 - First CI: run `29937918613`, job `88984135887`, failed in one new unit assertion
 - Failure artifact: `8537181107`, digest
   `sha256:b5f19bcfc8e7db665bd9a567e77f7e8917742f1996085a39c371b51080f8b3c9`
@@ -40,8 +40,8 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 | 1–4 | Baseline present and audited | OAuth config/session, encrypted vault, account metadata, Room 25 identity layer |
 | 5 | Complete and exact-head green | Run `29939518580`; 340 unit tests, lint, Room schema and both APK assemblies passed |
 | 6 | Complete and exact-head green | Run `29944016411`; 357 unit tests, lint, Room schema and both APK assemblies passed |
-| 7 | Published; layout-test fix pending | Run `29945163003` compiled and ran 366 tests; one adaptive-grid test model was incorrect |
-| 8 | Audit complete; rewiring pending | Direct list writes are concentrated in Library and Details repositories |
+| 7 | Complete and exact-head green | Run `29945948142`; 366 unit tests, lint, Room schema and both APK assemblies passed |
+| 8 | Local implementation checkpoint | All tracking writes use one command service; AniList delivery is isolated in one outbox adapter |
 | 9 | Domain resolver added; persistence/UI pending | Defaults remain AniList-only; routing is independent by media type |
 | 10 | Not started | MAL add/update/delete adapter and read-back |
 | 11 | Data foundation added; UI pending | Provider target state never collapses partial success into full success |
@@ -101,7 +101,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 - APK `Kizomi-d3473691-run13-diagnostic.apk` is `41818164` bytes; SHA-256:
   `e9c504142bc9f928184aa4af7202c40db973cdc3c8f63ede8b636b1e6c925a16`.
 
-## Active local Phase-7 checkpoint
+## Published Phase-7 checkpoint
 
 - Unpublished work implements official MAL anime/manga search, native details, ranking, seasonal
   discovery and hostile next-page rejection with MAL-native stable keys.
@@ -126,11 +126,40 @@ repository, provider-extension, credential, token, authorization-code, or accoun
   `b2f78b6f590ff17cac065a29f7eb2c04025e647c2c7e27e5c16f879050c82d6b`.
 - The local test correction explicitly applies the adaptive-grid minimum-one-column contract. No
   production behavior or coverage requirement is removed.
+- The correction is published in `d6cd0eb8bbeea849019ad2028c8a0d70a1fba60e`; run
+  `29945948142`, job `89011221480`, succeeded: all 366 unit tests, Android lint, the
+  public-provider boundary, Room schema cleanliness and both APK assemblies passed.
+- Diagnostic artifact `8540391908` contains exactly one APK. Artifact/archive SHA-256:
+  `bd06fbb96838269ec7c5fb9d4d0758396640ece68e45e1d2503a2d0d3478b5c6`.
+- APK `Kizomi-d3f1c4a0-run16-diagnostic.apk` is `41961432` bytes; SHA-256:
+  `3e0ed521799da570435bc25bde25d6c2b8434ae53fbd6f17373b5d38162bd011`.
+
+## Active local Phase-8 checkpoint
+
+- `TrackingCommandService` is the sole production ingress for media tracking writes. It resolves an
+  immutable local media identity, selects the existing AniList-only default target and commits one
+  absolute command before the provider adapter can execute.
+- Library progress, full edits and deletes plus Details/quick-action add/update/delete now use that
+  service. `EpisodeUpdateWorker` no longer has a public local-only repository bypass; it performs one
+  optimistic-and-durable repository call before refreshing widgets.
+- `AniListTrackingProviderAdapter` is the only production owner of Save/Delete list GraphQL calls.
+  It uses the account-specific token client, preserves every previous tracking field including
+  custom lists/privacy flags, classifies retryable/terminal failures, and never logs provider bodies.
+- Deletes carry the known provider list-entry handle inside the serialized command; missing handles
+  and accounts are persisted as explicit blockers instead of silently dropping the target.
+- Details and Library caches remain optimistic. New details additions use distinct negative local
+  row keys until a provider-confirmed refresh replaces them; cancellation remains coroutine control
+  flow and cannot become a raw UI error/toast.
+- Existing coalescer/outbox tests already cover +/- bursts, return-to-baseline, running write plus a
+  newer target, older failure plus newer target, duplicate enqueue, process death and lease recovery.
+  New tests cover exactly-one service ingress, absolute state/custom-field retention, blockers,
+  identity failure, cancellation and a source-level no-direct-mutation boundary.
 
 ## Resume instructions
 
-1. Publish the bounded adaptive-grid assertion fix and observe the complete gate; do not weaken tests.
-2. Record exact Phase-7 evidence only after the published head is green.
+1. Finish static review of the local Phase-8 files, publish one bounded checkpoint and run the full
+   gate without weakening tests.
+2. Record exact Phase-8 evidence only after its published head is green.
 3. Never add secrets, real account identifiers, private provider information, or diagnostic bodies.
 4. Never merge PR `#2` automatically.
 

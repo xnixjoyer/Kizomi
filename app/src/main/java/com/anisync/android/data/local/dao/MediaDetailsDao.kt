@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.anisync.android.data.local.entity.MediaDetailsEntity
+import com.anisync.android.domain.LibraryStatus
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -40,6 +41,19 @@ interface MediaDetailsDao {
 
     @Query("UPDATE media_details SET isFavourite = :isFavourite WHERE id = :id")
     suspend fun updateFavouriteStatus(id: Int, isFavourite: Boolean)
+
+    @Query(
+        "UPDATE media_details SET listStatus = :status, listProgress = :progress " +
+            "WHERE id = :id"
+    )
+    suspend fun updateTrackingState(id: Int, status: LibraryStatus, progress: Int)
+
+    @Query(
+        "UPDATE media_details SET listEntryId = NULL, listStatus = NULL, listProgress = NULL, " +
+            "listNotes = NULL, listEntryPrivate = NULL, listEntryHiddenFromStatusLists = NULL " +
+            "WHERE id = :id"
+    )
+    suspend fun clearTrackingState(id: Int)
 
     /**
      * Clear all cached media details.

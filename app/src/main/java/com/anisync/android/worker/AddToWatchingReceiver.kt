@@ -12,6 +12,7 @@ import com.anisync.android.domain.LibraryStatus
 import com.anisync.android.domain.Result
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -95,6 +96,8 @@ class AddToWatchingReceiver : BroadcastReceiver() {
                         }
                     }
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (e: Exception) {
                 Log.e(TAG, "Exception while adding to watching", e)
                 CoroutineScope(Dispatchers.Main).launch {

@@ -10,16 +10,16 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Coalesces rapid, idempotent mutations (likes, favourites, ratings, progress)
  * keyed by entity id, so a burst of taps collapses into a bounded sequence of
- * absolute network writes.
+ * absolute durable commands.
  *
  * A key has at most one worker. New values replace the desired target but never
  * cancel a commit that has already started. This matters for Apollo/OkHttp calls:
- * cancelling an in-flight worker used to surface internal messages such as
+ * cancelling an in-flight commit used to surface internal messages such as
  * "I49 was cancelled" and could let older/newer absolute writes race each other.
  * The worker now serializes commits and, after each result, drains the newest
  * desired value.
  *
- * If the settled value equals the last server-committed value — e.g. +1 then -1
+ * If the settled value equals the last durably accepted value — e.g. +1 then -1
  * on progress — nothing is sent. Optimistic UI updates happen at the call site;
  * this class only governs when and in which order the network writes occur.
  *
@@ -31,8 +31,8 @@ class MutationCoalescer<K : Any, V>(
     private val scope: CoroutineScope,
     private val debounceMs: Long = 500L,
     /**
-     * Sends the settled [value] for [key]; returns true if it reached the server.
-     * Returning false leaves the committed baseline unchanged. If a newer target
+     * Durably accepts the settled [value] for [key]; returns true once its command is stored.
+     * Returning false leaves the accepted baseline unchanged. If a newer target
      * arrived while the failed request was running, that newer target is still
      * drained by the same worker.
      */
@@ -51,7 +51,7 @@ class MutationCoalescer<K : Any, V>(
         committed.putIfAbsent(key, value)
     }
 
-    /** Force [key]'s committed baseline to [value] after an external refresh. */
+    /** Force [key]'s accepted baseline to [value] after an external refresh. */
     fun reset(key: K, value: V) {
         committed[key] = value
     }

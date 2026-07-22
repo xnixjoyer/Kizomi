@@ -42,6 +42,9 @@ enum class TrackingField {
     NOTES,
     STARTED_AT,
     COMPLETED_AT,
+    CUSTOM_LISTS,
+    PRIVATE,
+    HIDDEN_FROM_STATUS_LISTS,
     DELETE,
 }
 
@@ -102,6 +105,10 @@ data class TrackingDesiredState(
     val startedAt: String? = null,
     /** ISO-8601 yyyy-MM-dd. */
     val completedAt: String? = null,
+    /** Provider capability-gated list memberships; currently supported by AniList only. */
+    val customLists: List<String> = emptyList(),
+    val isPrivate: Boolean = false,
+    val hiddenFromStatusLists: Boolean = false,
 ) {
     init {
         require(progress >= 0) { "progress must be non-negative" }
@@ -114,13 +121,15 @@ data class TrackingDesiredState(
         require(completedAt == null || ISO_DATE.matches(completedAt)) {
             "completedAt must be yyyy-MM-dd"
         }
+        require(customLists.none(String::isBlank)) { "custom list names must not be blank" }
     }
 
     override fun toString(): String =
         "TrackingDesiredState(status=${status?.name ?: "none"}, progress=$progress, " +
             "progressSecondary=${progressSecondary ?: "none"}, score100=${score100 ?: "none"}, " +
             "repeatCount=$repeatCount, notes=<redacted>, startedAt=${startedAt ?: "none"}, " +
-            "completedAt=${completedAt ?: "none"})"
+            "completedAt=${completedAt ?: "none"}, customLists=<redacted>, " +
+            "isPrivate=$isPrivate, hiddenFromStatusLists=$hiddenFromStatusLists)"
 
     companion object {
         private val ISO_DATE = Regex("\\d{4}-\\d{2}-\\d{2}")
@@ -135,6 +144,8 @@ data class TrackingCommandDraft(
     val desired: TrackingDesiredState,
     val fields: Set<TrackingField>,
     val deleteIntent: Boolean = false,
+    /** Provider-native list-entry handles needed for delete without a second lookup. */
+    val providerListEntryIds: Map<TrackingProvider, Long> = emptyMap(),
 ) {
     init {
         require(localMediaId.isNotBlank()) { "localMediaId must not be blank" }
@@ -143,6 +154,9 @@ data class TrackingCommandDraft(
             "delete intent and DELETE field must agree"
         }
         require(deleteIntent || desired.status != null) { "non-delete state requires a status" }
+        require(providerListEntryIds.values.all { it > 0L }) {
+            "provider list-entry ids must be positive"
+        }
     }
 }
 

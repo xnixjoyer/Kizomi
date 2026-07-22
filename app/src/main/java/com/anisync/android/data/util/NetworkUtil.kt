@@ -6,6 +6,7 @@ import com.apollographql.apollo.api.Operation
 import com.apollographql.apollo.exception.ApolloException
 import com.apollographql.apollo.exception.ApolloHttpException
 import com.apollographql.apollo.exception.ApolloNetworkException
+import kotlinx.coroutines.CancellationException
 
 /**
  * Executes an Apollo GraphQL call with comprehensive error handling.
@@ -31,6 +32,10 @@ suspend fun <T> safeApiCall(
 ): Result<T> {
     return try {
         Result.Success(apiCall())
+    } catch (cancelled: CancellationException) {
+        // Structured cancellation is control flow. Turning it into a user-visible network error
+        // produces stale toasts and can let obsolete tracking writes continue.
+        throw cancelled
     } catch (e: ApiError.RateLimited) {
         Result.Error("Too many requests. Please wait ${e.retryAfterSeconds} seconds.", 429, e.retryAfterSeconds, e)
     } catch (e: ApiError.Unauthorized) {
