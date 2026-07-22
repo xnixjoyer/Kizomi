@@ -12,6 +12,7 @@ import com.anisync.android.data.local.dao.MediaDetailsDao
 import com.anisync.android.data.local.dao.SavedForumThreadDao
 import com.anisync.android.data.local.dao.TrackingConflictDao
 import com.anisync.android.data.local.dao.TrackingDao
+import com.anisync.android.data.local.dao.TrackingReconciliationDao
 import com.anisync.android.data.local.dao.UserProfileDao
 import dagger.Module
 import dagger.Provides
@@ -88,4 +89,8 @@ object DatabaseModule {
     @Provides
     fun provideTrackingConflictDao(database: AppDatabase): TrackingConflictDao =
         database.trackingConflictDao()
+
+    @Provides
+    fun provideTrackingReconciliationDao(database: AppDatabase): TrackingReconciliationDao =
+        database.trackingReconciliationDao()
 }

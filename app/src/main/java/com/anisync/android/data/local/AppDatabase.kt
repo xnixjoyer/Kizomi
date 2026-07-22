@@ -12,6 +12,7 @@ import com.anisync.android.data.local.dao.MediaIdentityDao
 import com.anisync.android.data.local.dao.SavedForumThreadDao
 import com.anisync.android.data.local.dao.TrackingConflictDao
 import com.anisync.android.data.local.dao.TrackingDao
+import com.anisync.android.data.local.dao.TrackingReconciliationDao
 import com.anisync.android.data.local.dao.UserProfileDao
 import com.anisync.android.data.local.entity.AiringScheduleEntity
 import com.anisync.android.data.local.entity.CommunityScoreEntity
@@ -169,4 +170,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun mediaIdentityDao(): MediaIdentityDao
     abstract fun trackingDao(): TrackingDao
     abstract fun trackingConflictDao(): TrackingConflictDao
+    abstract fun trackingReconciliationDao(): TrackingReconciliationDao
 }

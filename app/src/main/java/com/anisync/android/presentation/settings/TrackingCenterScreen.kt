@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -21,9 +22,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anisync.android.R
+import com.anisync.android.data.tracking.ReconciliationItemView
+import com.anisync.android.data.tracking.ReconciliationPlanState
+import com.anisync.android.data.tracking.ReconciliationPlanView
 import com.anisync.android.data.tracking.TrackingProviderConflict
 import com.anisync.android.data.tracking.TrackingSagaOperation
 import com.anisync.android.data.tracking.TrackingSagaTarget
+import com.anisync.android.domain.tracking.TrackingMediaType
 import com.anisync.android.domain.tracking.TrackingProvider
 
 @Composable
@@ -71,6 +76,54 @@ fun TrackingCenterScreen(
             )
         }
 
+        SettingsSectionLabel(stringResource(R.string.tracking_compare_section))
+        Text(
+            stringResource(R.string.tracking_compare_explanation),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        CompareDirectionButton(
+            mediaType = TrackingMediaType.ANIME,
+            source = TrackingProvider.ANILIST,
+            enabled = !state.reconciliationBusy,
+            onClick = viewModel::previewMissingOnly,
+        )
+        CompareDirectionButton(
+            mediaType = TrackingMediaType.ANIME,
+            source = TrackingProvider.MYANIMELIST,
+            enabled = !state.reconciliationBusy,
+            onClick = viewModel::previewMissingOnly,
+        )
+        CompareDirectionButton(
+            mediaType = TrackingMediaType.MANGA,
+            source = TrackingProvider.ANILIST,
+            enabled = !state.reconciliationBusy,
+            onClick = viewModel::previewMissingOnly,
+        )
+        CompareDirectionButton(
+            mediaType = TrackingMediaType.MANGA,
+            source = TrackingProvider.MYANIMELIST,
+            enabled = !state.reconciliationBusy,
+            onClick = viewModel::previewMissingOnly,
+        )
+        if (state.reconciliationBusy) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        state.reconciliationPlan?.let { plan ->
+            ReconciliationCard(
+                plan = plan,
+                busy = state.reconciliationBusy,
+                execute = viewModel::executeMissingOnly,
+                pause = viewModel::pauseMissingOnly,
+                refresh = viewModel::refreshMissingOnly,
+            )
+        }
+
         SettingsSectionLabel(stringResource(R.string.tracking_center_operations_section))
         if (state.operations.isEmpty()) {
             Text(
@@ -95,6 +148,147 @@ fun TrackingCenterScreen(
             }
         }
     }
+}
+
+@Composable
+private fun CompareDirectionButton(
+    mediaType: TrackingMediaType,
+    source: TrackingProvider,
+    enabled: Boolean,
+    onClick: (TrackingMediaType, TrackingProvider) -> Unit,
+) {
+    val target = if (source == TrackingProvider.ANILIST) {
+        TrackingProvider.MYANIMELIST
+    } else {
+        TrackingProvider.ANILIST
+    }
+    OutlinedButton(
+        onClick = { onClick(mediaType, source) },
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            stringResource(
+                R.string.tracking_compare_direction,
+                mediaType.name,
+                source.name,
+                target.name,
+            )
+        )
+    }
+}
+
+@Composable
+private fun ReconciliationCard(
+    plan: ReconciliationPlanView,
+    busy: Boolean,
+    execute: () -> Unit,
+    pause: () -> Unit,
+    refresh: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                stringResource(
+                    R.string.tracking_compare_plan_title,
+                    plan.mediaType.name,
+                    plan.direction.source.name,
+                    plan.direction.target.name,
+                ),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.tracking_compare_plan_state, plan.state.name),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                stringResource(
+                    R.string.tracking_compare_counts_primary,
+                    plan.counts.equal,
+                    plan.counts.different,
+                    plan.counts.onlySource,
+                    plan.counts.onlyTarget,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                stringResource(
+                    R.string.tracking_compare_counts_safety,
+                    plan.counts.unmapped,
+                    plan.counts.blocked,
+                    plan.counts.ready,
+                    plan.counts.succeeded,
+                    plan.counts.failed,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                stringResource(R.string.tracking_compare_missing_only_guarantee),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            plan.items.forEach { item -> ReconciliationItemRow(item) }
+            when (plan.state) {
+                ReconciliationPlanState.PREVIEW,
+                ReconciliationPlanState.PAUSED -> Button(
+                    onClick = execute,
+                    enabled = !busy && plan.counts.ready > 0,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.tracking_compare_execute_missing_only))
+                }
+                ReconciliationPlanState.RUNNING -> {
+                    OutlinedButton(
+                        onClick = refresh,
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.tracking_compare_refresh_result))
+                    }
+                    TextButton(
+                        onClick = pause,
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.tracking_compare_pause))
+                    }
+                }
+                else -> OutlinedButton(
+                    onClick = refresh,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.tracking_compare_refresh_result))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReconciliationItemRow(item: ReconciliationItemView) {
+    val error = item.lastError?.name ?: stringResource(R.string.tracking_compare_no_error)
+    Text(
+        stringResource(
+            R.string.tracking_compare_item_status,
+            item.action.name,
+            item.state.name,
+            error,
+        ),
+        style = MaterialTheme.typography.bodySmall,
+        color = if (item.lastError == null) {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        } else {
+            MaterialTheme.colorScheme.error
+        },
+    )
 }
 
 @Composable
