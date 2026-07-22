@@ -64,7 +64,8 @@ jobs:
             testStableDebugUnitTest \
             lintStableDebug \
             assembleStableDebug \
-            assembleStableDebugAndroidTest
+            assembleStableDebugAndroidTest \
+            2>&1 | tee "$RUNNER_TEMP/gradle-output.log"
 
       - name: Verify exported Room schema is committed
         shell: bash
@@ -86,6 +87,7 @@ jobs:
         with:
           name: Kizomi-${{ github.sha }}-run${{ github.run_number }}-failure-reports
           path: |
+            ${{ runner.temp }}/gradle-output.log
             app/build/test-results/testStableDebugUnitTest/**
             app/build/reports/tests/testStableDebugUnitTest/**
             app/build/reports/lint-results-stableDebug.*
