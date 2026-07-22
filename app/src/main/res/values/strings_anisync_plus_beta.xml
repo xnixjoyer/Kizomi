@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources xmlns:ns0="http://schemas.android.com/tools" ns0:ignore="MissingTranslation">
+    <string name="anisync_plus_previous_season_beta">Previous-season candidate pool (Beta)</string>
+    <string name="anisync_plus_previous_season_beta_desc">Loads one bounded, cached AniList season pool only after local matching fails. Adds a small number of AniList requests.</string>
+    <string name="anisync_plus_search_fallback_beta">AniList search fallback for unmatched DE-Dub entries (Beta)</string>
+    <string name="anisync_plus_search_fallback_beta_desc">Disabled by default. Performs at most four deduplicated searches after every local source has failed. Uncertain results remain unmatched.</string>
+    <string name="anisync_plus_request_counts">Requests</string>
+    <string name="anisync_plus_timings">Timings: refresh / parse / match / persist</string>
+    <string name="anisync_plus_copy_diagnostics">Copy diagnostic report</string>
+    <string name="anisync_plus_copy_diagnostics_desc">Copies a compact, redacted report without tokens, cookies, passwords or signing data.</string>
+    <string name="anisync_plus_share_diagnostics">Share diagnostic report</string>
+    <string name="anisync_plus_share_diagnostics_desc">Opens Android sharing with the same redacted report.</string>
+    <string name="anisync_plus_clear_diagnostics">Clear diagnostic events</string>
+    <string name="anisync_plus_clear_diagnostics_desc">Clears the bounded in-memory event list. Cached calendar data is not removed.</string>
+    <string name="anisync_plus_diagnostic_event">Diagnostic event</string>
+    <string name="anisync_plus_unmatched_badge">Unmatched</string>
+    <string name="anisync_plus_beta_features">Optional Beta fallbacks</string>
+    <string name="anisync_plus_match_sources">Match sources</string>
+    <string name="anisync_plus_appearance">Appearance</string>
+    <string name="anisync_plus_density_compact">Compact</string>
+    <string name="anisync_plus_density_compact_desc">Shorter top bars and tighter spacing while preserving accessible touch targets.</string>
+    <string name="anisync_plus_density_standard">Standard</string>
+    <string name="anisync_plus_density_standard_desc">The familiar AniSync layout and spacing.</string>
+    <string name="anisync_plus_density_large">Large</string>
+    <string name="anisync_plus_density_large_desc">More generous spacing and controls for comfortable use.</string>
+    <string name="anisync_plus_navigation_customization">Main navigation</string>
+    <string name="anisync_plus_navigation_item_desc">Show or hide this tab and change its position.</string>
+    <string name="anisync_plus_navigation_profile_required_desc">Always visible so Settings and the notification badge remain reachable.</string>
+    <string name="anisync_plus_reorder_navigation">Reorder tabs</string>
+    <string name="anisync_plus_reorder_navigation_desc">Drag every destination into the order used by the bottom bar and navigation rail.</string>
+    <string name="anisync_plus_reorder_navigation_dialog_desc">Hold a handle and drag. The arrow buttons on the main screen remain available as an accessible alternative.</string>
+    <string name="anisync_plus_drag_to_reorder">Hold and drag to reorder</string>
+    <string name="anisync_plus_move_up">Move up</string>
+    <string name="anisync_plus_move_down">Move down</string>
+    <string name="anisync_plus_startup_tab">Startup tab</string>
+    <string name="anisync_plus_startup_last_opened">Last opened tab</string>
+    <string name="anisync_plus_startup_last_opened_desc">Reopen the last visible main tab.</string>
+    <string name="anisync_plus_startup_fixed">Chosen tab</string>
+    <string name="anisync_plus_startup_fixed_desc">Always start on one visible tab.</string>
+    <string name="anisync_plus_detail_edge_to_edge_beta">Edge-to-edge detail header (Beta)</string>
+    <string name="anisync_plus_detail_edge_to_edge_beta_desc">Lets media artwork blend behind the status bar with cutout-safe controls. Disabled by default.</string>
+</resources>

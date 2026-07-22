@@ -1,0 +1,80 @@
+package com.anisync.android.data.local.entity
+
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import com.anisync.android.domain.LibraryStatus
+import com.anisync.android.type.MediaType
+
+/**
+ * Room entity for caching library entries.
+ * 
+ * Indices are added for frequently-queried columns:
+ * - mediaType: Used for filtering Anime vs Manga
+ * - status: Used for filtering by library status (Watching, Completed, etc.)
+ * - Composite index for combined queries
+ * - Sorting indexes for updatedAt, timeUntilAiring, score for sort performance
+ */
+@Entity(
+    tableName = "library_entries",
+    indices = [
+        Index(value = ["ownerId"]),              // Per-account scoping (multi-account)
+        Index(value = ["ownerId", "mediaType"]),
+        Index(value = ["mediaType"]),
+        Index(value = ["status"]),
+        Index(value = ["mediaType", "status"]),
+        Index(value = ["updatedAt"]),           // For "Last Updated" sort
+        Index(value = ["createdAt"]),           // For "Last Added" sort
+        Index(value = ["timeUntilAiring"]),     // For "Airing Soon" sort
+        Index(value = ["score"]),               // For "Score" sort
+        Index(value = ["progress"]),            // For "Progress" sort
+        Index(value = ["mediaStartDate"])       // For "Release Date" sort
+    ]
+)
+data class LibraryEntryEntity(
+    @PrimaryKey val id: Int,                   // MediaList ID (globally unique per AniList)
+    /** AniList user id this entry belongs to. Lets multiple accounts' libraries coexist. */
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val ownerId: Int = 0,
+    val mediaId: Int,
+    @androidx.room.ColumnInfo(defaultValue = "NULL")
+    val malId: Int? = null,
+    val titleRomaji: String?,
+    val titleEnglish: String?,
+    val titleNative: String?,
+    val titleUserPreferred: String,
+    val coverUrl: String?,
+    @androidx.room.ColumnInfo(defaultValue = "NULL")
+    val coverMedium: String? = null,
+    @androidx.room.ColumnInfo(defaultValue = "NULL")
+    val coverLarge: String? = null,
+    @androidx.room.ColumnInfo(defaultValue = "NULL")
+    val coverExtraLarge: String? = null,
+    val progress: Int,
+    val totalEpisodes: Int?,
+    val totalChapters: Int?,
+    val totalVolumes: Int?,
+    val mediaType: MediaType?,
+    val status: LibraryStatus,
+    val nextAiringEpisode: Int?,
+    val timeUntilAiring: Int?,
+    val mediaStatus: String?,
+    @androidx.room.ColumnInfo(defaultValue = "NULL")
+    val averageScore: Int? = null,
+    val nextAiringEpisodeTime: Long? = null, // Added for absolute airing time
+    val score: Double? = 0.0,
+    val rewatches: Int = 0,
+    val notes: String? = null,
+    val startedAt: Long? = null,
+    val completedAt: Long? = null,
+    val updatedAt: Long? = null,
+    val createdAt: Long? = null,
+    val mediaStartDate: Long? = null,
+    @androidx.room.ColumnInfo(defaultValue = "[]")
+    val customLists: List<String> = emptyList(),
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val isPrivate: Boolean = false,
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val hiddenFromStatusLists: Boolean = false,
+    val lastUpdated: Long = System.currentTimeMillis()
+)

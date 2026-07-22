@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="public_settings_experience">تجربه</string>
+    <string name="public_settings_appearance">ظاهر و پیمایش</string>
+    <string name="public_settings_appearance_desc">تراکم چیدمان، ظاهر تقویم، زبانه‌ها، میانبرها و مقصد آغاز</string>
+    <string name="public_settings_scores">امتیازهای جامعه</string>
+    <string name="public_settings_scores_desc">پیکربندی نمایش فقط‌خواندنی امتیازهای AniList و MyAnimeList</string>
+    <string name="public_settings_support">پشتیبانی</string>
+    <string name="public_settings_diagnostics">عیب‌یابی</string>
+    <string name="public_settings_diagnostics_desc">بررسی آمار ارائه‌دهنده عمومی، حافظه نهان و مجموعه‌ها</string>
+    <string name="public_settings_density">تراکم چیدمان</string>
+    <string name="public_settings_edge_to_edge">چیدمان گسترده جزئیات</string>
+    <string name="public_settings_edge_to_edge_desc">اجازه استفاده از تمام عرض موجود برای صفحه‌های جزئیات پشتیبانی‌شده</string>
+    <string name="public_settings_compact_calendar">تقویم فشرده</string>
+    <string name="public_settings_compact_calendar_desc">استفاده از سربرگ کوچک‌تر تقویم با حفظ حاشیه‌های سیستم</string>
+    <string name="public_settings_navigation">پیمایش اصلی</string>
+    <string name="public_settings_shortcuts">میانبرهای کتابخانه</string>
+    <string name="public_settings_startup">مقصد آغاز</string>
+    <string name="public_settings_startup_last">آخرین مقصد بازشده</string>
+    <string name="public_settings_startup_fixed">همیشه از یک مقصد انتخاب‌شده استفاده شود</string>
+    <string name="public_move_up">انتقال به بالا</string>
+    <string name="public_move_down">انتقال به پایین</string>
+    <string name="public_density_compact">فشرده</string>
+    <string name="public_density_standard">استاندارد</string>
+    <string name="public_density_large">بزرگ</string>
+    <string name="public_diagnostic_score_mode">حالت نمایش امتیاز</string>
+    <string name="public_diagnostic_score_runtime">اجرای امتیازها</string>
+    <string name="public_diagnostic_score_cache">حافظه نهان امتیازها</string>
+    <string name="public_diagnostic_graph_cache">حافظه نهان نمودار مجموعه‌ها</string>
+    <string name="public_diagnostic_refresh">تازه‌سازی عیب‌یابی</string>
+    <string name="settings_anisync_plus_desc">AniList، MyAnimeList، تقویم، ظاهر و عیب‌یابی</string>
+    <string name="community_score_clear_cache_desc">امتیازهای جامعه ذخیره‌شده محلی حذف شوند؛ در صورت نیاز دوباره دریافت می‌شوند</string>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="nav_library">قفسه</string>
+    <string name="nav_discover">اکتشاف</string>
+    <string name="nav_feed">نظرات</string>
+    <string name="nav_forum">فرم ها</string>
+    <string name="nav_profile">پروفایل</string>
+    <string name="feed_filter_all">همه</string>
+    <string name="feed_filter_status">وضعیت</string>
+    <string name="feed_filter_list">لیست</string>
+    <string name="feed_scope_global">جهانی</string>
+    <string name="calendar_last_updated">آخرین به‌روزرسانی: %1$s (اروپا/برلین)</string>
+    <string name="calendar_source_details">جزئیات منبع تقویم</string>
+    <string name="calendar_source_details_unavailable">هنوز جزئیات همگام‌سازی در دسترس نیست.</string>
+    <string name="calendar_source_details_close">بستن</string>
+    <string name="nav_calendar_short">تقویم</string>
+    <string name="setting_nav_bar_show_labels_desc">نمایش برچسب‌های متنی زیر نمادها</string>
+</resources>

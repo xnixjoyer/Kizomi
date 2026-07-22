@@ -1,0 +1,1154 @@
+package com.anisync.android.presentation.library
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import com.anisync.android.presentation.util.LocalAppSettings
+import com.anisync.android.presentation.util.LocalGridColumnCount
+import com.anisync.android.presentation.util.LocalGridColumnsAuto
+import com.anisync.android.presentation.util.posterGridColumns
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.material.icons.filled.AllInclusive
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material3.AppBarWithSearch
+import androidx.compose.material3.ExpandedFullScreenSearchBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SearchBarState
+import androidx.compose.material3.SearchBarValue
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberSearchBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.anisync.android.R
+import com.anisync.android.domain.LibraryEntry
+import com.anisync.android.domain.LibraryStatus
+import com.anisync.android.presentation.components.SegmentedTabItem
+import com.anisync.android.presentation.components.CompletedCardConfig
+import com.anisync.android.presentation.components.CustomPullToRefreshIndicator
+import com.anisync.android.presentation.components.ErrorState
+import com.anisync.android.presentation.components.LibraryMediaCard
+import com.anisync.android.presentation.components.MediaTypeSelector
+import com.anisync.android.presentation.components.WatchingCardConfig
+import com.anisync.android.presentation.components.alert.rememberRateLimitedRefresh
+import com.anisync.android.presentation.library.components.EditLibraryEntrySheet
+import com.anisync.android.presentation.library.components.EmptyLibraryTabState
+import com.anisync.android.presentation.library.components.LibraryListCard
+import com.anisync.android.presentation.library.components.LibrarySearchCategoryBar
+import com.anisync.android.presentation.library.components.LibrarySearchResultCard
+import com.anisync.android.presentation.library.components.LibraryViewOptionsSheet
+import com.anisync.android.presentation.library.components.ListManagementSheet
+import com.anisync.android.presentation.library.components.SkeletonGrid
+import com.anisync.android.presentation.library.components.SkeletonList
+import com.anisync.android.presentation.library.components.SortBottomSheet
+import com.anisync.android.presentation.library.components.SortIcon
+import com.anisync.android.presentation.util.LIBRARY_ALL_TAB_ID
+import com.anisync.android.presentation.util.LIBRARY_FAVORITES_TAB_ID
+import com.anisync.android.presentation.util.LocalMainNavBarInset
+import com.anisync.android.presentation.util.rememberHapticFeedback
+import com.anisync.android.presentation.util.toLabel
+import com.anisync.android.presentation.navigation.MainDestinationRegistry
+import com.anisync.android.type.MediaType
+import com.anisync.android.ui.theme.LocalAppDimensions
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.math.roundToInt
+
+
+internal fun coordinatedLibraryChromeOffset(
+    heightOffset: Float,
+    maximumCollapsePx: Int
+): Int = heightOffset
+    .roundToInt()
+    .coerceIn(-maximumCollapsePx.coerceAtLeast(0), 0)
+
+internal fun coordinatedLibraryChromeHeight(
+    measuredHeight: Int,
+    coordinatedOffsetPx: Int
+): Int = (measuredHeight + coordinatedOffsetPx).coerceAtLeast(0)
+
+sealed class LibraryTab {
+    /** Browse-all tab showing every status list merged (#91). Lives in the tab order like the rest. */
+    object All : LibraryTab()
+    data class Standard(val status: LibraryStatus) : LibraryTab()
+    object Favorites : LibraryTab()
+    data class Custom(val name: String) : LibraryTab()
+
+    /** Canonical identifier matching the format used in tabOrder / AppSettings. */
+    fun toId(): String = when (this) {
+        is All -> LIBRARY_ALL_TAB_ID
+        is Standard -> "status:${status.name}"
+        is Favorites -> LIBRARY_FAVORITES_TAB_ID
+        is Custom -> name
+    }
+
+    @Composable
+    fun getLabel(mediaType: MediaType): String {
+        return when (this) {
+            is All -> stringResource(R.string.all)
+            is Standard -> status.toLabel(mediaType)
+            is Favorites -> "Favorites"
+            is Custom -> name
+        }
+    }
+}
+
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalFoundationApi::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalSharedTransitionApi::class,
+    kotlinx.coroutines.FlowPreview::class
+)
+@Composable
+fun LibraryScreen(
+    onMediaClick: (Int) -> Unit,
+    onNavigateTopShortcut: (String) -> Unit,
+    onNavigateToNotes: () -> Unit,
+    viewModel: LibraryViewModel = hiltViewModel(),
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val mediaType = uiState.mediaType
+    val sortOption = uiState.sortOption
+    val isAscending = uiState.isAscending
+    val titleLanguage = uiState.titleLanguage
+    val dimensions = LocalAppDimensions.current
+    val appSettings = LocalAppSettings.current
+    val topShortcutOrder by appSettings.topShortcutOrder.collectAsStateWithLifecycle()
+    val visibleTopShortcuts by appSettings.visibleTopShortcuts.collectAsStateWithLifecycle()
+    val topShortcuts = remember(topShortcutOrder, visibleTopShortcuts) {
+        topShortcutOrder.filter(visibleTopShortcuts::contains)
+    }
+
+    val context = LocalContext.current
+    val haptic = rememberHapticFeedback()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    var showSortMenu by rememberSaveable { mutableStateOf(false) }
+    var showViewOptionsSheet by rememberSaveable { mutableStateOf(false) }
+    var nowEpochSec by remember { mutableLongStateOf(System.currentTimeMillis() / 1000L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            nowEpochSec = System.currentTimeMillis() / 1000L
+        }
+    }
+
+    val tabs = remember(uiState.tabOrder, uiState.hiddenListNames, uiState.customListNames) {
+        // "All" now lives in the tab order like every other tab, so it reorders/hides through the
+        // manage-tabs sheet. buildTabOrder guarantees it is present (pinned first when absent).
+        uiState.tabOrder.mapNotNull { id ->
+            if (id in uiState.hiddenListNames) return@mapNotNull null
+
+            when {
+                id == LIBRARY_ALL_TAB_ID -> LibraryTab.All
+                id == "status:FAVORITES" -> LibraryTab.Favorites
+                id.startsWith("status:") -> {
+                    val statusName = id.removePrefix("status:")
+                    LibraryStatus.entries.find { it.name == statusName }?.let { LibraryTab.Standard(it) }
+                }
+                else -> {
+                    // Custom list — only show if it exists
+                    if (id in uiState.customListNames) {
+                        LibraryTab.Custom(id)
+                    } else null
+                }
+            }
+        }
+    }
+
+    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    var editingEntry by remember { mutableStateOf<LibraryEntry?>(null) }
+    var showListManagement by remember { mutableStateOf(false) }
+
+    // Restore last selected tab on first data load
+    LaunchedEffect(uiState.initialTabId, tabs) {
+        val targetId = uiState.initialTabId ?: return@LaunchedEffect
+        if (tabs.isEmpty()) return@LaunchedEffect
+        val targetIndex = tabs.indexOfFirst { it.toId() == targetId }
+        if (targetIndex >= 0 && targetIndex != pagerState.currentPage) {
+            pagerState.scrollToPage(targetIndex)
+        }
+        viewModel.onAction(LibraryAction.ConsumeInitialTab)
+    }
+
+    // Persist selected tab whenever the user settles on a new page
+    LaunchedEffect(pagerState, tabs) {
+        snapshotFlow { pagerState.currentPage }
+            .collect { page ->
+                if (page < tabs.size) {
+                    viewModel.onAction(LibraryAction.OnTabSelected(tabs[page].toId()))
+                }
+            }
+    }
+
+    val searchBarState = rememberSearchBarState()
+    val textFieldState = rememberTextFieldState()
+    val coroutineScope = rememberCoroutineScope()
+    val scrollBehavior = SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
+    val inputModeManager = LocalInputModeManager.current
+    val searchChromeCollapseLimitPx = with(LocalDensity.current) { 64.dp.roundToPx() }
+    val coordinatedSearchOffsetPx by remember(scrollBehavior, searchChromeCollapseLimitPx) {
+        derivedStateOf {
+            coordinatedLibraryChromeOffset(
+                heightOffset = scrollBehavior.scrollOffset,
+                maximumCollapsePx = searchChromeCollapseLimitPx
+            )
+        }
+    }
+
+    val isSearchQueryEmpty by remember {
+        derivedStateOf { textFieldState.text.isEmpty() }
+    }
+
+    val handleIncrement =
+        remember(viewModel) {
+            { mediaId: Int ->
+                viewModel.onAction(
+                    LibraryAction.IncrementProgress(
+                        mediaId
+                    )
+                )
+            }
+        }
+    val handleDecrement =
+        remember(viewModel) {
+            { mediaId: Int ->
+                viewModel.onAction(
+                    LibraryAction.DecrementProgress(
+                        mediaId
+                    )
+                )
+            }
+        }
+    val handleEdit = remember { { entry: LibraryEntry -> editingEntry = entry } }
+
+    LaunchedEffect(Unit) {
+        viewModel.onAction(LibraryAction.OnScreenVisible)
+    }
+
+    LaunchedEffect(textFieldState) {
+        snapshotFlow { textFieldState.text.toString() }
+            .debounce(300.milliseconds)
+            .collect { viewModel.onAction(LibraryAction.OnSearchQueryChange(it)) }
+    }
+
+    // When search opens, seed the category chips to the tab it was opened from (Discover-style
+    // "search this list"). The VM resets to All when the query is cleared or the media type changes.
+    LaunchedEffect(searchBarState.currentValue) {
+        if (searchBarState.currentValue == SearchBarValue.Expanded) {
+            val currentTabId = tabs.getOrNull(pagerState.currentPage)?.toId() ?: LIBRARY_ALL_TAB_ID
+            viewModel.onAction(LibraryAction.OnSearchOpened(currentTabId))
+        }
+    }
+
+    BackHandler(enabled = searchBarState.currentValue == SearchBarValue.Expanded) {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        coroutineScope.launch { searchBarState.animateToCollapsed() }
+    }
+
+    var shouldKeepTopBarOverlayForReturn by rememberSaveable { mutableStateOf(false) }
+    var hasObservedLibraryReEnter by rememberSaveable { mutableStateOf(false) }
+
+    val navigateToMediaDetails: (Int) -> Unit = remember(onMediaClick) {
+        { id ->
+            shouldKeepTopBarOverlayForReturn = true
+            hasObservedLibraryReEnter = false
+            onMediaClick(id)
+        }
+    }
+
+    val onSearchResultClick: (Int) -> Unit = remember(navigateToMediaDetails, searchBarState, coroutineScope) {
+        { id ->
+            keyboardController?.hide()
+            // Collapse the full-screen search overlay before navigating; the overlay
+            // is a Popup window that otherwise persists over MediaDetails and lets
+            // tap events keep firing onto a stale list, repeatedly re-pushing the
+            // detail destination until the app is force-closed.
+            coroutineScope.launch { searchBarState.animateToCollapsed() }
+            navigateToMediaDetails(id)
+        }
+    }
+
+    // OPTIMIZATION: Fixed focus loss. Extracting the input field to a standalone composable
+    // function stops Compose from destroying and recreating the node state when captured values change.
+    val inputField = @Composable {
+        LibrarySearchBarInputField(
+            searchBarState = searchBarState,
+            textFieldState = textFieldState,
+            isSearchQueryEmpty = isSearchQueryEmpty,
+            isGridView = uiState.isGridView,
+            isAscending = isAscending,
+            // Highlight the sort affordance whenever the active sort differs from the default
+            // (Airing Soon, ascending), so it's obvious the list isn't in its default order.
+            isNonDefaultSort = sortOption != LibrarySort.AIRING_SOON || !isAscending,
+            showListManagement = showListManagement,
+            onSearch = { keyboardController?.hide() },
+            onBackClick = {
+                focusManager.clearFocus()
+                keyboardController?.hide()
+                coroutineScope.launch { searchBarState.animateToCollapsed() }
+            },
+            onClearClick = { textFieldState.edit { replace(0, length, "") } },
+            onToggleView = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                showViewOptionsSheet = true
+            },
+            onToggleSort = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                showSortMenu = true
+            },
+            onNavigateTopShortcut = onNavigateTopShortcut,
+            topShortcuts = topShortcuts,
+            onNavigateToNotes = onNavigateToNotes
+        )
+    }
+    val isLibraryEnteringFromBackStack by remember {
+        derivedStateOf {
+            animatedVisibilityScope.transition.currentState == EnterExitState.PreEnter &&
+                animatedVisibilityScope.transition.targetState == EnterExitState.Visible
+        }
+    }
+    val isLibraryTargetingVisible by remember {
+        derivedStateOf {
+            animatedVisibilityScope.transition.targetState == EnterExitState.Visible
+        }
+    }
+    val isLibraryFullyVisible by remember {
+        derivedStateOf {
+            animatedVisibilityScope.transition.currentState == EnterExitState.Visible &&
+                animatedVisibilityScope.transition.targetState == EnterExitState.Visible
+        }
+    }
+    val isSharedTransitionRunning by remember {
+        derivedStateOf { sharedTransitionScope.isTransitionActive }
+    }
+    val shouldRenderTopBarInOverlay by remember {
+        derivedStateOf {
+            shouldKeepTopBarOverlayForReturn &&
+                isLibraryTargetingVisible &&
+                (
+                    isLibraryEnteringFromBackStack ||
+                        (hasObservedLibraryReEnter && isSharedTransitionRunning)
+                    )
+        }
+    }
+    val topBarOverlayAlpha by animatedVisibilityScope.transition.animateFloat(label = "TopBarOverlayAlpha") { state ->
+        if (state == EnterExitState.Visible) 1f else 0f
+    }
+
+    LaunchedEffect(shouldKeepTopBarOverlayForReturn, isLibraryEnteringFromBackStack) {
+        if (shouldKeepTopBarOverlayForReturn && isLibraryEnteringFromBackStack) {
+            hasObservedLibraryReEnter = true
+        }
+    }
+
+    LaunchedEffect(
+        shouldKeepTopBarOverlayForReturn,
+        hasObservedLibraryReEnter,
+        isLibraryFullyVisible,
+        isSharedTransitionRunning
+    ) {
+        if (
+            shouldKeepTopBarOverlayForReturn &&
+            hasObservedLibraryReEnter &&
+            isLibraryFullyVisible &&
+            !isSharedTransitionRunning
+        ) {
+            shouldKeepTopBarOverlayForReturn = false
+            hasObservedLibraryReEnter = false
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            with(sharedTransitionScope) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .renderInSharedTransitionScopeOverlay(
+                            zIndexInOverlay = 1f,
+                            renderInOverlay = { shouldRenderTopBarInOverlay }
+                        )
+                        .graphicsLayer {
+                            alpha = if (shouldRenderTopBarInOverlay) topBarOverlayAlpha else 1f
+                        },
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clipToBounds()
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    val coordinatedHeight = coordinatedLibraryChromeHeight(
+                                        measuredHeight = placeable.height,
+                                        coordinatedOffsetPx = coordinatedSearchOffsetPx
+                                    )
+                                    layout(placeable.width, coordinatedHeight) {
+                                        placeable.placeRelative(0, 0)
+                                    }
+                                }
+                        ) {
+                        // Keep the collapsed search field unfocusable in touch mode: M3 expands
+                        // the bar whenever the field gains focus, and old devices (API 26 /
+                        // EMUI 8, issue #51) spuriously re-focus it as the expanded search
+                        // dialog tears down — popping the bar back open (and again on tab
+                        // switches while the stale focus lingers). Tap-to-open still works via
+                        // the press path, and the expanded field lives in its own dialog
+                        // window, unaffected. Keyboard-mode focus stays allowed; expansion
+                        // there is key-driven, not focus-driven.
+                        AppBarWithSearch(
+                            modifier = Modifier
+                                .heightIn(min = 64.dp)
+                                .focusProperties {
+                                    canFocus = !showListManagement &&
+                                        inputModeManager.inputMode == InputMode.Keyboard
+                                },
+                            scrollBehavior = scrollBehavior,
+                            state = searchBarState,
+                            inputField = inputField,
+                            colors = SearchBarDefaults.appBarWithSearchColors(
+                                appBarContainerColor = Color.Transparent,
+                                scrolledAppBarContainerColor = Color.Transparent
+                            ),
+                        )
+
+                        Column(
+                            modifier = Modifier.offset {
+                                IntOffset(x = 0, y = coordinatedSearchOffsetPx)
+                            }
+                        ) {
+                        MediaTypeSelector(
+                            selected = mediaType,
+                            onSelect = { viewModel.onAction(LibraryAction.OnMediaTypeChange(it)) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = dimensions.sectionHorizontalPadding,
+                                    vertical = dimensions.sectionSpacing
+                                )
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            PrimaryScrollableTabRow(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(dimensions.listItemMinHeight),
+                                selectedTabIndex = pagerState.currentPage.coerceAtMost(
+                                    tabs.lastIndex.coerceAtLeast(
+                                        0
+                                    )
+                                ),
+                                containerColor = Color.Transparent,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                edgePadding = 16.dp,
+                                indicator = {},
+                                divider = {}
+                            ) {
+                                tabs.forEachIndexed { index, tab ->
+                                    val statusIcon = when (tab) {
+                                        is LibraryTab.All -> Icons.Default.AllInclusive
+                                        is LibraryTab.Standard -> {
+                                            when (tab.status) {
+                                                LibraryStatus.CURRENT -> if (mediaType == MediaType.ANIME) Icons.Default.PlayArrow else Icons.AutoMirrored.Filled.MenuBook
+                                                LibraryStatus.PAUSED -> Icons.Default.Pause
+                                                LibraryStatus.COMPLETED -> Icons.Default.Done
+                                                LibraryStatus.PLANNING -> Icons.Default.CalendarMonth
+                                                LibraryStatus.DROPPED -> Icons.Default.Close
+                                                else -> Icons.Default.Inbox
+                                            }
+                                        }
+
+                                        is LibraryTab.Favorites -> Icons.Default.Favorite
+                                        is LibraryTab.Custom -> Icons.AutoMirrored.Filled.List
+                                    }
+
+                                    SegmentedTabItem(
+                                        index = index,
+                                        selectedIndex = pagerState.currentPage,
+                                        selected = pagerState.currentPage == index,
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(index)
+                                            }
+                                        },
+                                        icon = statusIcon,
+                                        label = tab.getLabel(mediaType),
+                                        count = uiState.tabCounts[tab.toId()]
+                                    )
+                                }
+                            }
+
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        }
+                        }
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            when {
+                uiState.isLoading -> {
+                    if (uiState.isGridView) SkeletonGrid(itemCount = 6) else SkeletonList(itemCount = 6)
+                }
+
+                uiState.errorMessage != null -> ErrorState(
+                    message = uiState.errorMessage!!,
+                    onRetry = { viewModel.onAction(LibraryAction.Refresh) })
+
+                else -> {
+                    val motionScheme = MaterialTheme.motionScheme
+                    val spatialSpec =
+                        remember(motionScheme) { motionScheme.defaultSpatialSpec<IntOffset>() }
+                    val effectsSpec =
+                        remember(motionScheme) { motionScheme.defaultEffectsSpec<Float>() }
+
+                    // Pull-to-refresh wraps the tab pager so any list — including an
+                    // empty/glitched one — can be refreshed without restarting (#35).
+                    // Gated by rememberRateLimitedRefresh so it no-ops during a 429.
+                    val pullToRefreshState = rememberPullToRefreshState()
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = rememberRateLimitedRefresh { viewModel.onAction(LibraryAction.Refresh) },
+                        state = pullToRefreshState,
+                        modifier = Modifier.fillMaxSize(),
+                        indicator = {
+                            CustomPullToRefreshIndicator(
+                                isRefreshing = uiState.isRefreshing,
+                                state = pullToRefreshState,
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .padding(top = 16.dp)
+                            )
+                        }
+                    ) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { pageIndex ->
+                        if (pageIndex >= tabs.size) return@HorizontalPager
+                        val tab = tabs[pageIndex]
+
+                        val entries = when (tab) {
+                            is LibraryTab.All -> uiState.entries
+                            is LibraryTab.Standard -> uiState.groupedEntries[tab.status]
+                                ?: emptyList()
+
+                            is LibraryTab.Favorites -> uiState.favoriteEntries
+                            is LibraryTab.Custom -> uiState.customListEntries[tab.name]
+                                ?: emptyList()
+                        }
+
+                        LaunchedEffect(
+                            pageIndex,
+                            pagerState.currentPage,
+                            uiState.communityScoreMode,
+                            entries.take(12).map { it.mediaId to it.malId }
+                        ) {
+                            if (pageIndex == pagerState.currentPage &&
+                                mediaType == MediaType.ANIME &&
+                                uiState.communityScoreMode.usesMyAnimeList
+                            ) {
+                                viewModel.onAction(LibraryAction.PrefetchCommunityScores(entries))
+                            }
+                        }
+
+                        val tabLabel = tab.getLabel(mediaType)
+                        val gridState = rememberSaveable(
+                            tabLabel,
+                            sortOption,
+                            isAscending,
+                            saver = LazyGridState.Saver
+                        ) { LazyGridState() }
+                        // The list view is a single-column grid on compact and a
+                        // multi-column grid of list cards once the window/pane is wide
+                        // enough (§6.4), so its scroll state is a LazyGridState too.
+                        val listState = rememberSaveable(
+                            tabLabel,
+                            sortOption,
+                            isAscending,
+                            saver = LazyGridState.Saver
+                        ) { LazyGridState() }
+
+                        // Rewatching/rereading (REPEATING) gets the same progress
+                        // card + quick +/- adjusters as the watching list (#80).
+                        val hasQuickProgress = tab is LibraryTab.Standard &&
+                            (tab.status == LibraryStatus.CURRENT || tab.status == LibraryStatus.REPEATING)
+                        val cardConfig =
+                            if (hasQuickProgress) WatchingCardConfig else CompletedCardConfig
+
+                        if (entries.isEmpty()) {
+                            val emptyStatus = if (tab is LibraryTab.Standard) tab.status else null
+                            // One full-height item so the empty state still emits
+                            // nested scroll — otherwise pull-to-refresh can't fire on
+                            // an empty/glitched tab, which is exactly the #35 case.
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier.fillParentMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        EmptyLibraryTabState(emptyStatus, mediaType)
+                                    }
+                                }
+                            }
+                        } else {
+                            AnimatedContent(
+                                targetState = uiState.isGridView,
+                                transitionSpec = {
+                                    (slideInVertically(spatialSpec) { if (targetState) -it / 8 else it / 8 } + fadeIn(
+                                        effectsSpec
+                                    )) togetherWith
+                                            (slideOutVertically(spatialSpec) { if (targetState) it / 8 else -it / 8 } + fadeOut(
+                                                effectsSpec
+                                            ))
+                                },
+                                label = "ViewMode"
+                            ) { isGrid ->
+                                if (isGrid) {
+                                    LazyVerticalGrid(
+                                        columns = posterGridColumns(baseMinSize = 150.dp),
+                                        state = gridState,
+                                        contentPadding = PaddingValues(
+                                            start = dimensions.sectionHorizontalPadding,
+                                            end = dimensions.sectionHorizontalPadding,
+                                            top = dimensions.sectionSpacing * 3f,
+                                            bottom = dimensions.sectionSpacing * 3f + LocalMainNavBarInset.current
+                                        ),
+                                        horizontalArrangement = Arrangement.spacedBy(dimensions.sectionSpacing * 2f),
+                                        verticalArrangement = Arrangement.spacedBy(dimensions.sectionSpacing * 2f),
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        items(
+                                            items = entries,
+                                            key = { "grid_${tabLabel}_${it.mediaId}" },
+                                            contentType = { "LibraryEntry" }
+                                        ) { entry ->
+                                            LibraryMediaCard(
+                                                entry = entry,
+                                                mediaType = mediaType,
+                                                nowEpochSec = nowEpochSec,
+                                                onClick = { navigateToMediaDetails(entry.mediaId) },
+                                                onIncrement = if (hasQuickProgress) {
+                                                    { handleIncrement(entry.mediaId) }
+                                                } else null,
+                                                onDecrement = if (hasQuickProgress) {
+                                                    { handleDecrement(entry.mediaId) }
+                                                } else null,
+                                                onEdit = { handleEdit(entry) },
+                                                config = cardConfig,
+                                                showScore = uiState.showScoreOnCards,
+                                                communityScoreMode = uiState.communityScoreMode,
+                                                scoreFormat = uiState.userScoreFormat,
+                                                sharedTransitionScope = sharedTransitionScope,
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                titleLanguage = titleLanguage,
+                                                modifier = Modifier.animateItem(
+                                                    fadeInSpec = effectsSpec,
+                                                    fadeOutSpec = effectsSpec,
+                                                    placementSpec = spatialSpec
+                                                )
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    LazyVerticalGrid(
+                                        // Wide list cards (~360dp) flow into as many
+                                        // columns as fit; compact / a narrow detail pane
+                                        // collapse to the single column (unchanged look).
+                                        columns = GridCells.Adaptive(minSize = 360.dp),
+                                        state = listState,
+                                        contentPadding = PaddingValues(
+                                            start = dimensions.sectionHorizontalPadding,
+                                            end = dimensions.sectionHorizontalPadding,
+                                            top = dimensions.sectionSpacing * 3f,
+                                            bottom = dimensions.sectionSpacing * 3f + LocalMainNavBarInset.current
+                                        ),
+                                        horizontalArrangement = Arrangement.spacedBy(dimensions.sectionSpacing * 2f),
+                                        verticalArrangement = Arrangement.spacedBy(dimensions.sectionSpacing + 4.dp),
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        items(
+                                            items = entries,
+                                            key = { "list_${tabLabel}_${it.mediaId}" },
+                                            contentType = { "LibraryEntry" }
+                                        ) { entry ->
+                                            LibraryListCard(
+                                                entry = entry,
+                                                mediaType = mediaType,
+                                                nowEpochSec = nowEpochSec,
+                                                onClick = { navigateToMediaDetails(entry.mediaId) },
+                                                onIncrement = if (hasQuickProgress) {
+                                                    { handleIncrement(entry.mediaId) }
+                                                } else null,
+                                                onDecrement = if (hasQuickProgress) {
+                                                    { handleDecrement(entry.mediaId) }
+                                                } else null,
+                                                onEdit = { handleEdit(entry) },
+                                                config = cardConfig,
+                                                showScore = uiState.showScoreOnCards,
+                                                communityScoreMode = uiState.communityScoreMode,
+                                                scoreFormat = uiState.userScoreFormat,
+                                                sharedTransitionScope = sharedTransitionScope,
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                titleLanguage = titleLanguage,
+                                                modifier = Modifier.animateItem(
+                                                    fadeInSpec = effectsSpec,
+                                                    fadeOutSpec = effectsSpec,
+                                                    placementSpec = spatialSpec
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    }
+                }
+            }
+        }
+    }
+
+    if (editingEntry == null) {
+        ExpandedFullScreenSearchBar(
+            state = searchBarState,
+            inputField = inputField
+        ) {
+            when {
+                uiState.isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(R.string.loading),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                uiState.errorMessage != null -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = uiState.errorMessage!!,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
+                else -> {
+                    val searchMatches = uiState.searchMatches
+                    when {
+                        searchMatches.isEmpty() && !isSearchQueryEmpty -> {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.search_no_results),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+
+                        // Blank query: keep the overlay empty until the user types (Discover parity).
+                        searchMatches.isEmpty() -> Box(modifier = Modifier.fillMaxSize())
+
+                        else -> {
+                            val byCategory = uiState.searchMatchesByCategory
+                            // Chips: "All" first, then every non-empty, non-hidden list in tab order.
+                            val categories = remember(
+                                searchMatches,
+                                byCategory,
+                                uiState.tabOrder,
+                                uiState.hiddenListNames
+                            ) {
+                                buildList {
+                                    add(LIBRARY_ALL_TAB_ID to searchMatches.size)
+                                    uiState.tabOrder.forEach { id ->
+                                        if (id != LIBRARY_ALL_TAB_ID && id !in uiState.hiddenListNames) {
+                                            byCategory[id]?.let { add(id to it.size) }
+                                        }
+                                    }
+                                }
+                            }
+                            val categoryIds = remember(categories) {
+                                categories.mapTo(HashSet()) { it.first }
+                            }
+                            // Fall back to All if the seeded category has no matches for this query.
+                            val effectiveCategory =
+                                if (uiState.activeSearchCategory in categoryIds) {
+                                    uiState.activeSearchCategory
+                                } else {
+                                    LIBRARY_ALL_TAB_ID
+                                }
+                            val activeList = if (effectiveCategory == LIBRARY_ALL_TAB_ID) {
+                                searchMatches
+                            } else {
+                                byCategory[effectiveCategory] ?: searchMatches
+                            }
+
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                LibrarySearchCategoryBar(
+                                    activeCategory = effectiveCategory,
+                                    categories = categories,
+                                    mediaType = mediaType,
+                                    onCategoryChange = {
+                                        viewModel.onAction(LibraryAction.OnSearchCategoryChange(it))
+                                    }
+                                )
+                                LazyColumn(
+                                    contentPadding = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    items(
+                                        items = activeList,
+                                        key = { "search_${it.mediaId}" },
+                                        contentType = { "SearchResult" }
+                                    ) { entry ->
+                                        LibrarySearchResultCard(
+                                            entry = entry,
+                                            mediaType = mediaType,
+                                            onClick = { onSearchResultClick(entry.mediaId) },
+                                            titleLanguage = titleLanguage
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    SortBottomSheet(
+        visible = showSortMenu,
+        onDismiss = { showSortMenu = false },
+        options = LibrarySort.entries.toList(),
+        selectedOption = sortOption,
+        isAscending = isAscending,
+        onOptionSelected = { sort, ascending ->
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            viewModel.onAction(LibraryAction.OnSortOptionChange(sort, ascending))
+        }
+    )
+
+    LibraryViewOptionsSheet(
+        visible = showViewOptionsSheet,
+        isGridView = uiState.isGridView,
+        autoColumns = LocalGridColumnsAuto.current,
+        columnCount = LocalGridColumnCount.current,
+        showScore = uiState.showScoreOnCards,
+        onSetGridView = { viewModel.onAction(LibraryAction.SetGridView(it)) },
+        onSetAutoColumns = { appSettings.setGridColumnsAuto(it) },
+        onSetColumnCount = { appSettings.setGridColumnCount(it) },
+        onSetShowScore = { appSettings.setShowScoreOnCards(it) },
+        onManageLists = {
+            showViewOptionsSheet = false
+            showListManagement = true
+        },
+        onDismiss = { showViewOptionsSheet = false }
+    )
+
+
+    ListManagementSheet(
+        visible = showListManagement,
+        onDismiss = { showListManagement = false },
+        tabOrder = uiState.tabOrder,
+        customLists = uiState.customListNames,
+        hiddenLists = uiState.hiddenListNames,
+        mediaType = mediaType,
+        onVisibilityChanged = { name, hidden ->
+            viewModel.onAction(LibraryAction.ToggleListVisibility(name, hidden))
+        },
+        onReorder = { viewModel.onAction(LibraryAction.ReorderTabs(it)) },
+        onDeleteList = { viewModel.onAction(LibraryAction.DeleteCustomList(it)) },
+        onCreateList = { listName, type ->
+            viewModel.onAction(
+                LibraryAction.CreateCustomList(
+                    listName,
+                    type
+                )
+            )
+        }
+    )
+
+    editingEntry?.let { entry ->
+        LaunchedEffect(Unit) {
+            if (searchBarState.currentValue == SearchBarValue.Expanded) {
+                searchBarState.animateToCollapsed()
+            }
+        }
+
+        EditLibraryEntrySheet(
+            entry = entry,
+            scoreFormat = uiState.userScoreFormat,
+            availableCustomLists = uiState.customListNames,
+            onDismiss = { editingEntry = null },
+            onSave = { updatedEntry ->
+                viewModel.onAction(LibraryAction.UpdateEntry(updatedEntry))
+                editingEntry = null
+            },
+            onDelete = {
+                viewModel.onAction(LibraryAction.DeleteEntry(entry.id, entry.mediaId))
+                editingEntry = null
+            }
+        )
+    }
+}
+
+/**
+ * Isolated Component to fix Compose identity loss and input field focus drops during typing/toggling.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LibrarySearchBarInputField(
+    searchBarState: SearchBarState,
+    textFieldState: TextFieldState,
+    isSearchQueryEmpty: Boolean,
+    isGridView: Boolean,
+    isAscending: Boolean,
+    isNonDefaultSort: Boolean,
+    showListManagement: Boolean,
+    onSearch: () -> Unit,
+    onBackClick: () -> Unit,
+    onClearClick: () -> Unit,
+    onToggleView: () -> Unit,
+    onToggleSort: () -> Unit,
+    onNavigateTopShortcut: (String) -> Unit,
+    topShortcuts: List<String>,
+    onNavigateToNotes: () -> Unit
+) {
+    var showShortcutMenu by remember { mutableStateOf(false) }
+    SearchBarDefaults.InputField(
+        enabled = !showListManagement,
+        searchBarState = searchBarState,
+        textFieldState = textFieldState,
+        onSearch = { onSearch() },
+        placeholder = {
+            if (searchBarState.currentValue == SearchBarValue.Collapsed) {
+                Text(
+                    text = stringResource(R.string.search_library_placeholder),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            } else {
+                Text(stringResource(R.string.search_library_placeholder))
+            }
+        },
+        leadingIcon = if (searchBarState.currentValue == SearchBarValue.Expanded) {
+            {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back)
+                    )
+                }
+            }
+        } else null,
+        trailingIcon = {
+            if (searchBarState.currentValue == SearchBarValue.Expanded && !isSearchQueryEmpty) {
+                IconButton(onClick = onClearClick) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.clear)
+                    )
+                }
+            } else if (searchBarState.currentValue == SearchBarValue.Collapsed) {
+                Row {
+                    if (topShortcuts.isNotEmpty()) {
+                        Box {
+                            IconButton(onClick = { showShortcutMenu = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = stringResource(R.string.anisync_plus_top_shortcuts)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showShortcutMenu,
+                                onDismissRequest = { showShortcutMenu = false }
+                            ) {
+                                topShortcuts.forEach { key ->
+                                    val destination = MainDestinationRegistry.byKey[key]
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(destination?.labelRes ?: R.string.nav_library)
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                destination?.unselectedIcon ?: Icons.Default.CalendarMonth,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        onClick = {
+                                            showShortcutMenu = false
+                                            onNavigateTopShortcut(key)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    IconButton(onClick = onNavigateToNotes) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.ic_note_stack_24px),
+                            contentDescription = stringResource(R.string.a11y_open_notes_journal)
+                        )
+                    }
+
+                    IconButton(onClick = onToggleView) {
+                        Icon(
+                            imageVector = if (isGridView) Icons.Outlined.GridView else Icons.Outlined.ViewAgenda,
+                            contentDescription = stringResource(R.string.toggle_view)
+                        )
+                    }
+
+                    IconButton(onClick = onToggleSort) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .then(
+                                    if (isNonDefaultSort) {
+                                        Modifier.background(
+                                            MaterialTheme.colorScheme.tertiaryContainer,
+                                            CircleShape
+                                        )
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        ) {
+                            SortIcon(
+                                isAscending = isAscending,
+                                activeColor = if (isNonDefaultSort) {
+                                    MaterialTheme.colorScheme.onTertiaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    )
+}

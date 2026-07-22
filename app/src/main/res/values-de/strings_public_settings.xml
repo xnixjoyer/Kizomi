@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="public_settings_experience">Nutzungserlebnis</string>
+    <string name="public_settings_appearance">Darstellung und Navigation</string>
+    <string name="public_settings_appearance_desc">Layoutdichte, Kalenderdarstellung, Tabs, Verknüpfungen und Startziel</string>
+    <string name="public_settings_scores">Community-Bewertungen</string>
+    <string name="public_settings_scores_desc">Schreibgeschützte Anzeige der AniList- und MyAnimeList-Bewertungen konfigurieren</string>
+    <string name="public_settings_support">Unterstützung</string>
+    <string name="public_settings_diagnostics">Diagnose</string>
+    <string name="public_settings_diagnostics_desc">Statistiken zu öffentlichen Providern, Cache und Franchises prüfen</string>
+    <string name="public_settings_density">Layoutdichte</string>
+    <string name="public_settings_edge_to_edge">Erweitertes Detail-Layout</string>
+    <string name="public_settings_edge_to_edge_desc">Unterstützten Detailansichten die gesamte verfügbare Breite erlauben</string>
+    <string name="public_settings_compact_calendar">Kompakte Kalenderdarstellung</string>
+    <string name="public_settings_compact_calendar_desc">Kleinere Kalenderkopfzeile bei Beibehaltung der Systemabstände verwenden</string>
+    <string name="public_settings_navigation">Hauptnavigation</string>
+    <string name="public_settings_shortcuts">Bibliotheksverknüpfungen</string>
+    <string name="public_settings_startup">Startziel</string>
+    <string name="public_settings_startup_last">Zuletzt geöffnetes Ziel</string>
+    <string name="public_settings_startup_fixed">Immer ein ausgewähltes Ziel verwenden</string>
+    <string name="public_move_up">Nach oben</string>
+    <string name="public_move_down">Nach unten</string>
+    <string name="public_density_compact">Kompakt</string>
+    <string name="public_density_standard">Standard</string>
+    <string name="public_density_large">Groß</string>
+    <string name="public_diagnostic_score_mode">Bewertungsanzeige</string>
+    <string name="public_diagnostic_score_runtime">Bewertungslaufzeit</string>
+    <string name="public_diagnostic_score_cache">Bewertungscache</string>
+    <string name="public_diagnostic_graph_cache">Franchise-Graph-Cache</string>
+    <string name="public_diagnostic_refresh">Diagnose aktualisieren</string>
+    <string name="settings_anisync_plus_desc">AniList, MyAnimeList, Kalender, Darstellung und Diagnose</string>
+    <string name="community_score_clear_cache_desc">Lokal gespeicherte Community-Bewertungen entfernen; sie werden bei Bedarf erneut abgerufen</string>
+</resources>

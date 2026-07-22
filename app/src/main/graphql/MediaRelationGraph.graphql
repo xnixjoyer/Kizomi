@@ -1,0 +1,27 @@
+fragment FranchiseGraphNodeFields on Media {
+  id
+  idMal
+  type
+  format
+  status
+  averageScore
+  episodes
+  title { userPreferred romaji english native }
+  coverImage { medium large extraLarge }
+  startDate { year month day }
+  mediaListEntry { status progress }
+}
+
+query GetMediaRelationBatch($ids: [Int]) {
+  Page(page: 1, perPage: 10) {
+    media(id_in: $ids, sort: ID) {
+      ...FranchiseGraphNodeFields
+      relations {
+        edges {
+          relationType
+          node { ...FranchiseGraphNodeFields }
+        }
+      }
+    }
+  }
+}

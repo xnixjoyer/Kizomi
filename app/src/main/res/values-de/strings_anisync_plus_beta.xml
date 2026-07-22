@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="anisync_plus_previous_season_beta">Vorherige Season als Kandidatenpool (Beta)</string>
+    <string name="anisync_plus_previous_season_beta_desc">Lädt erst nach erfolglosem lokalem Matching einen begrenzten und gecachten AniList-Season-Pool. Dabei entstehen wenige zusätzliche AniList-Anfragen.</string>
+    <string name="anisync_plus_search_fallback_beta">AniList-Suchfallback für nicht zugeordnete DE-Dub-Einträge (Beta)</string>
+    <string name="anisync_plus_search_fallback_beta_desc">Standardmäßig aus. Führt nach allen lokalen Stufen höchstens vier deduplizierte Suchen aus. Unsichere Treffer bleiben nicht zugeordnet.</string>
+    <string name="anisync_plus_request_counts">Anfragen</string>
+    <string name="anisync_plus_timings">Laufzeiten: Gesamt / Parser / Matching / Speichern</string>
+    <string name="anisync_plus_copy_diagnostics">Diagnosebericht kopieren</string>
+    <string name="anisync_plus_copy_diagnostics_desc">Kopiert einen kompakten, redigierten Bericht ohne Tokens, Cookies, Passwörter oder Signing-Daten.</string>
+    <string name="anisync_plus_share_diagnostics">Diagnosebericht teilen</string>
+    <string name="anisync_plus_share_diagnostics_desc">Öffnet die Android-Teilen-Funktion mit demselben redigierten Bericht.</string>
+    <string name="anisync_plus_clear_diagnostics">Diagnoseereignisse löschen</string>
+    <string name="anisync_plus_clear_diagnostics_desc">Löscht nur die begrenzte Ereignisliste. Der Kalender-Cache bleibt erhalten.</string>
+    <string name="anisync_plus_diagnostic_event">Diagnoseereignis</string>
+    <string name="anisync_plus_unmatched_badge">Nicht zugeordnet</string>
+    <string name="anisync_plus_beta_features">Optionale Beta-Fallbacks</string>
+    <string name="anisync_plus_match_sources">Match-Quellen</string>
+    <string name="anisync_plus_appearance">Darstellung</string>
+    <string name="anisync_plus_density_compact">Kompakt</string>
+    <string name="anisync_plus_density_compact_desc">Kürzere Kopfleisten und engere Abstände bei weiterhin gut bedienbaren Touch-Zielen.</string>
+    <string name="anisync_plus_density_standard">Standard</string>
+    <string name="anisync_plus_density_standard_desc">Das vertraute AniSync-Layout mit den bisherigen Abständen.</string>
+    <string name="anisync_plus_density_large">Groß</string>
+    <string name="anisync_plus_density_large_desc">Großzügigere Abstände und Bedienelemente für komfortable Nutzung.</string>
+    <string name="anisync_plus_navigation_customization">Hauptnavigation</string>
+    <string name="anisync_plus_navigation_item_desc">Tab ein- oder ausblenden und seine Position ändern.</string>
+    <string name="anisync_plus_navigation_profile_required_desc">Bleibt sichtbar, damit Einstellungen und Benachrichtigungen erreichbar sind.</string>
+    <string name="anisync_plus_reorder_navigation">Tabs neu anordnen</string>
+    <string name="anisync_plus_reorder_navigation_desc">Alle Ziele per Ziehen in die Reihenfolge für Navigationsleiste und Navigation Rail bringen.</string>
+    <string name="anisync_plus_reorder_navigation_dialog_desc">Griff halten und ziehen. Als barrierearme Alternative bleiben die Pfeiltasten auf der Hauptseite verfügbar.</string>
+    <string name="anisync_plus_drag_to_reorder">Halten und zum Sortieren ziehen</string>
+    <string name="anisync_plus_move_up">Nach oben verschieben</string>
+    <string name="anisync_plus_move_down">Nach unten verschieben</string>
+    <string name="anisync_plus_startup_tab">Start-Tab</string>
+    <string name="anisync_plus_startup_last_opened">Zuletzt geöffneter Tab</string>
+    <string name="anisync_plus_startup_last_opened_desc">Öffnet erneut den zuletzt verwendeten sichtbaren Haupt-Tab.</string>
+    <string name="anisync_plus_startup_fixed">Ausgewählter Tab</string>
+    <string name="anisync_plus_startup_fixed_desc">Startet immer in einem fest gewählten sichtbaren Tab.</string>
+    <string name="anisync_plus_detail_edge_to_edge_beta">Randloser Detailkopf (Beta)</string>
+    <string name="anisync_plus_detail_edge_to_edge_beta_desc">Blendet Mediengrafik hinter der Statusleiste ein und hält Bedienelemente vom Displayausschnitt frei. Standardmäßig aus.</string>
+</resources>

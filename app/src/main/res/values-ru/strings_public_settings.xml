@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="public_settings_experience">Использование</string>
+    <string name="public_settings_appearance">Внешний вид и навигация</string>
+    <string name="public_settings_appearance_desc">Плотность интерфейса, оформление календаря, вкладки, ярлыки и стартовый раздел</string>
+    <string name="public_settings_scores">Оценки сообщества</string>
+    <string name="public_settings_scores_desc">Настройка отображения оценок AniList и MyAnimeList только для чтения</string>
+    <string name="public_settings_support">Поддержка</string>
+    <string name="public_settings_diagnostics">Диагностика</string>
+    <string name="public_settings_diagnostics_desc">Просмотр статистики публичного провайдера, кэша и франшиз</string>
+    <string name="public_settings_density">Плотность интерфейса</string>
+    <string name="public_settings_edge_to_edge">Расширенный экран сведений</string>
+    <string name="public_settings_edge_to_edge_desc">Разрешить поддерживаемым экранам сведений использовать всю доступную ширину</string>
+    <string name="public_settings_compact_calendar">Компактный календарь</string>
+    <string name="public_settings_compact_calendar_desc">Использовать уменьшенный заголовок календаря с сохранением системных отступов</string>
+    <string name="public_settings_navigation">Основная навигация</string>
+    <string name="public_settings_shortcuts">Ярлыки библиотеки</string>
+    <string name="public_settings_startup">Стартовый раздел</string>
+    <string name="public_settings_startup_last">Последний открытый раздел</string>
+    <string name="public_settings_startup_fixed">Всегда использовать выбранный раздел</string>
+    <string name="public_move_up">Переместить вверх</string>
+    <string name="public_move_down">Переместить вниз</string>
+    <string name="public_density_compact">Компактная</string>
+    <string name="public_density_standard">Стандартная</string>
+    <string name="public_density_large">Крупная</string>
+    <string name="public_diagnostic_score_mode">Режим отображения оценок</string>
+    <string name="public_diagnostic_score_runtime">Работа оценок</string>
+    <string name="public_diagnostic_score_cache">Кэш оценок</string>
+    <string name="public_diagnostic_graph_cache">Кэш графа франшиз</string>
+    <string name="public_diagnostic_refresh">Обновить диагностику</string>
+    <string name="settings_anisync_plus_desc">AniList, MyAnimeList, календарь, внешний вид и диагностика</string>
+    <string name="community_score_clear_cache_desc">Удалить локальный кэш оценок сообщества; при необходимости они будут загружены снова</string>
+</resources>

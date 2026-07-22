@@ -1,0 +1,113 @@
+name: Build persistent update APK
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: persistent-update-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Verify and build persistent update APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle from wrapper
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Require and validate permanent signing identity
+        id: signing
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SECRET_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          SECRET_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          SECRET_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${SIGNING_KEY:?SIGNING_KEY is required; configure the permanent release keystore as base64}"
+          : "${SECRET_KEYSTORE_PASSWORD:?KEYSTORE_PASSWORD is required}"
+          : "${SECRET_KEY_ALIAS:?KEY_ALIAS is required}"
+          : "${SECRET_KEY_PASSWORD:?KEY_PASSWORD is required}"
+
+          keystore_file="$RUNNER_TEMP/persistent-update.keystore"
+          if ! printf '%s' "$SIGNING_KEY" | tr -d '[:space:]' | base64 --decode > "$keystore_file"; then
+            echo '::error::SIGNING_KEY is not valid base64.'
+            exit 1
+          fi
+          [[ -s "$keystore_file" ]] || { echo '::error::SIGNING_KEY decoded to an empty file.'; exit 1; }
+
+          certificate_output="$(keytool -J-Duser.language=en -list -v \
+            -keystore "$keystore_file" \
+            -storepass "$SECRET_KEYSTORE_PASSWORD" \
+            -alias "$SECRET_KEY_ALIAS")" || {
+              echo '::error::The permanent keystore, password, or alias is invalid.'
+              exit 1
+            }
+          fingerprint="$(printf '%s\n' "$certificate_output" | sed -n 's/.*SHA256: //p' | head -n 1 | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          [[ "$fingerprint" =~ ^[0-9A-F]{64}$ ]] || {
+            echo '::error::Could not read a SHA-256 certificate fingerprint from the permanent key.'
+            exit 1
+          }
+          printf 'Signing certificate SHA-256: %s\n' "$fingerprint"
+
+          echo "KEYSTORE_FILE=$keystore_file" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$SECRET_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$SECRET_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "KEY_PASSWORD=$SECRET_KEY_PASSWORD" >> "$GITHUB_ENV"
+          echo "SIGNING_CERT_SHA256=$fingerprint" >> "$GITHUB_ENV"
+
+      - name: Test, lint, and build signed Stable Release
+        run: |
+          ./gradlew --build-cache --parallel --continue \
+            testStableDebugUnitTest \
+            lintStableDebug \
+            assembleStableRelease
+
+      - name: Select and verify exact universal APK
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t apks < <(find app/build/outputs/apk/stable/release \
+            -maxdepth 1 -type f -name 'Kizomi-*-universal-release.apk' -print)
+          [[ ${#apks[@]} -eq 1 ]] || {
+            printf 'Expected one universal release APK, found %s\n' "${#apks[@]}"
+            exit 1
+          }
+
+          apksigner="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          [[ -x "$apksigner" ]] || { echo '::error::apksigner was not found.'; exit 1; }
+          "$apksigner" verify --verbose "${apks[0]}"
+          actual_fingerprint="$("$apksigner" verify --print-certs "${apks[0]}" |
+            sed -n 's/.*certificate SHA-256 digest: //p' | head -n 1 |
+            tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          [[ "$actual_fingerprint" == "$SIGNING_CERT_SHA256" ]] || {
+            echo '::error::Built APK certificate does not match the permanent signing identity.'
+            exit 1
+          }
+
+          short_sha="${GITHUB_SHA::8}"
+          target="$RUNNER_TEMP/Kizomi-${short_sha}-run${GITHUB_RUN_NUMBER}-persistent-update.apk"
+          cp "${apks[0]}" "$target"
+          echo "path=$target" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kizomi-persistent-update-apk
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 30
