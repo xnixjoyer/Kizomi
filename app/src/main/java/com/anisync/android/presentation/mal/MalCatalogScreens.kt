@@ -204,7 +204,7 @@ fun MalCatalogScreen(
                     }
                 }
                 state.error != null && !state.loading -> MalErrorState(
-                    errorKind = state.error.kind.name,
+                    errorKind = state.error?.kind?.name ?: "UNKNOWN",
                     onRetry = viewModel::retry,
                     modifier = Modifier.weight(1f),
                 )

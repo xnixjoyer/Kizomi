@@ -1,6 +1,6 @@
 # MAL production completion — execution state
 
-Last updated: 2026-07-22T17:59:52Z
+Last updated: 2026-07-22T18:04:30Z
 
 This is the resumable, public-only checkpoint for the active MAL completion branch. It must be
 updated after every material CI or implementation checkpoint. It intentionally contains no private
@@ -40,7 +40,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 | 1–4 | Baseline present and audited | OAuth config/session, encrypted vault, account metadata, Room 25 identity layer |
 | 5 | Complete and exact-head green | Run `29939518580`; 340 unit tests, lint, Room schema and both APK assemblies passed |
 | 6 | Complete and exact-head green | Run `29944016411`; 357 unit tests, lint, Room schema and both APK assemblies passed |
-| 7 | Local implementation checkpoint | MAL-native search/details/ranking/seasonal, cache reopen and provider-native navigation are statically reviewed before publication |
+| 7 | Published; compiler fix pending | Run `29944850177` found one delegated-state smart-cast error; the null-safe rendering fix is local |
 | 8 | Audit complete; rewiring pending | Direct list writes are concentrated in Library and Details repositories |
 | 9 | Domain resolver added; persistence/UI pending | Defaults remain AniList-only; routing is independent by media type |
 | 10 | Not started | MAL add/update/delete adapter and read-back |
@@ -112,12 +112,16 @@ repository, provider-extension, credential, token, authorization-code, or accoun
   social features unavailable.
 - Tests cover MAL-only search/list status, sparse details, related media, ranking, seasonal data,
   hostile paging, search-to-details-to-cached-reopen, offline cache and explicit AniList-fallback
-  rejection. This checkpoint must not be published until Phase 6 is exact-head green.
+  rejection.
+- Run `29944850177`, job `89007518444`, reached the production Kotlin compiler and failed only at
+  `MalCatalogScreens.kt`: Kotlin cannot smart-cast a property read through Compose's delegated
+  state. No failure artifact was created because tests had not started. The local fix uses the same
+  explicit null-safe rendering already used by the details screen; behavior and tests are unchanged.
 
 ## Resume instructions
 
-1. Finish the local Phase-7 static review, publish it as one bounded checkpoint and run the full gate.
-2. Record exact Phase-7 evidence only after the published head is green; do not weaken tests.
+1. Publish the bounded Phase-7 compiler fix and observe the full gate; do not weaken tests.
+2. Record exact Phase-7 evidence only after the published head is green.
 3. Never add secrets, real account identifiers, private provider information, or diagnostic bodies.
 4. Never merge PR `#2` automatically.
 
