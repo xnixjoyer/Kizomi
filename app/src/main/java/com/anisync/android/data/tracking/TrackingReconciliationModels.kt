@@ -223,7 +223,8 @@ private fun List<ReconciliationItemView>.toReconciliationCounts() = Reconciliati
     unmapped = count { it.action == ReconciliationAction.UNMAPPED },
     blocked = count {
         it.action == ReconciliationAction.BLOCKED_CONFLICT ||
-            it.state == ReconciliationItemState.BLOCKED
+            (it.state == ReconciliationItemState.BLOCKED &&
+                it.action != ReconciliationAction.UNMAPPED)
     },
     ready = count {
         it.state == ReconciliationItemState.READY ||
