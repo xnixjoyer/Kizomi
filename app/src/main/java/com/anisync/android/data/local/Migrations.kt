@@ -430,6 +430,43 @@ object Migrations {
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_provider_tracking_snapshots_provider_providerAccountId_mediaType` ON `provider_tracking_snapshots` (`provider`, `providerAccountId`, `mediaType`)")
             db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_provider_tracking_snapshots_provider_providerAccountId_providerMediaId_mediaType` ON `provider_tracking_snapshots` (`provider`, `providerAccountId`, `providerMediaId`, `mediaType`)")
 
+            // Seed the last locally cached AniList acknowledgement without rewriting or deleting the
+            // production library table. The static raw marker is deliberately non-sensitive; the
+            // first successful provider refresh replaces it with current provider fields.
+            db.execSQL(
+                """
+                INSERT OR IGNORE INTO `provider_tracking_snapshots` (
+                    `provider`, `providerAccountId`, `localMediaId`, `providerMediaId`,
+                    `providerListEntryId`, `mediaType`, `title`, `coverUrl`, `status`,
+                    `progress`, `progressSecondary`, `score`, `repeatCount`, `notes`,
+                    `startedAt`, `completedAt`, `providerUpdatedAtEpochMillis`,
+                    `fetchedAtEpochMillis`, `rawProviderFieldsJson`, `isDeleted`
+                )
+                SELECT
+                    'ANILIST', CAST(library.`ownerId` AS TEXT), identity.`localMediaId`,
+                    library.`mediaId`, library.`id`, identity.`mediaType`,
+                    library.`titleUserPreferred`,
+                    COALESCE(library.`coverExtraLarge`, library.`coverLarge`,
+                        library.`coverMedium`, library.`coverUrl`),
+                    library.`status`,
+                    CASE WHEN library.`progress` < 0 THEN 0 ELSE library.`progress` END,
+                    NULL, library.`score`,
+                    CASE WHEN library.`rewatches` < 0 THEN 0 ELSE library.`rewatches` END,
+                    library.`notes`,
+                    CASE WHEN library.`startedAt` IS NULL THEN NULL
+                        ELSE strftime('%Y-%m-%d', library.`startedAt` / 1000, 'unixepoch') END,
+                    CASE WHEN library.`completedAt` IS NULL THEN NULL
+                        ELSE strftime('%Y-%m-%d', library.`completedAt` / 1000, 'unixepoch') END,
+                    library.`updatedAt`, library.`lastUpdated`,
+                    '{"baselineSource":"MIGRATED_LOCAL"}', 0
+                FROM `library_entries` library
+                JOIN `provider_media_identities` identity
+                  ON identity.`provider` = 'ANILIST'
+                 AND identity.`providerMediaId` = library.`mediaId`
+                 AND identity.`mediaType` = library.`mediaType`
+                """.trimIndent()
+            )
+
             db.execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS `tracking_operations` (

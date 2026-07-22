@@ -29,6 +29,28 @@ class TrackingMigrationTest {
             )
             execSQL(
                 """
+                INSERT INTO provider_media_identities (
+                    localMediaId, provider, providerMediaId, mediaType, mappingSource,
+                    verificationStatus, createdAtEpochMillis, updatedAtEpochMillis
+                ) VALUES (
+                    'local-anime', 'ANILIST', 42, 'ANIME', 'EXISTING_ANILIST_MIGRATION',
+                    'EXACT', 1, 1
+                )
+                """.trimIndent()
+            )
+            execSQL(
+                """
+                INSERT INTO library_entries (
+                    id, ownerId, mediaId, titleUserPreferred, progress, mediaType, status,
+                    score, rewatches, startedAt, updatedAt, lastUpdated
+                ) VALUES (
+                    99, 123, 42, 'Migrated fixture', 4, 'ANIME', 'CURRENT',
+                    80.0, 1, 1719792000000, 1719792000000, 1719792000000
+                )
+                """.trimIndent()
+            )
+            execSQL(
+                """
                 INSERT INTO mal_accounts (
                     localAccountId, provider, malUserId, username, displayName, avatarUrl,
                     accessTokenRef, refreshTokenRef, tokenGeneration,
@@ -53,6 +75,16 @@ class TrackingMigrationTest {
         EXPECTED_TABLES.forEach { table -> assertTrue(database.hasTable(table)) }
         assertEquals(1, database.intValue("SELECT COUNT(*) FROM local_media_identities"))
         assertEquals(1, database.intValue("SELECT COUNT(*) FROM mal_accounts"))
+        assertEquals(
+            1,
+            database.intValue(
+                "SELECT COUNT(*) FROM provider_tracking_snapshots " +
+                    "WHERE provider = 'ANILIST' AND providerAccountId = '123' " +
+                    "AND localMediaId = 'local-anime' AND providerMediaId = 42 " +
+                    "AND providerListEntryId = 99 AND progress = 4 " +
+                    "AND startedAt = '2024-07-01'"
+            ),
+        )
 
         database.execSQL(
             """

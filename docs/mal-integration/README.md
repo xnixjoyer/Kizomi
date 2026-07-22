@@ -10,6 +10,11 @@ This directory contains the focused design, migration and verification contracts
 | 2 — account/token persistence | #45 / PR #46 | `feature/mal-account-token-persistence` | Completed, exactly verified, Ready, unmerged |
 | 3 — browser login/refresh | #47 / PR #48 | `feature/mal-oauth-login-refresh` | Technically complete and green; real provider evidence pending; Draft |
 | 4 — provider-neutral identity | #49 / PR #50 | `feature/provider-neutral-media-identity` | Implemented on Room 25; exact final-head evidence recorded after the final documentation gate |
+| 5–14 — consolidated production completion | Draft PR #2 | `test/mal-production-completion` | Active; see `EXECUTION_STATE.md` |
+
+The Phase 1–4 rows above preserve historical stacked evidence. Their implementation is consolidated
+in public root `7dcfdefda10b6eaccfef14917b145ad2d286e62e`; new work must not reopen or merge the historical
+branches.
 
 ## Phase-4 documents
 
@@ -18,6 +23,8 @@ This directory contains the focused design, migration and verification contracts
 - `phase-4-migration-matrix.md` — migration behavior for safe, missing, duplicate, conflicting, invalid and orphaned identities.
 - `OWNER_ACTIONS_PHASE_3_AND_4.md` — nontechnical owner actions for MAL registration, real-device OAuth and Phase-4 update verification.
 - `AI_AGENT_BRIEFING_AND_ROADMAP.md` — current stacked baseline and strict next-agent boundary.
+- `EXECUTION_STATE.md` — exact active head, CI, phase status, and machine-resumable next actions.
+- `phase-5-outbox-contract.md` — durable command, target, lease, retry and partial-success rules.
 
 ## Room schema 25
 

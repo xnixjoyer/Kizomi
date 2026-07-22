@@ -141,7 +141,9 @@ class TrackingOutboxRepository @Inject constructor(
                 dao.insertOperationWithTargets(operation, targetEntities)
                 operation.toReceipt(targetEntities, deduplicated = false)
             }
-            if (receipt.targetStates.values.any { it == TrackingTargetState.PENDING }) {
+            if (!receipt.deduplicated &&
+                receipt.targetStates.values.any { it == TrackingTargetState.PENDING }
+            ) {
                 scheduler.enqueue()
             }
             TrackingEnqueueResult.Accepted(receipt)

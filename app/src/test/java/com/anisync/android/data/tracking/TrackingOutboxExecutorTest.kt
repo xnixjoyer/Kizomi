@@ -28,6 +28,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class TrackingOutboxExecutorTest {
@@ -142,6 +143,40 @@ class TrackingOutboxExecutorTest {
         assertTrue(propagated)
         assertEquals("RUNNING", target.state)
         assertTrue(target.leaseToken != null)
+    }
+
+    @Test
+    fun `committed command survives database and executor recreation`() = runTest {
+        database.close()
+        val context: Context = RuntimeEnvironment.getApplication()
+        val databaseFile: File = context.getDatabasePath("tracking-outbox-restart-test.db")
+        context.deleteDatabase(databaseFile.name)
+        database = Room.databaseBuilder(context, AppDatabase::class.java, databaseFile.name)
+            .allowMainThreadQueries()
+            .build()
+        seedLocal()
+        val receipt = enqueue(listOf(target(TrackingProvider.MYANIMELIST, "mal", 20)))
+        database.close()
+
+        database = Room.databaseBuilder(context, AppDatabase::class.java, databaseFile.name)
+            .allowMainThreadQueries()
+            .build()
+        val adapter = RecordingAdapter(TrackingProvider.MYANIMELIST) { request ->
+            TrackingDeliveryResult.Success(TrackingConfirmedSnapshot(state = request.command.draft.desired))
+        }
+        TrackingOutboxExecutor(
+            database.trackingDao(),
+            TrackingCommandCodec(),
+            setOf(adapter),
+        ).drain()
+
+        assertEquals(1, adapter.calls)
+        assertEquals("SUCCEEDED", database.trackingDao().getOperation(receipt.operationId)?.state)
+        database.close()
+        context.deleteDatabase(databaseFile.name)
+        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
     }
 
     private suspend fun seedLocal() {

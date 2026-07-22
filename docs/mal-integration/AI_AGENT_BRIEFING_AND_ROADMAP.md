@@ -2,7 +2,17 @@
 
 ## Mission
 
-Integrate MyAnimeList as an additional provider without weakening AniList-only behavior, credential safety, offline behavior or the existing mutation model. Productive work is performed through focused stacked issues and PRs. The research branch and PR #30 remain architecture references only.
+Integrate MyAnimeList as an additional provider without weakening AniList-only behavior, credential safety, offline behavior or the existing mutation model. The earlier stacked branches are historical evidence; their accepted Phase 1–4 implementation is consolidated in public root `7dcfdefda10b6eaccfef14917b145ad2d286e62e`. Production completion now happens only on `test/mal-production-completion` in Draft PR #2. Historical research remains read-only architecture input and is never merged or cherry-picked wholesale.
+
+## Active consolidated implementation
+
+- Base: `7dcfdefda10b6eaccfef14917b145ad2d286e62e`
+- Branch: `test/mal-production-completion`
+- Draft PR: #2; leave unmerged
+- Resumable live checkpoint: `EXECUTION_STATE.md`
+- Phases 1–4: present on the base and audited
+- Phase 5: active; Room 26 snapshots and durable command outbox
+- Phases 6–14: proceed in order after the preceding checkpoint is exact-head green
 
 ## Current stacked implementation
 
@@ -142,4 +152,7 @@ Phase 4 does not implement:
 
 ## Next-agent boundary
 
-Do not begin Phase 5 from this branch unless a new focused issue, branch and PR are explicitly authorized. Preserve the Phase-4 schema, adapter boundary and exact final-head evidence. Real Phase-3 provider acceptance and the owner's Phase-4 update smoke test remain human gates documented in `OWNER_ACTIONS_PHASE_3_AND_4.md`.
+Phase 5–14 work is explicitly authorized only on `test/mal-production-completion`. Resume from
+`EXECUTION_STATE.md`, preserve the additive Phase-4 schema/adapter boundary, and keep PR #2 Draft and
+unmerged. Do not manufacture real-provider evidence: MAL registration, real OAuth/account tests and
+physical-device acceptance remain external gates documented in the owner-actions file.
