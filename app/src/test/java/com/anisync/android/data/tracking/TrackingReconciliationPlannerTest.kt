@@ -49,7 +49,7 @@ class TrackingReconciliationPlannerTest {
     @Test
     fun `preview classifies every state and makes only missing mapped source ready`() = runTest {
         val locals = listOf("equal", "different", "only-source", "only-target", "unmapped", "conflict")
-        locals.forEach(::insertLocal)
+        for (local in locals) insertLocal(local)
         listOf("equal", "different", "only-source", "conflict").forEachIndexed { index, local ->
             insertIdentity(local, TrackingProvider.MYANIMELIST, 100L + index)
         }
