@@ -1,6 +1,6 @@
 # MAL production completion — execution state
 
-Last updated: 2026-07-22T18:55:38Z
+Last updated: 2026-07-22T19:11:36Z
 
 This is the resumable, public-only checkpoint for the active MAL completion branch. It must be
 updated after every material CI or implementation checkpoint. It intentionally contains no private
@@ -19,7 +19,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 
 - Branch: `test/mal-production-completion`
 - Draft PR: `#2`
-- Current published head: `ee4710deec4484fddd62012f4747799508c4d377`
+- Current published head: `113759e3e9358c58b44eaa05a45c0546cf78a9bc`
 - First CI: run `29937918613`, job `88984135887`, failed in one new unit assertion
 - Failure artifact: `8537181107`, digest
   `sha256:b5f19bcfc8e7db665bd9a567e77f7e8917742f1996085a39c371b51080f8b3c9`
@@ -42,8 +42,8 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 | 6 | Complete and exact-head green | Run `29944016411`; 357 unit tests, lint, Room schema and both APK assemblies passed |
 | 7 | Complete and exact-head green | Run `29945948142`; 366 unit tests, lint, Room schema and both APK assemblies passed |
 | 8 | Complete and exact-head green | Run `29947715268`; 372 unit tests, lint, Room schema and both APK assemblies passed |
-| 9 | Local implementation checkpoint | Independent persisted anime/manga policy, explicit blockers and accessible mode UI implemented |
-| 10 | Not started | MAL add/update/delete adapter and read-back |
+| 9 | Complete and exact-head green | Run `29948954856`; 375 unit tests, lint, Room schema and both APK assemblies passed |
+| 10 | Local implementation checkpoint | MAL add/update/delete adapter, capability matrix and controlled read-back implemented |
 | 11 | Data foundation added; UI pending | Provider target state never collapses partial success into full success |
 | 12 | Data foundation added; planner pending | Persistent reconciliation plan/item tables exist |
 | 13 | Not started | Central interceptor and worker kill switch required |
@@ -162,7 +162,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 - APK `Kizomi-4e8e492a-run17-diagnostic.apk` is `41977816` bytes; SHA-256:
   `538cf5af84cc21af18dcca5d861f62cc86afd29d764c7dfd6222c4ad9fea7c09`.
 
-## Active local Phase-9 checkpoint
+## Published Phase-9 checkpoint
 
 - `AppSettings` persists independent anime and manga tracking modes. Missing, legacy and malformed
   values self-heal to `ANILIST_ONLY`, preserving the behavior of every existing installation.
@@ -178,12 +178,39 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 - Tests cover both split policies, both AniList, both MAL, Dual anime/manga, missing configuration,
   logout, missing identity, account switch, process-style settings recreation and malformed-setting
   migration.
+- Commit `113759e3e9358c58b44eaa05a45c0546cf78a9bc` passed run `29948954856`, job
+  `89021494341`: all 375 unit tests, Android lint, public-provider boundary, committed Room schema,
+  Stable Debug and AndroidTest assembly passed.
+- Diagnostic artifact `8541571564` contains exactly one APK. Artifact/archive SHA-256:
+  `eaed132f130cc18922c57c311e83e85cec2885aa2271cece721464db5b07043f`.
+- APK `Kizomi-eee46971-run18-diagnostic.apk` is `41999220` bytes; SHA-256:
+  `08ba10aac0d1cf2fd68d2fec42353f3c3538a2c8f6ef44304dada65d4f428537`.
+
+## Active local Phase-10 checkpoint
+
+- `MalTrackingProviderAdapter` is registered beside the AniList adapter and executes durable MAL
+  outbox targets for both Anime and Manga through the central authenticated client.
+- Add/update uses absolute sparse PATCH forms; delete uses the matching MAL item endpoint. Public
+  client ID and Accept headers are explicit while Authorization remains centrally replaced.
+- The capability matrix supports status, primary progress, Manga volumes, integer score, repeat or
+  reread state/count, start/finish dates and delete. Notes and AniList-only fields fail closed with
+  `UNSUPPORTED_FIELD` before transport.
+- Every successful PATCH/DELETE is followed by a controlled details read-back for the same MAL ID.
+  Provider-confirmed state, projected integer score and deletion are persisted only after the
+  response agrees; retries resend identical absolute values.
+- Error mapping distinguishes rate limits with Retry-After, offline, timeout, transport, transient
+  server, auth, identity, validation and malformed response. Cancellation remains control flow and
+  all result strings omit provider bodies and credentials.
+- Tests cover exact Anime/Manga URLs, methods, headers and form bodies, add/update, delete,
+  read-back, duplicate retry, 429, auth failure, malformed response, unsupported fields,
+  cancellation and score rounding. The existing authenticated-client suite proves one refresh and
+  one retry after the first 401, with a second 401 stopping and invalidating the local MAL session.
 
 ## Resume instructions
 
-1. Finish static review of the local Phase-9 files, publish one bounded checkpoint and run the full
+1. Finish static review of the local Phase-10 files, publish one bounded checkpoint and run the full
    gate without weakening tests.
-2. Record exact Phase-9 evidence only after its published head is green.
+2. Record exact Phase-10 evidence only after its published head is green.
 3. Never add secrets, real account identifiers, private provider information, or diagnostic bodies.
 4. Never merge PR `#2` automatically.
 

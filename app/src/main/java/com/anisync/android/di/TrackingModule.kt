@@ -1,6 +1,7 @@
 package com.anisync.android.di
 
 import com.anisync.android.data.tracking.AniListTrackingProviderAdapter
+import com.anisync.android.data.tracking.MalTrackingProviderAdapter
 import com.anisync.android.data.tracking.TrackingOutboxScheduler
 import com.anisync.android.domain.tracking.TrackingProviderAdapter
 import com.anisync.android.worker.AndroidTrackingOutboxScheduler
@@ -28,5 +29,11 @@ abstract class TrackingModule {
     @IntoSet
     abstract fun bindAniListTrackingProviderAdapter(
         implementation: AniListTrackingProviderAdapter,
+    ): TrackingProviderAdapter
+
+    @Binds
+    @IntoSet
+    abstract fun bindMalTrackingProviderAdapter(
+        implementation: MalTrackingProviderAdapter,
     ): TrackingProviderAdapter
 }
