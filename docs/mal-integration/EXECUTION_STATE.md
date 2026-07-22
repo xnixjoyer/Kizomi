@@ -1,6 +1,6 @@
 # MAL production completion — execution state
 
-Last updated: 2026-07-22T19:11:36Z
+Last updated: 2026-07-22T19:24:49Z
 
 This is the resumable, public-only checkpoint for the active MAL completion branch. It must be
 updated after every material CI or implementation checkpoint. It intentionally contains no private
@@ -19,7 +19,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 
 - Branch: `test/mal-production-completion`
 - Draft PR: `#2`
-- Current published head: `113759e3e9358c58b44eaa05a45c0546cf78a9bc`
+- Current published head: `477376e984978f9aea9e4a4ed5dd53ca6dc4fcd0`
 - First CI: run `29937918613`, job `88984135887`, failed in one new unit assertion
 - Failure artifact: `8537181107`, digest
   `sha256:b5f19bcfc8e7db665bd9a567e77f7e8917742f1996085a39c371b51080f8b3c9`
@@ -43,8 +43,8 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 | 7 | Complete and exact-head green | Run `29945948142`; 366 unit tests, lint, Room schema and both APK assemblies passed |
 | 8 | Complete and exact-head green | Run `29947715268`; 372 unit tests, lint, Room schema and both APK assemblies passed |
 | 9 | Complete and exact-head green | Run `29948954856`; 375 unit tests, lint, Room schema and both APK assemblies passed |
-| 10 | Local implementation checkpoint | MAL add/update/delete adapter, capability matrix and controlled read-back implemented |
-| 11 | Data foundation added; UI pending | Provider target state never collapses partial success into full success |
+| 10 | Complete and exact-head green | Run `29950025448`; 382 unit tests, lint, Room schema and both APK assemblies passed |
+| 11 | Local implementation checkpoint | Durable provider-result projection, isolated retry and conflict-center UI under review |
 | 12 | Data foundation added; planner pending | Persistent reconciliation plan/item tables exist |
 | 13 | Not started | Central interceptor and worker kill switch required |
 | 14 | Not started | Migration, security, accessibility, diagnostics and release gates |
@@ -186,7 +186,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 - APK `Kizomi-eee46971-run18-diagnostic.apk` is `41999220` bytes; SHA-256:
   `08ba10aac0d1cf2fd68d2fec42353f3c3538a2c8f6ef44304dada65d4f428537`.
 
-## Active local Phase-10 checkpoint
+## Published Phase-10 checkpoint
 
 - `MalTrackingProviderAdapter` is registered beside the AniList adapter and executes durable MAL
   outbox targets for both Anime and Manga through the central authenticated client.
@@ -205,12 +205,30 @@ repository, provider-extension, credential, token, authorization-code, or accoun
   read-back, duplicate retry, 429, auth failure, malformed response, unsupported fields,
   cancellation and score rounding. The existing authenticated-client suite proves one refresh and
   one retry after the first 401, with a second 401 stopping and invalidating the local MAL session.
+- Commit `477376e984978f9aea9e4a4ed5dd53ca6dc4fcd0` passed run `29950025448`, job
+  `89025094317`: all 382 unit tests, Android lint, the public-provider boundary, committed Room
+  schema, Stable Debug and AndroidTest assembly passed.
+- Diagnostic artifact `8541980145` contains exactly one APK. Artifact/archive SHA-256:
+  `10faea4d398ee851c1881a0564f362e65c76ee1654de9f87158777dcacae2991`.
+- APK `Kizomi-1c8e1f14-run19-diagnostic.apk` is `42015604` bytes; SHA-256:
+  `b3eab6ebdc5317784e62bce795b6fdd9142345d8671b130cf0574eb74cac7281`.
+
+## Active local Phase-11 checkpoint
+
+- The durable saga projection keeps each provider target visible as pending, running, retrying,
+  blocked, failed or succeeded and derives the aggregate operation state from the complete target
+  set. Partial success can never be reported as full success.
+- The tracking center exposes provider-specific outcomes, redacted divergence summaries, identity
+  issue counts and retry actions scoped to failed targets only. Successful targets are never
+  rewritten by a retry of their failed sibling.
+- Tests cover the full aggregate-state matrix, partial failures in either provider order,
+  provider-isolated retry, successful-target preservation and redacted conflict projection.
 
 ## Resume instructions
 
-1. Finish static review of the local Phase-10 files, publish one bounded checkpoint and run the full
+1. Finish static review of the local Phase-11 files, publish one bounded checkpoint and run the full
    gate without weakening tests.
-2. Record exact Phase-10 evidence only after its published head is green.
+2. Record exact Phase-11 evidence only after its published head is green.
 3. Never add secrets, real account identifiers, private provider information, or diagnostic bodies.
 4. Never merge PR `#2` automatically.
 

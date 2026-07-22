@@ -404,6 +404,9 @@ object SettingsAniSyncPlusAppearance
 object SettingsCommunityScores
 
 @Serializable
+object SettingsTrackingCenter
+
+@Serializable
 object SettingsAniSyncPlusDiagnostics
 
 /**

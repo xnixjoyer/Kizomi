@@ -1295,6 +1295,22 @@
     <string ns0:ignore="MissingTranslation" name="tracking_mode_dual">AniList and MyAnimeList</string>
     <string ns0:ignore="MissingTranslation" name="tracking_mode_dual_desc">Create an explicit target for both providers; one provider never silently replaces the other.</string>
     <string ns0:ignore="MissingTranslation" name="tracking_provider_mal_blocked">MyAnimeList writes are explicitly blocked until a public client ID is configured and an account is connected. Your selected mode remains saved.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_open">Open sync and conflict center</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_open_desc">Inspect each provider result, retry only a failed target, and review divergent snapshots or identity issues.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_title">Sync and conflict center</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_identity_section">Identity review</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_identity_issues">Provider identity issues</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_identity_counts">%1$d unresolved · %2$d conflicting. Activate to refresh.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_operations_section">Provider operations</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_operations_empty">No provider operations have been recorded yet.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_conflicts_section">Snapshot divergences</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_conflicts_empty">AniList and MyAnimeList confirmed snapshots currently have no visible divergence.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_operation_summary">%1$s · %2$s</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_provider_result">%1$s: %2$s</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_failure_detail">%1$s · %2$d attempts</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_retry_provider">Retry %1$s only</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_conflict_fields">Different fields: %1$s</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_no_auto_resolution">No provider is overwritten automatically. Review and resolve explicitly.</string>
     <string ns0:ignore="MissingTranslation" name="mal_account_status_section">Connection</string>
     <string ns0:ignore="MissingTranslation" name="mal_login_not_configured">MAL login is not configured</string>
     <string ns0:ignore="MissingTranslation" name="mal_login_not_configured_detail">A public MAL client ID and registered redirect URI are required. No client secret belongs in the app.</string>

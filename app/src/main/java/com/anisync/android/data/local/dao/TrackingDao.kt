@@ -142,6 +142,11 @@ interface TrackingDao {
     suspend fun getTargets(operationId: String): List<TrackingOperationTargetEntity>
 
     @Query(
+        "SELECT * FROM tracking_operation_targets ORDER BY updatedAtEpochMillis DESC, provider"
+    )
+    fun observeAllTargets(): Flow<List<TrackingOperationTargetEntity>>
+
+    @Query(
         "SELECT target.* FROM tracking_operation_targets target " +
             "JOIN tracking_operations operation ON operation.operationId = target.operationId " +
             "WHERE target.state IN ('PENDING', 'RETRYING') " +
@@ -225,10 +230,41 @@ interface TrackingDao {
     suspend fun updateOperationState(operationId: String, state: String, nowEpochMillis: Long): Int
 
     @Query(
+        "UPDATE tracking_operation_targets SET state = 'RETRYING', attemptCount = 0, " +
+            "nextAttemptAtEpochMillis = :nowEpochMillis, leaseToken = NULL, " +
+            "leaseExpiresAtEpochMillis = NULL, lastErrorKind = NULL, lastHttpStatus = NULL, " +
+            "retryAfterMillis = NULL, updatedAtEpochMillis = :nowEpochMillis " +
+            "WHERE operationId = :operationId AND provider = :provider AND state = 'FAILED'"
+    )
+    suspend fun retryFailedTarget(
+        operationId: String,
+        provider: String,
+        nowEpochMillis: Long,
+    ): Int
+
+    @Query(
         "SELECT * FROM tracking_operations WHERE state NOT IN ('SUCCEEDED', 'SUPERSEDED') " +
             "ORDER BY updatedAtEpochMillis DESC"
     )
     fun observeUnsettledOperations(): Flow<List<TrackingOperationEntity>>
+
+    @Query(
+        "SELECT * FROM tracking_operations WHERE state != 'SUPERSEDED' " +
+            "ORDER BY updatedAtEpochMillis DESC LIMIT 100"
+    )
+    fun observeRecentOperations(): Flow<List<TrackingOperationEntity>>
+
+    @Query(
+        "SELECT * FROM provider_tracking_snapshots WHERE isDeleted = 0 " +
+            "ORDER BY localMediaId, provider"
+    )
+    fun observeAllActiveSnapshots(): Flow<List<ProviderTrackingSnapshotEntity>>
+
+    @Query(
+        "SELECT * FROM provider_tracking_snapshots WHERE isDeleted = 0 " +
+            "ORDER BY localMediaId, provider"
+    )
+    suspend fun getAllActiveSnapshots(): List<ProviderTrackingSnapshotEntity>
 
     @Query(
         "SELECT COUNT(*) FROM tracking_operation_targets " +

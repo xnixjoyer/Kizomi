@@ -34,6 +34,7 @@ import com.anisync.android.util.AppLinksUtil
 fun MalAccountSettingsScreen(
     onBackClick: () -> Unit,
     onBrowseMal: () -> Unit = {},
+    onOpenTrackingCenter: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MalAccountSettingsViewModel = hiltViewModel(),
 ) {
@@ -83,6 +84,14 @@ fun MalAccountSettingsScreen(
                 text = stringResource(R.string.tracking_provider_mal_blocked),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
+            )
+        }
+        SettingsGroup {
+            SettingsItem(
+                title = stringResource(R.string.tracking_center_open),
+                subtitle = stringResource(R.string.tracking_center_open_desc),
+                icon = Icons.Outlined.Link,
+                onClick = onOpenTrackingCenter,
             )
         }
 
