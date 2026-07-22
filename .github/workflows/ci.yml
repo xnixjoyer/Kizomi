@@ -61,11 +61,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          mkdir -p app/build
           ./gradlew --build-cache --parallel --continue \
             testStableDebugUnitTest \
             lintStableDebug \
             assembleStableDebug \
-            assembleStableDebugAndroidTest
+            assembleStableDebugAndroidTest \
+            2>&1 | tee app/build/ci-gradle.log
 
       - name: Verify exported Room schema is committed
         shell: bash
@@ -87,6 +89,7 @@ jobs:
         with:
           name: Kizomi-${{ github.sha }}-run${{ github.run_number }}-failure-reports
           path: |
+            app/build/ci-gradle.log
             app/build/test-results/testStableDebugUnitTest/**
             app/build/reports/tests/testStableDebugUnitTest/**
             app/build/reports/lint-results-stableDebug.*
