@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!--
+      Package visibility (Android 11+): declare that we interact with web browsers so the app can
+      resolve and explicitly target one when opening links externally (see AppLinksUtil.openInBrowser).
+      Without this, queryIntentActivities returns nothing and anilist.co links loop back into the app.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".AniSyncApplication"
+        android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AniSync"
+        tools:targetApi="31">
+        <!-- uiMode is handled in Compose: theme-mode switches and system dark flips swap the theme
+             in place instead of recreating the activity. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:label="@string/app_name"
+            android:configChanges="uiMode"
+            android:theme="@style/Theme.AniSync.Starting"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="anisync"
+                    android:host="auth" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="${malOAuthScheme}"
+                    android:host="${malOAuthHost}"
+                    android:path="${malOAuthPath}" />
+            </intent-filter>
+             <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="anisync"
+                    android:host="details" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="anisync"
+                    android:host="forum" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="anisync"
+                    android:host="user" />
+                <data
+                    android:scheme="anisync"
+                    android:host="review" />
+                <data
+                    android:scheme="anisync"
+                    android:host="activity" />
+                <data
+                    android:scheme="anisync"
+                    android:host="notifications" />
+            </intent-filter>
+            <!-- AniList URL deep links for sharing -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="anilist.co"
+                    android:pathPrefix="/anime/" />
+                <data
+                    android:scheme="https"
+                    android:host="anilist.co"
+                    android:pathPrefix="/manga/" />
+                <data
+                    android:scheme="https"
+                    android:host="anilist.co"
+                    android:pathPrefix="/forum/thread/" />
+                <data
+                    android:scheme="https"
+                    android:host="anilist.co"
+                    android:pathPrefix="/character/" />
+                <data
+                    android:scheme="https"
+                    android:host="anilist.co"
+                    android:pathPrefix="/staff/" />
+                <data
+                    android:scheme="https"
+                    android:host="anilist.co"
+                    android:pathPrefix="/user/" />
+                <data
+                    android:scheme="https"
+                    android:host="anilist.co"
+                    android:pathPrefix="/review/" />
+                <data
+                    android:scheme="https"
+                    android:host="anilist.co"
+                    android:pathPrefix="/activity/" />
+            </intent-filter>
+        </activity>
+
+        <!-- Immersive, rotatable fullscreen video player. Handles its own config changes so the
+             forced orientation flip doesn't recreate it (and drop the playing surface). -->
+        <activity
+            android:name=".presentation.components.FullscreenPlayerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+
+        <activity
+            android:name=".CrashReportActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:theme="@style/Theme.AniSync" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
+
+        <!-- BroadcastReceiver for handling "Add to Watching" action from notifications -->
+        <receiver
+            android:name=".widget.UpNextWidgetReceiver"
+            android:exported="true"
+            android:label="Up Next">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/up_next_widget_info" />
+        </receiver>
+
+
+
+        <receiver
+            android:name=".widget.AiringTodayWidgetReceiver"
+            android:exported="true"
+            android:label="Airing Today">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/airing_today_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WeeklyCalendarWidgetReceiver"
+            android:exported="true"
+            android:label="Weekly Calendar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/weekly_calendar_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.TrendingWidgetReceiver"
+            android:exported="true"
+            android:label="Top 10 Anime">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/trending_widget_info" />
+        </receiver>
+
+
+
+
+
+
+        <receiver
+            android:name=".worker.AddToWatchingReceiver"
+            android:exported="false" />
+    </application>
+
+</manifest>

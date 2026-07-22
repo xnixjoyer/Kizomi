@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="public_settings_experience">Experience</string>
+    <string name="public_settings_appearance">Appearance and navigation</string>
+    <string name="public_settings_appearance_desc">Layout density, calendar chrome, tabs, shortcuts, and startup destination</string>
+    <string name="public_settings_scores">Community scores</string>
+    <string name="public_settings_scores_desc">Configure the read-only AniList and MyAnimeList score display</string>
+    <string name="public_settings_support">Support</string>
+    <string name="public_settings_diagnostics">Diagnostics</string>
+    <string name="public_settings_diagnostics_desc">Inspect public provider, cache, and franchise statistics</string>
+    <string name="public_settings_density">Layout density</string>
+    <string name="public_settings_edge_to_edge">Expanded detail layout</string>
+    <string name="public_settings_edge_to_edge_desc">Allow supported detail screens to use the full available width</string>
+    <string name="public_settings_compact_calendar">Compact calendar chrome</string>
+    <string name="public_settings_compact_calendar_desc">Use a smaller calendar header while keeping system insets</string>
+    <string name="public_settings_navigation">Main navigation</string>
+    <string name="public_settings_shortcuts">Library shortcuts</string>
+    <string name="public_settings_startup">Startup destination</string>
+    <string name="public_settings_startup_last">Last opened destination</string>
+    <string name="public_settings_startup_fixed">Always use a selected destination</string>
+    <string name="public_move_up">Move up</string>
+    <string name="public_move_down">Move down</string>
+    <string name="public_density_compact">Compact</string>
+    <string name="public_density_standard">Standard</string>
+    <string name="public_density_large">Large</string>
+    <string name="public_diagnostic_score_mode">Score display mode</string>
+    <string name="public_diagnostic_score_runtime">Score runtime</string>
+    <string name="public_diagnostic_score_cache">Score cache</string>
+    <string name="public_diagnostic_graph_cache">Franchise graph cache</string>
+    <string name="public_diagnostic_refresh">Refresh diagnostics</string>
+    <string name="settings_anisync_plus_desc">AniList, MyAnimeList, calendar, appearance, and diagnostics</string>
+    <string name="community_score_clear_cache_desc">Remove locally cached community scores; they are fetched again when needed</string>
+</resources>

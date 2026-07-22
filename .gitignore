@@ -1,0 +1,118 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+build/
+.gradle/
+.cxx/
+.externalNativeBuild/
+
+# Gradle wrapper (generated, can be recreated with 'gradle wrapper')
+gradlew
+gradlew.bat
+gradle/wrapper/
+
+# Apollo GraphQL generated files (regenerated on build)
+app/build/generated/source/apollo/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Proguard
+proguard_logs/
+proguard-files/
+mapping/
+
+# Log Files
+*.log
+
+# Android Studio Navigation Editor temp files
+.navigation/
+
+# Android Studio captures folder
+captures/
+
+# Android Studio profiling
+*.hprof
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
+
+# Kotlin
+.kotlin/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# Environment variables & secrets
+.env
+.env.*
+*.env
+
+# Signing keys and credentials
+*.keystore
+*.jks
+*.pk8
+*.pem
+keystore.properties
+signing.properties
+
+# Release & distribution
+/release/
+app/stable/release/
+*.signed.apk
+*.dm
+
+# Crash reports
+crashlytics-build.properties
+fabric.properties
+
+# Google Services (contains API keys)
+google-services.json
+
+# Generated documentation (Dokka, etc.)
+# Note: docs/*.md files ARE tracked for project documentation
+docs/api/
+docs/generated/
+
+# Personal notes & todos
+.TODO/
+todo/
+AGENTS.md
+*.todo
+notes.md
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.bak
+*.jar

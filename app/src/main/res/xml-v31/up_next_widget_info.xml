@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?><!-- 
+  Modern widget configuration for responsive layouts.
+  targetCellWidth/Height ensures it defaults to a nice 3x2 size.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_up_next_description"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:initialLayout="@layout/widget_preview_up_next"
+    android:previewLayout="@layout/widget_preview_up_next"
+    android:widgetCategory="home_screen" />

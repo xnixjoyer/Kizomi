@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="public_settings_experience">Expérience</string>
+    <string name="public_settings_appearance">Apparence et navigation</string>
+    <string name="public_settings_appearance_desc">Densité de l’interface, présentation du calendrier, onglets, raccourcis et destination de démarrage</string>
+    <string name="public_settings_scores">Notes de la communauté</string>
+    <string name="public_settings_scores_desc">Configurer l’affichage en lecture seule des notes AniList et MyAnimeList</string>
+    <string name="public_settings_support">Assistance</string>
+    <string name="public_settings_diagnostics">Diagnostic</string>
+    <string name="public_settings_diagnostics_desc">Consulter les statistiques du fournisseur public, du cache et des franchises</string>
+    <string name="public_settings_density">Densité de l’interface</string>
+    <string name="public_settings_edge_to_edge">Mise en page détaillée étendue</string>
+    <string name="public_settings_edge_to_edge_desc">Autoriser les écrans de détail compatibles à utiliser toute la largeur disponible</string>
+    <string name="public_settings_compact_calendar">Calendrier compact</string>
+    <string name="public_settings_compact_calendar_desc">Utiliser un en-tête de calendrier plus petit tout en conservant les marges système</string>
+    <string name="public_settings_navigation">Navigation principale</string>
+    <string name="public_settings_shortcuts">Raccourcis de la bibliothèque</string>
+    <string name="public_settings_startup">Destination de démarrage</string>
+    <string name="public_settings_startup_last">Dernière destination ouverte</string>
+    <string name="public_settings_startup_fixed">Toujours utiliser une destination sélectionnée</string>
+    <string name="public_move_up">Monter</string>
+    <string name="public_move_down">Descendre</string>
+    <string name="public_density_compact">Compacte</string>
+    <string name="public_density_standard">Standard</string>
+    <string name="public_density_large">Grande</string>
+    <string name="public_diagnostic_score_mode">Mode d’affichage des notes</string>
+    <string name="public_diagnostic_score_runtime">Exécution des notes</string>
+    <string name="public_diagnostic_score_cache">Cache des notes</string>
+    <string name="public_diagnostic_graph_cache">Cache du graphe des franchises</string>
+    <string name="public_diagnostic_refresh">Actualiser le diagnostic</string>
+    <string name="settings_anisync_plus_desc">AniList, MyAnimeList, calendrier, apparence et diagnostic</string>
+    <string name="community_score_clear_cache_desc">Supprimer les notes de la communauté mises en cache localement ; elles seront récupérées à nouveau si nécessaire</string>
+</resources>

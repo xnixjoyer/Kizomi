@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="public_settings_experience">அனுபவம்</string>
+    <string name="public_settings_appearance">தோற்றம் மற்றும் வழிசெலுத்தல்</string>
+    <string name="public_settings_appearance_desc">வடிவமைப்பு அடர்த்தி, காலண்டர் தோற்றம், தாவல்கள், குறுக்குவழிகள் மற்றும் தொடக்க இலக்கு</string>
+    <string name="public_settings_scores">சமூக மதிப்பெண்கள்</string>
+    <string name="public_settings_scores_desc">AniList மற்றும் MyAnimeList மதிப்பெண்களின் படிக்க மட்டும் காட்சியை அமைக்கவும்</string>
+    <string name="public_settings_support">ஆதரவு</string>
+    <string name="public_settings_diagnostics">கண்டறிதல்</string>
+    <string name="public_settings_diagnostics_desc">பொது வழங்குநர், தற்காலிக சேமிப்பு மற்றும் பிராஞ்சைஸ் புள்ளிவிவரங்களைப் பார்க்கவும்</string>
+    <string name="public_settings_density">வடிவமைப்பு அடர்த்தி</string>
+    <string name="public_settings_edge_to_edge">விரிவாக்கப்பட்ட விவர வடிவமைப்பு</string>
+    <string name="public_settings_edge_to_edge_desc">ஆதரிக்கப்படும் விவரத் திரைகள் கிடைக்கும் முழு அகலத்தையும் பயன்படுத்த அனுமதிக்கவும்</string>
+    <string name="public_settings_compact_calendar">சுருக்கமான காலண்டர்</string>
+    <string name="public_settings_compact_calendar_desc">கணினி இடைவெளிகளை வைத்துக்கொண்டு சிறிய காலண்டர் தலைப்பைப் பயன்படுத்தவும்</string>
+    <string name="public_settings_navigation">முதன்மை வழிசெலுத்தல்</string>
+    <string name="public_settings_shortcuts">நூலக குறுக்குவழிகள்</string>
+    <string name="public_settings_startup">தொடக்க இலக்கு</string>
+    <string name="public_settings_startup_last">கடைசியாக திறந்த இலக்கு</string>
+    <string name="public_settings_startup_fixed">தேர்ந்தெடுத்த இலக்கை எப்போதும் பயன்படுத்தவும்</string>
+    <string name="public_move_up">மேலே நகர்த்து</string>
+    <string name="public_move_down">கீழே நகர்த்து</string>
+    <string name="public_density_compact">சுருக்கமான</string>
+    <string name="public_density_standard">நிலையான</string>
+    <string name="public_density_large">பெரியது</string>
+    <string name="public_diagnostic_score_mode">மதிப்பெண் காட்சி முறை</string>
+    <string name="public_diagnostic_score_runtime">மதிப்பெண் இயக்கம்</string>
+    <string name="public_diagnostic_score_cache">மதிப்பெண் தற்காலிக சேமிப்பு</string>
+    <string name="public_diagnostic_graph_cache">பிராஞ்சைஸ் வரைபட தற்காலிக சேமிப்பு</string>
+    <string name="public_diagnostic_refresh">கண்டறிதலை புதுப்பிக்கவும்</string>
+    <string name="settings_anisync_plus_desc">AniList, MyAnimeList, காலண்டர், தோற்றம் மற்றும் கண்டறிதல்</string>
+    <string name="community_score_clear_cache_desc">உள்ளூரில் சேமிக்கப்பட்ட சமூக மதிப்பெண்களை அகற்றவும்; தேவைப்படும் போது அவை மீண்டும் பெறப்படும்</string>
+</resources>

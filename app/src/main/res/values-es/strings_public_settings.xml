@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="public_settings_experience">Experiencia</string>
+    <string name="public_settings_appearance">Apariencia y navegación</string>
+    <string name="public_settings_appearance_desc">Densidad del diseño, aspecto del calendario, pestañas, accesos directos y destino inicial</string>
+    <string name="public_settings_scores">Puntuaciones de la comunidad</string>
+    <string name="public_settings_scores_desc">Configurar la visualización de solo lectura de puntuaciones de AniList y MyAnimeList</string>
+    <string name="public_settings_support">Soporte</string>
+    <string name="public_settings_diagnostics">Diagnóstico</string>
+    <string name="public_settings_diagnostics_desc">Consultar estadísticas del proveedor público, la caché y las franquicias</string>
+    <string name="public_settings_density">Densidad del diseño</string>
+    <string name="public_settings_edge_to_edge">Diseño de detalles ampliado</string>
+    <string name="public_settings_edge_to_edge_desc">Permitir que las pantallas de detalles compatibles usen todo el ancho disponible</string>
+    <string name="public_settings_compact_calendar">Calendario compacto</string>
+    <string name="public_settings_compact_calendar_desc">Usar una cabecera de calendario más pequeña manteniendo los márgenes del sistema</string>
+    <string name="public_settings_navigation">Navegación principal</string>
+    <string name="public_settings_shortcuts">Accesos directos de la biblioteca</string>
+    <string name="public_settings_startup">Destino inicial</string>
+    <string name="public_settings_startup_last">Último destino abierto</string>
+    <string name="public_settings_startup_fixed">Usar siempre un destino seleccionado</string>
+    <string name="public_move_up">Subir</string>
+    <string name="public_move_down">Bajar</string>
+    <string name="public_density_compact">Compacta</string>
+    <string name="public_density_standard">Estándar</string>
+    <string name="public_density_large">Grande</string>
+    <string name="public_diagnostic_score_mode">Modo de visualización de puntuaciones</string>
+    <string name="public_diagnostic_score_runtime">Ejecución de puntuaciones</string>
+    <string name="public_diagnostic_score_cache">Caché de puntuaciones</string>
+    <string name="public_diagnostic_graph_cache">Caché del grafo de franquicias</string>
+    <string name="public_diagnostic_refresh">Actualizar diagnóstico</string>
+    <string name="settings_anisync_plus_desc">AniList, MyAnimeList, calendario, apariencia y diagnóstico</string>
+    <string name="community_score_clear_cache_desc">Eliminar las puntuaciones de la comunidad almacenadas localmente; se volverán a obtener cuando sea necesario</string>
+</resources>

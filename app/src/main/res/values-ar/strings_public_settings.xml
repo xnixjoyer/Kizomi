@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="public_settings_experience">التجربة</string>
+    <string name="public_settings_appearance">المظهر والتنقل</string>
+    <string name="public_settings_appearance_desc">كثافة التخطيط ومظهر التقويم وعلامات التبويب والاختصارات ووجهة البدء</string>
+    <string name="public_settings_scores">تقييمات المجتمع</string>
+    <string name="public_settings_scores_desc">إعداد عرض تقييمات AniList وMyAnimeList للقراءة فقط</string>
+    <string name="public_settings_support">الدعم</string>
+    <string name="public_settings_diagnostics">التشخيص</string>
+    <string name="public_settings_diagnostics_desc">فحص إحصاءات المزوّد العام وذاكرة التخزين المؤقت والسلاسل</string>
+    <string name="public_settings_density">كثافة التخطيط</string>
+    <string name="public_settings_edge_to_edge">تخطيط تفاصيل موسّع</string>
+    <string name="public_settings_edge_to_edge_desc">السماح لشاشات التفاصيل المدعومة باستخدام العرض الكامل المتاح</string>
+    <string name="public_settings_compact_calendar">تقويم مدمج</string>
+    <string name="public_settings_compact_calendar_desc">استخدام رأس تقويم أصغر مع الإبقاء على هوامش النظام</string>
+    <string name="public_settings_navigation">التنقل الرئيسي</string>
+    <string name="public_settings_shortcuts">اختصارات المكتبة</string>
+    <string name="public_settings_startup">وجهة البدء</string>
+    <string name="public_settings_startup_last">آخر وجهة مفتوحة</string>
+    <string name="public_settings_startup_fixed">استخدام وجهة محددة دائمًا</string>
+    <string name="public_move_up">نقل لأعلى</string>
+    <string name="public_move_down">نقل لأسفل</string>
+    <string name="public_density_compact">مدمج</string>
+    <string name="public_density_standard">قياسي</string>
+    <string name="public_density_large">كبير</string>
+    <string name="public_diagnostic_score_mode">وضع عرض التقييم</string>
+    <string name="public_diagnostic_score_runtime">تشغيل التقييمات</string>
+    <string name="public_diagnostic_score_cache">ذاكرة تقييمات مؤقتة</string>
+    <string name="public_diagnostic_graph_cache">ذاكرة مخطط السلاسل المؤقتة</string>
+    <string name="public_diagnostic_refresh">تحديث التشخيص</string>
+    <string name="settings_anisync_plus_desc">AniList وMyAnimeList والتقويم والمظهر والتشخيص</string>
+    <string name="community_score_clear_cache_desc">إزالة تقييمات المجتمع المخزنة محليًا؛ ستُجلب من جديد عند الحاجة</string>
+</resources>

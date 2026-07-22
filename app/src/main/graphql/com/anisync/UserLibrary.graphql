@@ -1,0 +1,70 @@
+query GetUserLibrary($username: String!, $type: MediaType!) {
+  MediaListCollection(userName: $username, type: $type) {
+    user {
+      id
+      mediaListOptions {
+        scoreFormat
+        animeList { customLists }
+        mangaList { customLists }
+      }
+    }
+    lists {
+      name
+      isCustomList
+      entries {
+        id
+        media {
+          id
+          idMal
+          title {
+            userPreferred
+            romaji
+            english
+            native
+          }
+          coverImage {
+            medium
+            large
+            extraLarge
+          }
+          episodes
+          chapters
+          volumes
+          type
+          format
+          status
+          averageScore
+          nextAiringEpisode {
+            episode
+            timeUntilAiring
+            airingAt
+          }
+          startDate {
+            year
+            month
+            day
+          }
+        }
+        status
+        progress
+        score
+        repeat
+        notes
+        startedAt {
+          year
+          month
+          day
+        }
+        completedAt {
+          year
+          month
+          day
+        }
+        private
+        hiddenFromStatusLists
+        updatedAt
+        createdAt
+      }
+    }
+  }
+}
