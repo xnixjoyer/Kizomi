@@ -116,6 +116,12 @@ data class TrackingDesiredState(
         }
     }
 
+    override fun toString(): String =
+        "TrackingDesiredState(status=${status?.name ?: \"none\"}, progress=$progress, " +
+            "progressSecondary=${progressSecondary ?: \"none\"}, score100=${score100 ?: \"none\"}, " +
+            "repeatCount=$repeatCount, notes=<redacted>, startedAt=${startedAt ?: \"none\"}, " +
+            "completedAt=${completedAt ?: \"none\"})"
+
     companion object {
         private val ISO_DATE = Regex("\\d{4}-\\d{2}-\\d{2}")
     }

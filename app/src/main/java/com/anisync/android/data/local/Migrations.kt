@@ -616,9 +616,36 @@ object Migrations {
         }
     }
 
+    val MIGRATION_26_27 = object : Migration(26, 27) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `mal_import_entries` (
+                    `localAccountId` TEXT NOT NULL,
+                    `mediaType` TEXT NOT NULL,
+                    `generation` INTEGER NOT NULL,
+                    `malId` INTEGER NOT NULL,
+                    `localMediaId` TEXT NOT NULL,
+                    `payloadJson` TEXT NOT NULL,
+                    PRIMARY KEY(`localAccountId`, `mediaType`, `generation`, `malId`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_mal_import_entries_localAccountId_mediaType_generation` " +
+                    "ON `mal_import_entries` (`localAccountId`, `mediaType`, `generation`)"
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_mal_import_entries_localMediaId` " +
+                    "ON `mal_import_entries` (`localMediaId`)"
+            )
+        }
+    }
+
     val ALL_MIGRATIONS: Array<Migration> = arrayOf(
         MIGRATION_23_24,
         MIGRATION_24_25,
         MIGRATION_25_26,
+        MIGRATION_26_27,
     )
 }

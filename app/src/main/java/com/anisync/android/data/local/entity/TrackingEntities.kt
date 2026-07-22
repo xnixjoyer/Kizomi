@@ -172,6 +172,31 @@ data class MalImportStateEntity(
     val lastErrorKind: String?,
 )
 
+/**
+ * Account-scoped import staging. Provider snapshots remain the last fully successful generation
+ * until every page has been fetched and this staging generation is promoted atomically.
+ */
+@Entity(
+    tableName = "mal_import_entries",
+    primaryKeys = ["localAccountId", "mediaType", "generation", "malId"],
+    indices = [
+        Index(value = ["localAccountId", "mediaType", "generation"]),
+        Index(value = ["localMediaId"]),
+    ],
+)
+data class MalImportEntryEntity(
+    val localAccountId: String,
+    val mediaType: String,
+    val generation: Long,
+    val malId: Long,
+    val localMediaId: String,
+    val payloadJson: String,
+) {
+    override fun toString(): String =
+        "MalImportEntryEntity(localAccountId=<redacted>, mediaType=$mediaType, " +
+            "generation=$generation, malId=$malId, localMediaId=<redacted>, payloadJson=<redacted>)"
+}
+
 /** Immutable reconciliation preview baseline; execution can resume after process death. */
 @Entity(
     tableName = "tracking_reconciliation_plans",

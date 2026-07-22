@@ -1,6 +1,6 @@
 # MAL production completion — execution state
 
-Last updated: 2026-07-22T16:36:00Z
+Last updated: 2026-07-22T17:00:00Z
 
 This is the resumable, public-only checkpoint for the active MAL completion branch. It must be
 updated after every material CI or implementation checkpoint. It intentionally contains no private
@@ -19,7 +19,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 
 - Branch: `test/mal-production-completion`
 - Draft PR: `#2`
-- Current published head: `ca4169ef8c77e7885ddcc14ba0da445ac71d9f01`
+- Current published head: `b157b997ceae16d7c569a84360b8a9130a85f92f`
 - First CI: run `29937918613`, job `88984135887`, failed in one new unit assertion
 - Failure artifact: `8537181107`, digest
   `sha256:b5f19bcfc8e7db665bd9a567e77f7e8917742f1996085a39c371b51080f8b3c9`
@@ -27,14 +27,19 @@ repository, provider-extension, credential, token, authorization-code, or accoun
   new issue. The combined Gradle step failed because duplicate enqueue scheduled the already-durable
   pending operation a second time. The implementation now suppresses that redundant schedule.
 - Merge policy: leave the PR Draft and unmerged; this branch is a review/beta surface
+- Exact Phase-5 completion CI: run `29939518580`, job `88989543253`, successful
+- Diagnostic artifact: `8537811932` (exactly one universal APK)
+- Artifact SHA-256: `71ab27e929959ce55016590c4ad32a8b26ee7f01b28fd65b0e38557dee328a23`
+- APK SHA-256: `91da290c333347b4c0c73cc519472c4009ea8e5e5382201dd24ebd37d217505e`
+- APK size: `41736244` bytes
 
 ## Phase state
 
 | Phase | State | Evidence / next boundary |
 |---|---|---|
 | 1–4 | Baseline present and audited | OAuth config/session, encrypted vault, account metadata, Room 25 identity layer |
-| 5 | In progress | First build compiled/assembled; one test-backed scheduler correction awaiting CI |
-| 6 | Not started | MAL list paging/import/cache implementation follows green Phase-5 foundation |
+| 5 | Complete and exact-head green | Run `29939518580`; 340 unit tests, lint, Room schema and both APK assemblies passed |
+| 6 | Local implementation checkpoint | Official paging/read API, restart-safe staged import, last-good cache and worker are under test before publication |
 | 7 | Not started | MAL-native search/details/discovery |
 | 8 | Audit complete; rewiring pending | Direct list writes are concentrated in Library and Details repositories |
 | 9 | Domain resolver added; persistence/UI pending | Defaults remain AniList-only; routing is independent by media type |
@@ -59,13 +64,28 @@ repository, provider-extension, credential, token, authorization-code, or accoun
   supersession, active-write preservation, tombstones, dual partial success, cancellation leases,
   executor recreation, missing adapters and routing blockers.
 
+## Active local Phase-6 checkpoint
+
+- The published Phase-5 head is clean and independently reproducible from its recorded artifact.
+- Unpublished work adds official anime/manga list reads, strict paging-origin validation, typed
+  failures, MAL-native models, account-scoped stale-while-revalidate flows and a constrained import
+  worker.
+- Room version 27 adds `mal_import_entries`. Pages are staged there and promoted to provider
+  snapshots only after the complete list succeeds, so a later-page error cannot corrupt last-good
+  state. A `RUNNING` generation resumes after process recreation.
+- Tests cover paging, 1,000-row responses, duplicates, partial failure, account isolation, local
+  deletion, paging loops, cancellation, offline classification and persisted restart checkpoints.
+- This section describes a local checkpoint only. It must not be marked complete until the exact
+  published Phase-6 commit passes the full GitHub Actions gate and schema 27 is committed.
+
 ## Resume instructions
 
-1. Publish the scheduler correction, migrated AniList snapshot seed, restart test and current docs.
+1. Finish static review of the local Phase-6 files and publish them as one bounded checkpoint.
 2. Run the full PR gate on that exact head; do not weaken or delete tests.
-3. Capture and commit the exact generated `app/schemas/.../26.json` from CI output.
-4. Re-run the full PR gate until the exact head is green and record run/job/artifact/digests here.
-5. Continue Phase 6 only after the Phase-5 storage/executor checkpoint is green.
+3. If the only failure is the Room schema gate, capture and commit the exact generated
+   `app/schemas/.../27.json` from CI output, then re-run the full gate.
+4. Record the exact Phase-6 run/job/artifact/archive/APK hashes here only after the head is green.
+5. Continue with Phase 7 MAL-native search/details/discovery from that green foundation.
 6. Never add secrets, real account identifiers, private provider information, or diagnostic bodies.
 7. Never merge PR `#2` automatically.
 

@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.anisync.android.data.local.entity.MalImportStateEntity
+import com.anisync.android.data.local.entity.MalImportEntryEntity
 import com.anisync.android.data.local.entity.MalMediaCacheEntity
 import com.anisync.android.data.local.entity.ProviderTrackingSnapshotEntity
 import com.anisync.android.data.local.entity.TrackingOperationEntity
@@ -29,6 +30,18 @@ interface TrackingDao {
             "AND mediaType = :mediaType ORDER BY title COLLATE NOCASE, providerMediaId"
     )
     fun observeSnapshots(
+        provider: String,
+        providerAccountId: String,
+        mediaType: String,
+    ): Flow<List<ProviderTrackingSnapshotEntity>>
+
+    @Query(
+        "SELECT * FROM provider_tracking_snapshots " +
+            "WHERE provider = :provider AND providerAccountId = :providerAccountId " +
+            "AND mediaType = :mediaType AND isDeleted = 0 " +
+            "ORDER BY title COLLATE NOCASE, providerMediaId"
+    )
+    fun observeActiveSnapshots(
         provider: String,
         providerAccountId: String,
         mediaType: String,
@@ -74,6 +87,17 @@ interface TrackingDao {
             "WHERE provider = :provider AND providerAccountId = :providerAccountId"
     )
     suspend fun deleteSnapshotsForAccount(provider: String, providerAccountId: String): Int
+
+    @Query(
+        "SELECT COUNT(*) FROM provider_tracking_snapshots " +
+            "WHERE provider = :provider AND providerAccountId = :providerAccountId " +
+            "AND mediaType = :mediaType AND isDeleted = 0"
+    )
+    suspend fun countActiveSnapshots(
+        provider: String,
+        providerAccountId: String,
+        mediaType: String,
+    ): Int
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertOperation(operation: TrackingOperationEntity)
@@ -244,6 +268,38 @@ interface TrackingDao {
 
     @Query("DELETE FROM mal_import_states WHERE localAccountId = :localAccountId")
     suspend fun deleteImportStates(localAccountId: String): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertImportEntries(entries: List<MalImportEntryEntity>)
+
+    @Query(
+        "SELECT * FROM mal_import_entries WHERE localAccountId = :localAccountId " +
+            "AND mediaType = :mediaType AND generation = :generation ORDER BY malId"
+    )
+    suspend fun getImportEntries(
+        localAccountId: String,
+        mediaType: String,
+        generation: Long,
+    ): List<MalImportEntryEntity>
+
+    @Query(
+        "SELECT malId FROM mal_import_entries WHERE localAccountId = :localAccountId " +
+            "AND mediaType = :mediaType AND generation = :generation"
+    )
+    suspend fun getImportEntryIds(
+        localAccountId: String,
+        mediaType: String,
+        generation: Long,
+    ): List<Long>
+
+    @Query(
+        "DELETE FROM mal_import_entries WHERE localAccountId = :localAccountId " +
+            "AND mediaType = :mediaType"
+    )
+    suspend fun deleteImportEntries(localAccountId: String, mediaType: String): Int
+
+    @Query("DELETE FROM mal_import_entries WHERE localAccountId = :localAccountId")
+    suspend fun deleteImportEntriesForAccount(localAccountId: String): Int
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertReconciliationPlan(plan: TrackingReconciliationPlanEntity)

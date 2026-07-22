@@ -30,6 +30,7 @@ import com.anisync.android.data.local.entity.TrackingReconciliationPlanEntity
 import com.anisync.android.data.local.entity.TrendingEntity
 import com.anisync.android.data.local.entity.UserProfileEntity
 import com.anisync.android.data.local.entity.MalImportStateEntity
+import com.anisync.android.data.local.entity.MalImportEntryEntity
 import com.anisync.android.data.local.entity.MalMediaCacheEntity
 
 /**
@@ -37,6 +38,9 @@ import com.anisync.android.data.local.entity.MalMediaCacheEntity
  *
  * Version History:
  * ─────────────────────────────────────────────────────────────────────────────
+ * v27 (Jul 2026):
+ *   - Added account-scoped MAL import staging for atomic last-good promotion and restart resume.
+ *
  * v26 (Jul 2026):
  *   - Added account-scoped provider snapshots and a durable multi-provider command journal.
  *   - Added MAL-native metadata/import caches and resumable reconciliation plans.
@@ -121,10 +125,11 @@ import com.anisync.android.data.local.entity.MalMediaCacheEntity
         TrackingOperationTargetEntity::class,
         MalMediaCacheEntity::class,
         MalImportStateEntity::class,
+        MalImportEntryEntity::class,
         TrackingReconciliationPlanEntity::class,
         TrackingReconciliationItemEntity::class,
     ],
-    version = 26,
+    version = 27,
     exportSchema = true,
     autoMigrations = [
         androidx.room.AutoMigration(from = 2, to = 3),

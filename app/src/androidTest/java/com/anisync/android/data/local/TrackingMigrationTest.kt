@@ -131,6 +131,41 @@ class TrackingMigrationTest {
         database.close()
     }
 
+    @Test
+    fun migrate26To27_addsRestartSafeMalImportStagingWithoutDataLoss() {
+        helper.createDatabase(TEST_DB, 26).apply {
+            execSQL(
+                """
+                INSERT INTO mal_import_states (
+                    localAccountId, mediaType, state, generation, nextPageUrl,
+                    importedCount, lastAttemptAtEpochMillis, lastSuccessAtEpochMillis,
+                    lastErrorKind
+                ) VALUES ('account', 'ANIME', 'SUCCEEDED', 4, NULL, 12, 100, 110, NULL)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        val database = helper.runMigrationsAndValidate(
+            TEST_DB,
+            27,
+            true,
+            Migrations.MIGRATION_26_27,
+        )
+
+        assertTrue(database.hasTable("mal_import_entries"))
+        assertEquals(12, database.intValue("SELECT importedCount FROM mal_import_states"))
+        database.execSQL(
+            """
+            INSERT INTO mal_import_entries (
+                localAccountId, mediaType, generation, malId, localMediaId, payloadJson
+            ) VALUES ('account', 'ANIME', 5, 42, 'local-id', '{}')
+            """.trimIndent()
+        )
+        assertEquals(1, database.intValue("SELECT COUNT(*) FROM mal_import_entries"))
+        database.close()
+    }
+
     companion object {
         private const val TEST_DB = "phase5-tracking-migration-test"
         private val EXPECTED_TABLES = setOf(
