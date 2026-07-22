@@ -114,7 +114,7 @@ class AuthenticatedMalClientTest {
     @Test
     fun `unknown host is classified as offline without leaking transport details`() = runTest {
         val offlineHttpClient = OkHttpClient.Builder()
-            .dns { throw UnknownHostException("private-dns-sentinel") }
+            .dns { _ -> throw UnknownHostException("private-dns-sentinel") }
             .build()
         val fixture = fixture(this, httpClient = offlineHttpClient)
 
