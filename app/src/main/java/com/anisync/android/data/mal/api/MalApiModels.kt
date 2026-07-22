@@ -2,6 +2,7 @@ package com.anisync.android.data.mal.api
 
 import com.anisync.android.domain.tracking.TrackingDesiredState
 import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.domain.tracking.TrackingProvider
 import kotlinx.serialization.Serializable
 
 enum class MalApiFailureKind {
@@ -107,4 +108,79 @@ data class MalLibraryItem(
         "MalLibraryItem(localMediaId=<redacted>, malId=$malId, mediaType=${mediaType.name}, " +
             "title=<redacted>, coverUrl=<redacted>, state=<redacted>, " +
             "fetchedAtEpochMillis=$fetchedAtEpochMillis)"
+}
+
+/** Provider-aware navigation identity. It never aliases a MAL-only row to an AniList integer. */
+@Serializable
+data class MalMediaKey(
+    val mediaType: TrackingMediaType,
+    val malId: Long,
+) {
+    init {
+        require(malId > 0L)
+    }
+
+    val stableValue: String
+        get() = "${TrackingProvider.MYANIMELIST.name}:${mediaType.name}:$malId"
+}
+
+@Serializable
+data class MalRelatedMedia(
+    val key: MalMediaKey,
+    val title: String,
+    val pictureUrl: String?,
+    val relationship: String?,
+) {
+    override fun toString(): String =
+        "MalRelatedMedia(key=${key.stableValue}, title=<redacted>, pictureUrl=<redacted>, " +
+            "relationship=${relationship ?: "none"})"
+}
+
+/** MAL-native search, details, ranking, and seasonal representation. */
+@Serializable
+data class MalCatalogMedia(
+    val key: MalMediaKey,
+    val title: String,
+    val alternativeTitles: List<String> = emptyList(),
+    val synopsis: String? = null,
+    val pictureMedium: String? = null,
+    val pictureLarge: String? = null,
+    val pictureGallery: List<String> = emptyList(),
+    val meanScore: Double? = null,
+    val rank: Int? = null,
+    val popularity: Int? = null,
+    val mediaStatus: String? = null,
+    val mediaFormat: String? = null,
+    val startDate: String? = null,
+    val endDate: String? = null,
+    val episodeCount: Int? = null,
+    val chapterCount: Int? = null,
+    val volumeCount: Int? = null,
+    val genres: List<String> = emptyList(),
+    val background: String? = null,
+    val listState: TrackingDesiredState? = null,
+    val related: List<MalRelatedMedia> = emptyList(),
+    val recommendations: List<MalRelatedMedia> = emptyList(),
+    val rankingPosition: Int? = null,
+    val isDetailed: Boolean = false,
+    val fetchedAtEpochMillis: Long,
+    val rawJson: String,
+) {
+    override fun toString(): String =
+        "MalCatalogMedia(key=${key.stableValue}, title=<redacted>, synopsis=<redacted>, " +
+            "images=<redacted>, background=<redacted>, listState=<redacted>, related=${related.size}, " +
+            "recommendations=${recommendations.size}, rankingPosition=${rankingPosition ?: "none"}, " +
+            "isDetailed=$isDetailed, fetchedAtEpochMillis=$fetchedAtEpochMillis, rawJson=<redacted>)"
+}
+
+data class MalCatalogPage(
+    val entries: List<MalCatalogMedia>,
+    val nextPageUrl: String?,
+)
+
+enum class MalSeason(val wireValue: String) {
+    WINTER("winter"),
+    SPRING("spring"),
+    SUMMER("summer"),
+    FALL("fall"),
 }

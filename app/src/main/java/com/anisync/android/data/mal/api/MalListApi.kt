@@ -111,7 +111,7 @@ class MalListApi internal constructor(
         request: Request,
     ): MalApiResult<MalListPage> = try {
         when (val result = executeAuthenticated(localAccountId) { request }) {
-            is MalAuthenticatedResult.Failure -> MalApiResult.Failure(result.toApiFailure())
+            is MalAuthenticatedResult.Failure -> MalApiResult.Failure(result.toMalApiFailure())
             is MalAuthenticatedResult.Success -> parseResponse(
                 mediaType = mediaType,
                 statusCode = result.response.statusCode,
@@ -330,7 +330,7 @@ class MalListApi internal constructor(
     }
 }
 
-private fun MalAuthenticatedResult.Failure.toApiFailure(): MalApiFailure = MalApiFailure(
+internal fun MalAuthenticatedResult.Failure.toMalApiFailure(): MalApiFailure = MalApiFailure(
     kind = refreshFailure?.toApiFailureKind() ?: when (reason) {
         MalAuthenticatedFailureReason.ACCOUNT_NOT_FOUND -> MalApiFailureKind.ACCOUNT_NOT_FOUND
         MalAuthenticatedFailureReason.TOKEN_UNAVAILABLE -> MalApiFailureKind.NOT_AUTHENTICATED
@@ -342,6 +342,21 @@ private fun MalAuthenticatedResult.Failure.toApiFailure(): MalApiFailure = MalAp
         MalAuthenticatedFailureReason.CANCELLED -> MalApiFailureKind.CANCELLED
     },
 )
+
+internal fun com.anisync.android.data.mal.oauth.MalAuthenticatedResponse.toHttpFailureOrNull(): MalApiFailure? {
+    if (statusCode in 200..299) return null
+    return MalApiFailure(
+        kind = when {
+            statusCode == 401 -> MalApiFailureKind.RELOGIN_REQUIRED
+            statusCode == 429 -> MalApiFailureKind.RATE_LIMITED
+            statusCode in 500..599 -> MalApiFailureKind.TRANSIENT_SERVER
+            else -> MalApiFailureKind.PERMANENT
+        },
+        httpStatus = statusCode,
+        retryAfterMillis = headers["Retry-After"]?.trim()?.toLongOrNull()
+            ?.coerceAtLeast(0L)?.times(1_000L),
+    )
+}
 
 private fun MalRefreshFailureReason.toApiFailureKind(): MalApiFailureKind = when (this) {
     MalRefreshFailureReason.ACCOUNT_NOT_FOUND -> MalApiFailureKind.ACCOUNT_NOT_FOUND

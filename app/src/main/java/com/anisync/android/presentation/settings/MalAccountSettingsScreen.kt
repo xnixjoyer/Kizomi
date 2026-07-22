@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material3.Button
@@ -30,6 +31,7 @@ import com.anisync.android.util.AppLinksUtil
 @Composable
 fun MalAccountSettingsScreen(
     onBackClick: () -> Unit,
+    onBrowseMal: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MalAccountSettingsViewModel = hiltViewModel(),
 ) {
@@ -83,6 +85,16 @@ fun MalAccountSettingsScreen(
                     )
                 }
                 MalAccountConnectionState.CONNECTED -> {
+                    Button(
+                        onClick = onBrowseMal,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Outlined.Explore, contentDescription = null)
+                        Text(
+                            text = stringResource(R.string.mal_browse_catalog),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                     OutlinedButton(
                         onClick = viewModel::logout,
                         modifier = Modifier.fillMaxWidth(),

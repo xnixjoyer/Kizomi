@@ -254,6 +254,9 @@ interface TrackingDao {
     @Query("SELECT * FROM mal_media_cache WHERE malId = :malId AND mediaType = :mediaType LIMIT 1")
     fun observeMalMedia(malId: Long, mediaType: String): Flow<MalMediaCacheEntity?>
 
+    @Query("SELECT * FROM mal_media_cache WHERE malId = :malId AND mediaType = :mediaType LIMIT 1")
+    suspend fun getMalMedia(malId: Long, mediaType: String): MalMediaCacheEntity?
+
     @Query(
         "SELECT * FROM mal_media_cache WHERE mediaType = :mediaType " +
             "AND title LIKE '%' || :query || '%' ORDER BY meanScore DESC, title COLLATE NOCASE LIMIT :limit"

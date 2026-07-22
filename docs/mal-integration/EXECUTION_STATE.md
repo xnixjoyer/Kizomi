@@ -1,6 +1,6 @@
 # MAL production completion — execution state
 
-Last updated: 2026-07-22T17:00:00Z
+Last updated: 2026-07-22T17:59:52Z
 
 This is the resumable, public-only checkpoint for the active MAL completion branch. It must be
 updated after every material CI or implementation checkpoint. It intentionally contains no private
@@ -19,7 +19,7 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 
 - Branch: `test/mal-production-completion`
 - Draft PR: `#2`
-- Current published head: `b157b997ceae16d7c569a84360b8a9130a85f92f`
+- Current published head: `83b07924332df86211a353d01a9d81bc59f98114`
 - First CI: run `29937918613`, job `88984135887`, failed in one new unit assertion
 - Failure artifact: `8537181107`, digest
   `sha256:b5f19bcfc8e7db665bd9a567e77f7e8917742f1996085a39c371b51080f8b3c9`
@@ -39,8 +39,8 @@ repository, provider-extension, credential, token, authorization-code, or accoun
 |---|---|---|
 | 1–4 | Baseline present and audited | OAuth config/session, encrypted vault, account metadata, Room 25 identity layer |
 | 5 | Complete and exact-head green | Run `29939518580`; 340 unit tests, lint, Room schema and both APK assemblies passed |
-| 6 | Local implementation checkpoint | Official paging/read API, restart-safe staged import, last-good cache and worker are under test before publication |
-| 7 | Not started | MAL-native search/details/discovery |
+| 6 | Complete and exact-head green | Run `29944016411`; 357 unit tests, lint, Room schema and both APK assemblies passed |
+| 7 | Local implementation checkpoint | MAL-native search/details/ranking/seasonal, cache reopen and provider-native navigation are statically reviewed before publication |
 | 8 | Audit complete; rewiring pending | Direct list writes are concentrated in Library and Details repositories |
 | 9 | Domain resolver added; persistence/UI pending | Defaults remain AniList-only; routing is independent by media type |
 | 10 | Not started | MAL add/update/delete adapter and read-back |
@@ -64,10 +64,10 @@ repository, provider-extension, credential, token, authorization-code, or accoun
   supersession, active-write preservation, tombstones, dual partial success, cancellation leases,
   executor recreation, missing adapters and routing blockers.
 
-## Active local Phase-6 checkpoint
+## Active published Phase-6 checkpoint
 
-- The published Phase-5 head is clean and independently reproducible from its recorded artifact.
-- Unpublished work adds official anime/manga list reads, strict paging-origin validation, typed
+- The Phase-5 head remains independently reproducible from its recorded artifact.
+- Published work adds official anime/manga list reads, strict paging-origin validation, typed
   failures, MAL-native models, account-scoped stale-while-revalidate flows and a constrained import
   worker.
 - Room version 27 adds `mal_import_entries`. Pages are staged there and promoted to provider
@@ -75,19 +75,51 @@ repository, provider-extension, credential, token, authorization-code, or accoun
   state. A `RUNNING` generation resumes after process recreation.
 - Tests cover paging, 1,000-row responses, duplicates, partial failure, account isolation, local
   deletion, paging loops, cancellation, offline classification and persisted restart checkpoints.
-- This section describes a local checkpoint only. It must not be marked complete until the exact
-  published Phase-6 commit passes the full GitHub Actions gate and schema 27 is committed.
+- Run `29940525472` exposed an escaped-template compiler error; run `29940801286` then reached the
+  unit-test compiler and exposed an invalid zero-argument DNS fake. Both defects were corrected in
+  bounded commits without weakening tests.
+- Run `29941527358`, job `88996333092`, reached the unit-test compiler but confirmed OkHttp's `Dns`
+  type cannot use the Kotlin-lambda fake in this dependency version. The exact explicit `Dns`
+  implementation is published in `c9e3f99cc985f7f5cf58a02359e299f4057e63ea`.
+- Run `29942255850`, job `88998792001`, compiled all production/test/Hilt sources and built the
+  AndroidTest APK. Exactly one of 357 tests failed because its paging-loop fixture asserted one
+  preserved row without first creating a last-good generation. The strengthened fixture now seeds
+  and explicitly verifies that previous row before inducing the loop.
+- Run-11 failure report artifact: `8538930233`, digest
+  `sha256:9abdbb7ed34674ad16addbfa49015efbec2fc88cfca1613313d288ec6614f872`.
+- Run `29943096330`, job `89001640743`, passed all 357 unit tests, Android lint, the public-provider
+  boundary and both APK assemblies. Its only failure was the expected schema-cleanliness check,
+  which exposed the exact generated Room 27 export.
+- Schema blob `2f57a6044c0200fc9369599311350ef7360a2c81` was reproduced byte-for-byte from that CI diff
+  and published in commit `83b07924332df86211a353d01a9d81bc59f98114` without altering production
+  code or tests.
+- Run `29944016411`, job `89004727597`, succeeded on exact head
+  `83b07924332df86211a353d01a9d81bc59f98114`: all 357 unit tests, Android lint, the
+  public-provider boundary, committed Room schema 27, Stable Debug and AndroidTest assembly passed.
+- Diagnostic artifact `8539622815` contains exactly one APK. Artifact/archive SHA-256:
+  `1b1ec45cd64eec58610399f4c7cb6573f7316187fc07ba24d2e0928e97651a54`.
+- APK `Kizomi-d3473691-run13-diagnostic.apk` is `41818164` bytes; SHA-256:
+  `e9c504142bc9f928184aa4af7202c40db973cdc3c8f63ede8b636b1e6c925a16`.
+
+## Active local Phase-7 checkpoint
+
+- Unpublished work implements official MAL anime/manga search, native details, ranking, seasonal
+  discovery and hostile next-page rejection with MAL-native stable keys.
+- Normalized details and search results reuse the existing MAL cache for offline search and an exact
+  cached details reopen; no AniList identifier or fallback is synthesized.
+- A dedicated adaptive catalog/details UI exposes loading, empty, typed error and cached-offline
+  states, preserves query/media type, supports large font/narrow layouts and labels AniList-only
+  social features unavailable.
+- Tests cover MAL-only search/list status, sparse details, related media, ranking, seasonal data,
+  hostile paging, search-to-details-to-cached-reopen, offline cache and explicit AniList-fallback
+  rejection. This checkpoint must not be published until Phase 6 is exact-head green.
 
 ## Resume instructions
 
-1. Finish static review of the local Phase-6 files and publish them as one bounded checkpoint.
-2. Run the full PR gate on that exact head; do not weaken or delete tests.
-3. If the only failure is the Room schema gate, capture and commit the exact generated
-   `app/schemas/.../27.json` from CI output, then re-run the full gate.
-4. Record the exact Phase-6 run/job/artifact/archive/APK hashes here only after the head is green.
-5. Continue with Phase 7 MAL-native search/details/discovery from that green foundation.
-6. Never add secrets, real account identifiers, private provider information, or diagnostic bodies.
-7. Never merge PR `#2` automatically.
+1. Finish the local Phase-7 static review, publish it as one bounded checkpoint and run the full gate.
+2. Record exact Phase-7 evidence only after the published head is green; do not weaken tests.
+3. Never add secrets, real account identifiers, private provider information, or diagnostic bodies.
+4. Never merge PR `#2` automatically.
 
 ## Environment note
 

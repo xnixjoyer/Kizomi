@@ -54,6 +54,8 @@ import com.anisync.android.presentation.forum.ThreadDetailScreen
 import com.anisync.android.presentation.library.LibraryListDetail
 import com.anisync.android.presentation.library.LibraryScreen
 import com.anisync.android.presentation.login.LoginScreen
+import com.anisync.android.presentation.mal.MalCatalogScreen
+import com.anisync.android.presentation.mal.MalDetailsScreen
 import com.anisync.android.presentation.notifications.NotificationsListDetail
 import com.anisync.android.presentation.profile.ProfileScreen
 import com.anisync.android.presentation.review.RecentReviewsScreen
@@ -272,6 +274,38 @@ fun AniSyncNavHost(
                 popExitTransition = { sharedAxisXExit(forward = false) }
             ) {
                 LoginScreen()
+            }
+
+            composable<MalCatalog>(
+                enterTransition = { sharedAxisZEnter() },
+                exitTransition = { sharedAxisZExit() },
+                popEnterTransition = { sharedAxisZPopEnter() },
+                popExitTransition = { sharedAxisZPopExit() },
+            ) {
+                MalCatalogScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onMediaClick = { key ->
+                        navController.navigate(
+                            MalNativeDetails(key.mediaType.name, key.malId)
+                        )
+                    },
+                )
+            }
+
+            composable<MalNativeDetails>(
+                enterTransition = { sharedAxisZEnter() },
+                exitTransition = { sharedAxisZExit() },
+                popEnterTransition = { sharedAxisZPopEnter() },
+                popExitTransition = { sharedAxisZPopExit() },
+            ) {
+                MalDetailsScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onRelatedClick = { key ->
+                        navController.navigate(
+                            MalNativeDetails(key.mediaType.name, key.malId)
+                        )
+                    },
+                )
             }
 
             // =================================================================
@@ -1299,7 +1333,8 @@ fun AniSyncNavHost(
                 popExitTransition = { sharedAxisZPopExit() }
             ) {
                 MalAccountSettingsScreen(
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    onBrowseMal = { navController.navigate(MalCatalog) },
                 )
             }
 
