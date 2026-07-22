@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -67,7 +66,7 @@ fun TrackingCenterScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            state.conflicts.forEach(::ConflictCard)
+            state.conflicts.forEach { conflict -> ConflictCard(conflict) }
         }
     }
 }
