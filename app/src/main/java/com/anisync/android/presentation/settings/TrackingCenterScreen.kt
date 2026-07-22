@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -21,6 +24,7 @@ import com.anisync.android.R
 import com.anisync.android.data.tracking.TrackingProviderConflict
 import com.anisync.android.data.tracking.TrackingSagaOperation
 import com.anisync.android.data.tracking.TrackingSagaTarget
+import com.anisync.android.domain.tracking.TrackingProvider
 
 @Composable
 fun TrackingCenterScreen(
@@ -29,6 +33,26 @@ fun TrackingCenterScreen(
     viewModel: TrackingCenterViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    state.resolutionFailure?.let { failure ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissResolutionFailure,
+            title = { Text(stringResource(R.string.tracking_center_resolution_failed)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.tracking_center_resolution_failed_detail,
+                        failure.name,
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissResolutionFailure) {
+                    Text(stringResource(R.string.tracking_center_resolution_dismiss))
+                }
+            },
+        )
+    }
+
     SettingsScreenScaffold(
         title = stringResource(R.string.tracking_center_title),
         onBackClick = onBackClick,
@@ -66,7 +90,9 @@ fun TrackingCenterScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            state.conflicts.forEach { conflict -> ConflictCard(conflict) }
+            state.conflicts.forEach { conflict ->
+                ConflictCard(conflict, viewModel::resolveConflict)
+            }
         }
     }
 }
@@ -74,7 +100,7 @@ fun TrackingCenterScreen(
 @Composable
 private fun OperationCard(
     operation: TrackingSagaOperation,
-    retry: (String, com.anisync.android.domain.tracking.TrackingProvider) -> Unit,
+    retry: (String, TrackingProvider) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -144,7 +170,10 @@ private fun TargetRow(
 }
 
 @Composable
-private fun ConflictCard(conflict: TrackingProviderConflict) {
+private fun ConflictCard(
+    conflict: TrackingProviderConflict,
+    resolve: (TrackingProviderConflict, TrackingProvider) -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -152,7 +181,7 @@ private fun ConflictCard(conflict: TrackingProviderConflict) {
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(conflict.title, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -167,6 +196,59 @@ private fun ConflictCard(conflict: TrackingProviderConflict) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
             )
+            ResolutionAction(
+                source = TrackingProvider.ANILIST,
+                conflict = conflict,
+                onClick = { resolve(conflict, TrackingProvider.ANILIST) },
+            )
+            ResolutionAction(
+                source = TrackingProvider.MYANIMELIST,
+                conflict = conflict,
+                onClick = { resolve(conflict, TrackingProvider.MYANIMELIST) },
+            )
         }
+    }
+}
+
+@Composable
+private fun ResolutionAction(
+    source: TrackingProvider,
+    conflict: TrackingProviderConflict,
+    onClick: () -> Unit,
+) {
+    val blockedFields = conflict.blockedFieldsWhenUsing(source)
+    val blocker = conflict.resolutionBlockerWhenUsing(source)
+    OutlinedButton(
+        onClick = onClick,
+        enabled = blocker == null,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            stringResource(
+                if (source == TrackingProvider.ANILIST) {
+                    R.string.tracking_center_use_anilist
+                } else {
+                    R.string.tracking_center_use_mal
+                }
+            )
+        )
+    }
+    when {
+        blockedFields.isNotEmpty() -> Text(
+            stringResource(
+                R.string.tracking_center_resolution_blocked_fields,
+                blockedFields.joinToString(", ") { it.name },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        blocker != null -> Text(
+            stringResource(
+                R.string.tracking_center_resolution_blocked_reason,
+                blocker.name,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
     }
 }

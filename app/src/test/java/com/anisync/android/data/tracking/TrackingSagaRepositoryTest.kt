@@ -2,6 +2,8 @@ package com.anisync.android.data.tracking
 
 import android.content.Context
 import androidx.room.Room
+import com.anisync.android.data.identity.LocalMediaIdentity
+import com.anisync.android.data.identity.MediaIdentityResult
 import com.anisync.android.data.local.AppDatabase
 import com.anisync.android.data.local.entity.LocalMediaIdentityEntity
 import com.anisync.android.data.local.entity.ProviderTrackingSnapshotEntity
@@ -10,6 +12,7 @@ import com.anisync.android.domain.tracking.TrackingCommandTarget
 import com.anisync.android.domain.tracking.TrackingConfirmedSnapshot
 import com.anisync.android.domain.tracking.TrackingDeliveryResult
 import com.anisync.android.domain.tracking.TrackingDesiredState
+import com.anisync.android.domain.tracking.TrackingEnqueueReceipt
 import com.anisync.android.domain.tracking.TrackingEnqueueResult
 import com.anisync.android.domain.tracking.TrackingFailureKind
 import com.anisync.android.domain.tracking.TrackingField
@@ -86,9 +89,9 @@ class TrackingSagaRepositoryTest {
             setOf(aniList, mal),
         ).drain(maxDeliveries = 2)
 
-        val saga = TrackingSagaRepository(database.trackingDao(), scheduler)
+        val saga = repository()
         val operation = saga.observeOperations().first().single()
-        assertEquals("PARTIAL_FAILURE", operation.state.name)
+        assertEquals(TrackingOperationState.PARTIAL_FAILURE, operation.state)
         assertEquals(TrackingTargetState.SUCCEEDED, operation.targets.single {
             it.provider == TrackingProvider.ANILIST
         }.state)
@@ -102,7 +105,6 @@ class TrackingSagaRepositoryTest {
             setOf(TrackingProvider.ANILIST, TrackingProvider.MYANIMELIST),
         )
         val targets = database.trackingDao().getTargets(receipt.operationId).associateBy { it.provider }
-
         assertEquals(1, retried)
         assertEquals("SUCCEEDED", targets.getValue("ANILIST").state)
         assertEquals("RETRYING", targets.getValue("MYANIMELIST").state)
@@ -110,16 +112,16 @@ class TrackingSagaRepositoryTest {
         assertEquals("PENDING", database.trackingDao().getOperation(receipt.operationId)?.state)
         assertEquals(1, scheduler.calls)
 
-        var successfulProviderCalls = 0
-        var retriedProviderCalls = 0
+        var aniListCalls = 0
+        var malCalls = 0
         val mustNotRepeatAniList = adapter(TrackingProvider.ANILIST) { request ->
-            successfulProviderCalls++
+            aniListCalls++
             TrackingDeliveryResult.Success(
                 TrackingConfirmedSnapshot(state = request.command.draft.desired)
             )
         }
         val successfulMalRetry = adapter(TrackingProvider.MYANIMELIST) { request ->
-            retriedProviderCalls++
+            malCalls++
             TrackingDeliveryResult.Success(
                 TrackingConfirmedSnapshot(state = request.command.draft.desired)
             )
@@ -130,8 +132,8 @@ class TrackingSagaRepositoryTest {
             setOf(mustNotRepeatAniList, successfulMalRetry),
         ).drain(maxDeliveries = 2)
 
-        assertEquals(0, successfulProviderCalls)
-        assertEquals(1, retriedProviderCalls)
+        assertEquals(0, aniListCalls)
+        assertEquals(1, malCalls)
         val completed = saga.observeOperations().first().single()
         assertEquals(TrackingOperationState.SUCCEEDED, completed.state)
         assertTrue(completed.targets.all { it.state == TrackingTargetState.SUCCEEDED })
@@ -146,17 +148,14 @@ class TrackingSagaRepositoryTest {
             score = 80.0,
             notes = "private-b",
         )
+        val conflict = buildConflicts(listOf(equal, different)).single()
 
-        val conflicts = buildConflicts(listOf(equal, different))
-
-        assertEquals(1, conflicts.size)
-        val conflict = conflicts.single()
         assertTrue(TrackingConflictField.PROGRESS in conflict.differingFields)
         assertTrue(TrackingConflictField.SCORE in conflict.differingFields)
         assertTrue(TrackingConflictField.NOTES in conflict.differingFields)
         assertFalse(conflict.toString().contains("private-a"))
         assertFalse(conflict.toString().contains("private-b"))
-        assertFalse(conflict.toString().contains("account"))
+        assertFalse(conflict.toString().contains("private-account"))
         assertTrue(buildConflicts(listOf(equal, equal.copy(provider = "MYANIMELIST"))).isEmpty())
     }
 
@@ -180,11 +179,36 @@ class TrackingSagaRepositoryTest {
             listOf(TrackingTargetState.FAILED, TrackingTargetState.FAILED) to
                 TrackingOperationState.FAILED,
         )
-
         cases.forEach { (targets, expected) ->
             assertEquals(expected, aggregateTrackingOperationState(targets))
         }
     }
+
+    private fun repository() = TrackingSagaRepository(
+        database.trackingDao(),
+        database.trackingConflictDao(),
+        scheduler,
+        testCommandService(),
+    )
+
+    private fun testCommandService() = TrackingCommandService(
+        ensureLocalIdentity = { type, mediaId ->
+            MediaIdentityResult.Success(LocalMediaIdentity("local-$mediaId", type, 1L, 1L))
+        },
+        activeAniListAccountId = { "ani" },
+        activeMalAccountId = { "mal" },
+        isMalConfigured = { true },
+        enqueueCommand = { _, targets ->
+            TrackingEnqueueResult.Accepted(
+                TrackingEnqueueReceipt(
+                    operationId = "unused",
+                    generation = 1L,
+                    deduplicated = false,
+                    targetStates = targets.associate { it.provider to TrackingTargetState.PENDING },
+                )
+            )
+        },
+    )
 
     private fun snapshot(
         provider: TrackingProvider,

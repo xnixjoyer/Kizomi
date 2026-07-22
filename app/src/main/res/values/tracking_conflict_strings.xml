@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="tracking_center_use_anilist" tools:ignore="MissingTranslation">Use AniList state for this pair</string>
+    <string name="tracking_center_use_mal" tools:ignore="MissingTranslation">Use MyAnimeList state for this pair</string>
+    <string name="tracking_center_resolution_blocked_fields" tools:ignore="MissingTranslation">This direction is blocked because the target provider cannot safely write: %1$s.</string>
+    <string name="tracking_center_resolution_blocked_reason" tools:ignore="MissingTranslation">This direction is blocked (%1$s). No provider will be changed.</string>
+    <string name="tracking_center_resolution_failed" tools:ignore="MissingTranslation">Conflict was not changed</string>
+    <string name="tracking_center_resolution_failed_detail" tools:ignore="MissingTranslation">The exact target was rejected (%1$s). No provider was overwritten.</string>
+    <string name="tracking_center_resolution_dismiss" tools:ignore="MissingTranslation">OK</string>
+</resources>

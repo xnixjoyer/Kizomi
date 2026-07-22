@@ -7,6 +7,8 @@ import com.anisync.android.data.identity.MediaIdentityStore
 import com.anisync.android.data.tracking.TrackingProviderConflict
 import com.anisync.android.data.tracking.TrackingSagaOperation
 import com.anisync.android.data.tracking.TrackingSagaRepository
+import com.anisync.android.domain.tracking.TrackingEnqueueResult
+import com.anisync.android.domain.tracking.TrackingFailureKind
 import com.anisync.android.domain.tracking.TrackingProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +25,7 @@ data class TrackingCenterUiState(
     val unresolvedIdentityCount: Int = 0,
     val conflictingIdentityCount: Int = 0,
     val loadingIdentityIssues: Boolean = true,
+    val resolutionFailure: TrackingFailureKind? = null,
 )
 
 @HiltViewModel
@@ -48,6 +51,21 @@ class TrackingCenterViewModel @Inject constructor(
         viewModelScope.launch {
             saga.retryFailed(operationId, setOf(provider))
         }
+    }
+
+    fun resolveConflict(conflict: TrackingProviderConflict, source: TrackingProvider) {
+        viewModelScope.launch {
+            val result = saga.resolveConflict(conflict, source)
+            _uiState.update { state ->
+                state.copy(
+                    resolutionFailure = (result as? TrackingEnqueueResult.Rejected)?.reason,
+                )
+            }
+        }
+    }
+
+    fun dismissResolutionFailure() {
+        _uiState.update { it.copy(resolutionFailure = null) }
     }
 
     fun refreshIdentityIssues() {
