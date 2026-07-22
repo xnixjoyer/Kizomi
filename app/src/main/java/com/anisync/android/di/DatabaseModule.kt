@@ -10,6 +10,7 @@ import com.anisync.android.data.local.dao.LibraryDao
 import com.anisync.android.data.local.dao.MalAccountDao
 import com.anisync.android.data.local.dao.MediaDetailsDao
 import com.anisync.android.data.local.dao.SavedForumThreadDao
+import com.anisync.android.data.local.dao.TrackingDao
 import com.anisync.android.data.local.dao.UserProfileDao
 import dagger.Module
 import dagger.Provides
@@ -79,4 +80,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMalAccountDao(database: AppDatabase): MalAccountDao = database.malAccountDao()
+
+    @Provides
+    fun provideTrackingDao(database: AppDatabase): TrackingDao = database.trackingDao()
 }

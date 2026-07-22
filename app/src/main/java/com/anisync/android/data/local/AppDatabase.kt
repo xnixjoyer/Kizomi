@@ -10,6 +10,7 @@ import com.anisync.android.data.local.dao.MalAccountDao
 import com.anisync.android.data.local.dao.MediaDetailsDao
 import com.anisync.android.data.local.dao.MediaIdentityDao
 import com.anisync.android.data.local.dao.SavedForumThreadDao
+import com.anisync.android.data.local.dao.TrackingDao
 import com.anisync.android.data.local.dao.UserProfileDao
 import com.anisync.android.data.local.entity.AiringScheduleEntity
 import com.anisync.android.data.local.entity.CommunityScoreEntity
@@ -20,15 +21,27 @@ import com.anisync.android.data.local.entity.MalAccountEntity
 import com.anisync.android.data.local.entity.MediaDetailsEntity
 import com.anisync.android.data.local.entity.ProviderMediaIdentityEntity
 import com.anisync.android.data.local.entity.ProviderMediaIdentityIssueEntity
+import com.anisync.android.data.local.entity.ProviderTrackingSnapshotEntity
 import com.anisync.android.data.local.entity.SavedForumThreadEntity
+import com.anisync.android.data.local.entity.TrackingOperationEntity
+import com.anisync.android.data.local.entity.TrackingOperationTargetEntity
+import com.anisync.android.data.local.entity.TrackingReconciliationItemEntity
+import com.anisync.android.data.local.entity.TrackingReconciliationPlanEntity
 import com.anisync.android.data.local.entity.TrendingEntity
 import com.anisync.android.data.local.entity.UserProfileEntity
+import com.anisync.android.data.local.entity.MalImportStateEntity
+import com.anisync.android.data.local.entity.MalMediaCacheEntity
 
 /**
  * Room database for offline caching and non-secret provider account metadata.
  *
  * Version History:
  * ─────────────────────────────────────────────────────────────────────────────
+ * v26 (Jul 2026):
+ *   - Added account-scoped provider snapshots and a durable multi-provider command journal.
+ *   - Added MAL-native metadata/import caches and resumable reconciliation plans.
+ *   - Manual additive migration preserves all Phase 1–4 data.
+ *
  * v25 (Jul 2026):
  *   - Added provider-neutral local media identities, active provider mappings, and review issues.
  *   - Manual migration seeds existing typed AniList identities without rewriting production caches.
@@ -103,8 +116,15 @@ import com.anisync.android.data.local.entity.UserProfileEntity
         LocalMediaIdentityEntity::class,
         ProviderMediaIdentityEntity::class,
         ProviderMediaIdentityIssueEntity::class,
+        ProviderTrackingSnapshotEntity::class,
+        TrackingOperationEntity::class,
+        TrackingOperationTargetEntity::class,
+        MalMediaCacheEntity::class,
+        MalImportStateEntity::class,
+        TrackingReconciliationPlanEntity::class,
+        TrackingReconciliationItemEntity::class,
     ],
-    version = 25,
+    version = 26,
     exportSchema = true,
     autoMigrations = [
         androidx.room.AutoMigration(from = 2, to = 3),
@@ -141,4 +161,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun franchiseGraphDao(): FranchiseGraphDao
     abstract fun malAccountDao(): MalAccountDao
     abstract fun mediaIdentityDao(): MediaIdentityDao
+    abstract fun trackingDao(): TrackingDao
 }
