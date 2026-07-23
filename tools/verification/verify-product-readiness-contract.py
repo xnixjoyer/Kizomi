@@ -28,9 +28,8 @@ REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
         "absolute retry repeats the same body",
     ),
     "app/src/test/java/com/anisync/android/data/tracking/TrackingNetworkNullTest.kt": (
-        "default pure AniList mode never consults MAL",
-        "MAL-only produces zero AniList targets",
-        "dual mode creates exactly one independently account-bound target",
+        "MAL mode performs zero AniList identity account and enqueue work for AniList command",
+        "AniList mode performs zero MAL identity account and enqueue work for MAL command",
     ),
     "app/src/test/java/com/anisync/android/data/tracking/TrackingOutboxRepositoryTest.kt": (
         "durable before scheduling",
@@ -38,10 +37,10 @@ REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
         "concurrent duplicate input produces exactly one operation",
     ),
     "app/src/test/java/com/anisync/android/data/tracking/TrackingOutboxExecutorTest.kt": (
-        "worker kill switch blocks every provider",
-        "delivery-time account switch blocks queued target",
-        "cancellation leaves a lease",
-        "survives database and executor recreation",
+        "delivery gate blocks target with zero adapter calls",
+        "delivery-time account switch blocks stale target",
+        "cancellation preserves lease for restart recovery",
+        "committed command survives database and executor recreation",
     ),
     "app/src/test/java/com/anisync/android/worker/TrackingOutboxWorkerTest.kt": (
         "settled drain completes worker",
