@@ -51,3 +51,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'feat(compliance): complete MAL application readiness hardening'
           git push origin HEAD:compliance/mal-api-agreement-readiness
+
+# Existing-workflow trigger commit. The workflow deletes itself after applying the payload.
