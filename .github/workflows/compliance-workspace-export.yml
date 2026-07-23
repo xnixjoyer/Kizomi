@@ -23,12 +23,16 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          git archive --format=zip --output="$RUNNER_TEMP/kizomi-compliance-workspace.zip" HEAD
+          evidence="$RUNNER_TEMP/compliance-workspace"
+          mkdir -p "$evidence"
+          git archive --format=zip --output="$evidence/kizomi-compliance-workspace.zip" HEAD
+          git rev-parse HEAD > "$evidence/head-sha.txt"
+          git rev-parse 'HEAD^{tree}' > "$evidence/tree-sha.txt"
 
       - name: Upload short-lived workspace archive
         uses: actions/upload-artifact@v4
         with:
           name: compliance-workspace-${{ github.event.pull_request.head.sha }}
-          path: ${{ runner.temp }}/kizomi-compliance-workspace.zip
+          path: ${{ runner.temp }}/compliance-workspace
           if-no-files-found: error
           retention-days: 1
