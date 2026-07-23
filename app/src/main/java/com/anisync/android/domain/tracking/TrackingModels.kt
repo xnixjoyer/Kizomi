@@ -158,6 +158,11 @@ data class TrackingCommandDraft(
             "provider list-entry ids must be positive"
         }
     }
+
+    override fun toString(): String =
+        "TrackingCommandDraft(localMediaId=<redacted>, mediaType=${mediaType.name}, desired=$desired, " +
+            "fields=${fields.map { it.name }.sorted()}, deleteIntent=$deleteIntent, " +
+            "providerListEntryIds=<redacted>)"
 }
 
 /** Immutable payload stored before any remote call. */
@@ -171,6 +176,9 @@ data class TrackingCommand(
         require(operationId.isNotBlank()) { "operationId must not be blank" }
         require(generation > 0) { "generation must be positive" }
     }
+
+    override fun toString(): String =
+        "TrackingCommand(operationId=<redacted>, generation=$generation, draft=$draft)"
 }
 
 /** One configured saga target; blockers are persisted rather than silently dropping the target. */
@@ -185,6 +193,10 @@ data class TrackingCommandTarget(
         require(providerAccountId == null || providerAccountId.isNotBlank())
         require(providerMediaId == null || providerMediaId > 0L)
     }
+
+    override fun toString(): String =
+        "TrackingCommandTarget(provider=${provider.name}, providerAccountId=<redacted>, " +
+            "providerMediaId=<redacted>, blocker=${blocker?.name ?: "none"})"
 }
 
 data class TrackingEnqueueReceipt(
@@ -192,7 +204,11 @@ data class TrackingEnqueueReceipt(
     val generation: Long,
     val deduplicated: Boolean,
     val targetStates: Map<TrackingProvider, TrackingTargetState>,
-)
+) {
+    override fun toString(): String =
+        "TrackingEnqueueReceipt(operationId=<redacted>, generation=$generation, " +
+            "deduplicated=$deduplicated, targetStates=$targetStates)"
+}
 
 sealed interface TrackingEnqueueResult {
     data class Accepted(val receipt: TrackingEnqueueReceipt) : TrackingEnqueueResult
@@ -205,7 +221,12 @@ data class TrackingProviderRequest(
     val providerAccountId: String,
     val providerMediaId: Long,
     val deliveryAttempt: Int,
-)
+) {
+    override fun toString(): String =
+        "TrackingProviderRequest(command=$command, provider=${provider.name}, " +
+            "providerAccountId=<redacted>, providerMediaId=<redacted>, " +
+            "deliveryAttempt=$deliveryAttempt)"
+}
 
 data class TrackingConfirmedSnapshot(
     val providerListEntryId: Long? = null,
@@ -216,7 +237,13 @@ data class TrackingConfirmedSnapshot(
     val rawProviderFieldsJson: String = "{}",
     val remoteRevision: String? = null,
     val deleted: Boolean = false,
-)
+) {
+    override fun toString(): String =
+        "TrackingConfirmedSnapshot(providerListEntryId=<redacted>, title=$title, " +
+            "coverUrl=${if (coverUrl == null) "absent" else "present"}, state=$state, " +
+            "providerUpdatedAtEpochMillis=${providerUpdatedAtEpochMillis ?: "none"}, " +
+            "rawProviderFieldsJson=<redacted>, remoteRevision=<redacted>, deleted=$deleted)"
+}
 
 sealed interface TrackingDeliveryResult {
     data class Success(val snapshot: TrackingConfirmedSnapshot) : TrackingDeliveryResult
