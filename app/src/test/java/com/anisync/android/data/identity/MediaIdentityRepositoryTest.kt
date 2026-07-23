@@ -51,8 +51,8 @@ class MediaIdentityRepositoryTest {
             MediaIdentityProvider.MYANIMELIST,
             44L,
             LocalMediaType.ANIME,
-            MediaIdentityMappingSource.MAL_IMPORT,
-            MediaIdentityVerificationStatus.IMPORTED,
+            MediaIdentityMappingSource.MAL_NATIVE,
+            MediaIdentityVerificationStatus.PROVIDER_CONFIRMED,
         )
         assertTrue(attached is MediaIdentityResult.Success)
         assertEquals(local.id, success(repository.resolveByMalId(LocalMediaType.ANIME, 44L))?.id)
@@ -90,8 +90,8 @@ class MediaIdentityRepositoryTest {
             MediaIdentityProvider.MYANIMELIST,
             500L,
             LocalMediaType.ANIME,
-            MediaIdentityMappingSource.MAL_IMPORT,
-            MediaIdentityVerificationStatus.IMPORTED,
+            MediaIdentityMappingSource.MAL_NATIVE,
+            MediaIdentityVerificationStatus.PROVIDER_CONFIRMED,
         )
         assertTrue(localConflict is MediaIdentityResult.Conflict)
         assertTrue(globalConflict is MediaIdentityResult.Conflict)
@@ -172,8 +172,8 @@ class MediaIdentityRepositoryTest {
                     MediaIdentityProvider.MYANIMELIST,
                     1_234L,
                     LocalMediaType.ANIME,
-                    MediaIdentityMappingSource.MAL_IMPORT,
-                    MediaIdentityVerificationStatus.IMPORTED,
+                    MediaIdentityMappingSource.MAL_NATIVE,
+                    MediaIdentityVerificationStatus.PROVIDER_CONFIRMED,
                 )
             }
         }.awaitAll()
@@ -195,8 +195,8 @@ class MediaIdentityRepositoryTest {
             MediaIdentityProvider.MYANIMELIST,
             providerId,
             type,
-            MediaIdentityMappingSource.MAL_IMPORT,
-            MediaIdentityVerificationStatus.IMPORTED,
+            MediaIdentityMappingSource.MAL_NATIVE,
+            MediaIdentityVerificationStatus.PROVIDER_CONFIRMED,
         ) as MediaIdentityResult.Success).value
 
     private fun openDatabase(): AppDatabase =

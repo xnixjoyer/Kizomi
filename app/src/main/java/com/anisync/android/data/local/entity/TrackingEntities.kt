@@ -4,10 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 
-/**
- * Last provider-confirmed list state. Provider rows deliberately remain separate so a dual write
- * can expose divergence instead of flattening two remote truths into one value.
- */
+/** Last state confirmed by the single active provider. */
 @Entity(
     tableName = "provider_tracking_snapshots",
     primaryKeys = ["provider", "providerAccountId", "localMediaId"],
@@ -45,11 +42,10 @@ data class ProviderTrackingSnapshotEntity(
     val completedAt: String?,
     val providerUpdatedAtEpochMillis: Long?,
     val fetchedAtEpochMillis: Long,
-    val rawProviderFieldsJson: String,
     val isDeleted: Boolean,
 )
 
-/** One immutable absolute desired state. A newer generation supersedes only work not in flight. */
+/** One immutable absolute desired state. */
 @Entity(
     tableName = "tracking_operations",
     foreignKeys = [
@@ -84,10 +80,10 @@ data class TrackingOperationEntity(
     val updatedAtEpochMillis: Long,
 )
 
-/** Independent delivery state for one provider in a durable, non-atomic dual-write saga. */
+/** Exactly one fail-closed delivery target for an operation. */
 @Entity(
     tableName = "tracking_operation_targets",
-    primaryKeys = ["operationId", "provider"],
+    primaryKeys = ["operationId"],
     foreignKeys = [
         ForeignKey(
             entity = TrackingOperationEntity::class,
@@ -98,7 +94,6 @@ data class TrackingOperationEntity(
         )
     ],
     indices = [
-        Index(value = ["operationId"]),
         Index(value = ["state", "nextAttemptAtEpochMillis", "updatedAtEpochMillis"]),
         Index(value = ["provider", "providerAccountId", "providerMediaId"]),
     ],
@@ -120,7 +115,7 @@ data class TrackingOperationTargetEntity(
     val updatedAtEpochMillis: Long,
 )
 
-/** MAL-native metadata cache used by list, search, details and discovery without AniList IDs. */
+/** Minimal normalized provider-global MAL catalog cache. */
 @Entity(
     tableName = "mal_media_cache",
     primaryKeys = ["malId", "mediaType"],
@@ -137,6 +132,65 @@ data class MalMediaCacheEntity(
     val synopsis: String?,
     val mainPictureMedium: String?,
     val mainPictureLarge: String?,
+    val pictureGalleryJson: String,
+    val meanScore: Double?,
+    val rank: Int?,
+    val popularity: Int?,
+    val mediaStatus: String?,
+    val mediaFormat: String?,
+    val startDate: String?,
+    val endDate: String?,
+    val episodeCount: Int?,
+    val chapterCount: Int?,
+    val volumeCount: Int?,
+    val genresJson: String,
+    val background: String?,
+    val relatedJson: String,
+    val recommendationsJson: String,
+    val rankingPosition: Int?,
+    val isDetailed: Boolean,
+    val fetchedAtEpochMillis: Long,
+    val expiresAtEpochMillis: Long,
+)
+
+/** Account/type-scoped last-good list refresh metadata. */
+@Entity(
+    tableName = "mal_library_refresh_states",
+    primaryKeys = ["localAccountId", "mediaType"],
+    indices = [Index(value = ["state", "lastAttemptAtEpochMillis"])],
+)
+data class MalLibraryRefreshStateEntity(
+    val localAccountId: String,
+    val mediaType: String,
+    val state: String,
+    val generation: Long,
+    val nextPageUrl: String?,
+    val itemCount: Int,
+    val lastAttemptAtEpochMillis: Long,
+    val lastSuccessAtEpochMillis: Long?,
+    val lastErrorKind: String?,
+)
+
+/** Normalized staging row for one atomic MAL list refresh. */
+@Entity(
+    tableName = "mal_library_refresh_entries",
+    primaryKeys = ["localAccountId", "mediaType", "generation", "malId"],
+    indices = [
+        Index(value = ["localAccountId", "mediaType", "generation"]),
+        Index(value = ["localMediaId"]),
+    ],
+)
+data class MalLibraryRefreshEntryEntity(
+    val localAccountId: String,
+    val mediaType: String,
+    val generation: Long,
+    val malId: Long,
+    val localMediaId: String,
+    val title: String,
+    val alternativeTitlesJson: String,
+    val synopsis: String?,
+    val pictureMedium: String?,
+    val pictureLarge: String?,
     val meanScore: Double?,
     val rank: Int?,
     val popularity: Int?,
@@ -147,104 +201,13 @@ data class MalMediaCacheEntity(
     val chapterCount: Int?,
     val volumeCount: Int?,
     val genresJson: String,
-    val relatedJson: String,
-    val recommendationsJson: String,
-    val rawJson: String,
-    val fetchedAtEpochMillis: Long,
-    val expiresAtEpochMillis: Long,
-)
-
-/** Account/type-scoped paging and last-good import metadata. */
-@Entity(
-    tableName = "mal_import_states",
-    primaryKeys = ["localAccountId", "mediaType"],
-    indices = [Index(value = ["state", "lastAttemptAtEpochMillis"])],
-)
-data class MalImportStateEntity(
-    val localAccountId: String,
-    val mediaType: String,
-    val state: String,
-    val generation: Long,
-    val nextPageUrl: String?,
-    val importedCount: Int,
-    val lastAttemptAtEpochMillis: Long,
-    val lastSuccessAtEpochMillis: Long?,
-    val lastErrorKind: String?,
-)
-
-/**
- * Account-scoped import staging. Provider snapshots remain the last fully successful generation
- * until every page has been fetched and this staging generation is promoted atomically.
- */
-@Entity(
-    tableName = "mal_import_entries",
-    primaryKeys = ["localAccountId", "mediaType", "generation", "malId"],
-    indices = [
-        Index(value = ["localAccountId", "mediaType", "generation"]),
-        Index(value = ["localMediaId"]),
-    ],
-)
-data class MalImportEntryEntity(
-    val localAccountId: String,
-    val mediaType: String,
-    val generation: Long,
-    val malId: Long,
-    val localMediaId: String,
-    val payloadJson: String,
-) {
-    override fun toString(): String =
-        "MalImportEntryEntity(localAccountId=<redacted>, mediaType=$mediaType, " +
-            "generation=$generation, malId=$malId, localMediaId=<redacted>, payloadJson=<redacted>)"
-}
-
-/** Immutable reconciliation preview baseline; execution can resume after process death. */
-@Entity(
-    tableName = "tracking_reconciliation_plans",
-    indices = [Index(value = ["state", "updatedAtEpochMillis"])],
-    primaryKeys = ["planId"],
-)
-data class TrackingReconciliationPlanEntity(
-    val planId: String,
-    val mode: String,
-    val mediaType: String,
-    val sourceAccountId: String?,
-    val targetAccountId: String?,
-    val state: String,
-    val baselineFingerprint: String,
-    val createdAtEpochMillis: Long,
-    val updatedAtEpochMillis: Long,
-)
-
-@Entity(
-    tableName = "tracking_reconciliation_items",
-    primaryKeys = ["planId", "itemKey"],
-    foreignKeys = [
-        ForeignKey(
-            entity = TrackingReconciliationPlanEntity::class,
-            parentColumns = ["planId"],
-            childColumns = ["planId"],
-            onDelete = ForeignKey.CASCADE,
-            onUpdate = ForeignKey.NO_ACTION,
-        )
-    ],
-    indices = [
-        Index(value = ["planId"]),
-        Index(value = ["planId", "action", "state"]),
-    ],
-)
-data class TrackingReconciliationItemEntity(
-    val planId: String,
-    val itemKey: String,
-    val localMediaId: String?,
-    val mediaType: String,
-    val aniListId: Long?,
-    val malId: Long?,
-    val action: String,
-    val state: String,
-    val sourceSnapshotJson: String?,
-    val targetSnapshotJson: String?,
-    val commandJson: String?,
-    val operationId: String?,
-    val lastErrorKind: String?,
-    val updatedAtEpochMillis: Long,
+    val status: String,
+    val progress: Int,
+    val progressSecondary: Int?,
+    val score100: Double?,
+    val repeatCount: Int,
+    val notes: String?,
+    val startedAt: String?,
+    val completedAt: String?,
+    val providerUpdatedAtEpochMillis: Long?,
 )

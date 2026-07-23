@@ -80,7 +80,7 @@ class MalTrackingProviderAdapterTest {
         assertEquals("/v2/anime/20", readBack.url.encodedPath)
         assertEquals("id,title,main_picture,my_list_status", readBack.url.queryParameter("fields"))
         assertTrue(result.snapshot.toString().contains("Read back"))
-        assertFalse(result.snapshot.rawProviderFieldsJson.contains("access-token"))
+        assertFalse(result.snapshot.toString().contains("access-token"))
     }
 
     @Test

@@ -75,7 +75,6 @@ import com.anisync.android.presentation.settings.LinksScreen
 import com.anisync.android.presentation.settings.LookAndFeelScreen
 import com.anisync.android.presentation.settings.MediaUploadSettingsScreen
 import com.anisync.android.presentation.settings.MalAccountSettingsScreen
-import com.anisync.android.presentation.settings.TrackingCenterScreen
 import com.anisync.android.presentation.settings.NotificationsScreen
 import com.anisync.android.presentation.settings.OpenSourceLicensesScreen
 import com.anisync.android.presentation.settings.SettingsListDetail
@@ -1335,18 +1334,7 @@ fun AniSyncNavHost(
             ) {
                 MalAccountSettingsScreen(
                     onBackClick = { navController.popBackStack() },
-                    onBrowseMal = { navController.navigate(MalCatalog) },
-                    onOpenTrackingCenter = { navController.navigate(SettingsTrackingCenter) },
                 )
-            }
-
-            composable<SettingsTrackingCenter>(
-                enterTransition = { sharedAxisZEnter() },
-                exitTransition = { sharedAxisZExit() },
-                popEnterTransition = { sharedAxisZPopEnter() },
-                popExitTransition = { sharedAxisZPopExit() }
-            ) {
-                TrackingCenterScreen(onBackClick = { navController.popBackStack() })
             }
 
             // Notifications Settings

@@ -1,8 +1,6 @@
 package com.anisync.android.data
 
 import android.content.Context
-import com.anisync.android.domain.tracking.TrackingMediaType
-import com.anisync.android.domain.tracking.TrackingMode
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -30,8 +28,6 @@ class AppSettingsCustomizationTest {
         assertEquals(UiDensity.STANDARD, settings.uiDensity.value)
         assertFalse(settings.detailEdgeToEdgeEnabled.value)
         assertEquals(CommunityScoreMode.ANILIST, settings.communityScoreMode.value)
-        assertEquals(TrackingMode.ANILIST_ONLY, settings.animeTrackingMode.value)
-        assertEquals(TrackingMode.ANILIST_ONLY, settings.mangaTrackingMode.value)
         assertEquals(MainNavigationDestination.defaultOrder, settings.mainNavigationOrder.value)
         assertEquals(MainNavigationDestination.defaultVisibleKeys, settings.visibleMainNavigation.value)
         assertEquals(MainNavigationStartMode.LAST_OPENED, settings.mainNavigationStartMode.value)
@@ -44,8 +40,6 @@ class AppSettingsCustomizationTest {
         settings.setUiDensity(UiDensity.LARGE)
         settings.setDetailEdgeToEdgeEnabled(true)
         settings.setCommunityScoreMode(CommunityScoreMode.BOTH)
-        settings.setTrackingMode(TrackingMediaType.ANIME, TrackingMode.DUAL)
-        settings.setTrackingMode(TrackingMediaType.MANGA, TrackingMode.MYANIMELIST_ONLY)
         settings.moveMainNavigationDestination("profile", -4)
         assertTrue(settings.setMainNavigationVisible("feed", false))
         settings.setMainNavigationStartMode(MainNavigationStartMode.FIXED)
@@ -57,10 +51,6 @@ class AppSettingsCustomizationTest {
         assertEquals(UiDensity.LARGE, restored.uiDensity.value)
         assertTrue(restored.detailEdgeToEdgeEnabled.value)
         assertEquals(CommunityScoreMode.BOTH, restored.communityScoreMode.value)
-        assertEquals(TrackingMode.DUAL, restored.animeTrackingMode.value)
-        assertEquals(TrackingMode.MYANIMELIST_ONLY, restored.mangaTrackingMode.value)
-        assertEquals(TrackingMode.DUAL, restored.currentTrackingPolicy().animeMode)
-        assertEquals(TrackingMode.MYANIMELIST_ONLY, restored.currentTrackingPolicy().mangaMode)
         assertEquals("profile", restored.mainNavigationOrder.value.first())
         assertFalse("feed" in restored.visibleMainNavigation.value)
         assertEquals(MainNavigationStartMode.FIXED, restored.mainNavigationStartMode.value)
@@ -73,9 +63,7 @@ class AppSettingsCustomizationTest {
         val settings = AppSettings(context)
         MainNavigationDestination.defaultVisibleKeys
             .filterNot { it == MainNavigationDestination.PROFILE.key }
-            .forEach { key ->
-                assertTrue(settings.setMainNavigationVisible(key, false))
-            }
+            .forEach { key -> assertTrue(settings.setMainNavigationVisible(key, false)) }
 
         assertFalse(settings.setMainNavigationVisible("profile", false))
         assertEquals(setOf("profile"), settings.visibleMainNavigation.value)
@@ -91,8 +79,6 @@ class AppSettingsCustomizationTest {
             .putString("main_navigation_fixed_start_v2", "unknown")
             .putBoolean("detail_edge_to_edge_beta", true)
             .putString("community_score_mode_beta_v1", "BROKEN")
-            .putString("tracking_mode_anime_v1", "BROKEN")
-            .putString("tracking_mode_manga_v1", "")
             .commit()
 
         val settings = AppSettings(context)
@@ -104,11 +90,5 @@ class AppSettingsCustomizationTest {
         assertEquals("profile", settings.fixedMainNavigationStart.value)
         assertTrue(settings.detailEdgeToEdgeEnabled.value)
         assertEquals(CommunityScoreMode.ANILIST, settings.communityScoreMode.value)
-        assertEquals(TrackingMode.ANILIST_ONLY, settings.animeTrackingMode.value)
-        assertEquals(TrackingMode.ANILIST_ONLY, settings.mangaTrackingMode.value)
-        assertEquals(
-            TrackingMode.ANILIST_ONLY.name,
-            preferences.getString("tracking_mode_anime_v1", null),
-        )
     }
 }

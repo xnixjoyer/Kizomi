@@ -41,6 +41,18 @@ interface MediaIdentityDao {
     @Query("SELECT * FROM provider_media_identity_issues WHERE localMediaId = :localMediaId AND provider = :provider AND providerMediaId = :providerMediaId AND mediaType = :mediaType AND verificationStatus = :status ORDER BY id DESC LIMIT 1")
     suspend fun findIssue(localMediaId: String, provider: String, providerMediaId: Long, mediaType: String, status: String): ProviderMediaIdentityIssueEntity?
 
+    @Query("DELETE FROM provider_media_identities WHERE provider = :provider")
+    suspend fun deleteProviderIdentities(provider: String): Int
+
+    @Query("DELETE FROM provider_media_identity_issues WHERE provider = :provider")
+    suspend fun deleteIdentityIssues(provider: String): Int
+
+    @Query("DELETE FROM provider_media_identities")
+    suspend fun deleteAllProviderIdentities(): Int
+
+    @Query("DELETE FROM provider_media_identity_issues")
+    suspend fun deleteAllIdentityIssues(): Int
+
     @Query("SELECT COUNT(*) FROM local_media_identities")
     suspend fun countLocalIdentities(): Int
 

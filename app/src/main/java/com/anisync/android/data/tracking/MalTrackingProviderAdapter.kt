@@ -246,7 +246,6 @@ class MalTrackingProviderAdapter internal constructor(
                     title = wire.title,
                     coverUrl = wire.mainPicture?.large ?: wire.mainPicture?.medium,
                     state = request.command.draft.desired,
-                    rawProviderFieldsJson = "{}",
                     deleted = true,
                 )
             )
@@ -261,7 +260,6 @@ class MalTrackingProviderAdapter internal constructor(
                 providerUpdatedAtEpochMillis = wire.listStatus.updatedAt?.let { value ->
                     runCatching { Instant.parse(value).toEpochMilli() }.getOrNull()
                 },
-                rawProviderFieldsJson = json.encodeToString(wire.listStatus),
             )
         )
     }

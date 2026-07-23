@@ -87,6 +87,22 @@ class AccountStore @Inject constructor(
         persistMeta()
     }
 
+    /** Deletes every AniList credential and account record without selecting a replacement. */
+    fun clearAll() {
+        val ids = _accounts.value.map(Account::id)
+        activeId = null
+        _activeAccount.value = null
+        secure.edit().apply {
+            ids.forEach { remove(tokenKey(it)) }
+            remove(LEGACY_TOKEN_KEY)
+        }.commit()
+        _accounts.value = emptyList()
+        metaPrefs.edit()
+            .remove(KEY_ACCOUNTS)
+            .putInt(KEY_ACTIVE_ID, NO_ACTIVE)
+            .commit()
+    }
+
     /** Marks the active account's token expired and clears the active slot (used on HTTP 401). */
     fun markActiveExpired() {
         val active = _activeAccount.value ?: return

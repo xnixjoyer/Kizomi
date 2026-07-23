@@ -59,11 +59,17 @@ import com.anisync.android.data.AppSettings
 import com.anisync.android.data.AuthRepository
 import com.anisync.android.data.account.AccountManager
 import com.anisync.android.data.mal.oauth.MalAuthRepository
+import com.anisync.android.data.mal.oauth.MalAuthState
+import com.anisync.android.data.mal.oauth.MalCallbackResult
+import com.anisync.android.data.provider.ActiveProviderStore
+import com.anisync.android.data.provider.ProviderSessionCoordinator
+import com.anisync.android.domain.provider.ActiveProvider
 import com.anisync.android.data.update.UpdateManager
 import com.anisync.android.data.update.UpdateState
 import com.anisync.android.domain.LinkPreviewProvider
 import com.anisync.android.presentation.MainScreen
-import com.anisync.android.presentation.login.LoginScreen
+import com.anisync.android.presentation.mal.MalProviderMainScreen
+import com.anisync.android.presentation.onboarding.ProviderOnboardingScreen
 import com.anisync.android.presentation.settings.UpdateDialog
 import com.anisync.android.presentation.util.LocalAdaptiveInfo
 import com.anisync.android.presentation.util.LocalStatusBarOverlayEnabled
@@ -107,6 +113,12 @@ class MainActivity : AppCompatActivity() {
     lateinit var malAuthRepository: MalAuthRepository
 
     @Inject
+    lateinit var providerStore: ActiveProviderStore
+
+    @Inject
+    lateinit var providerCoordinator: ProviderSessionCoordinator
+
+    @Inject
     lateinit var appSettings: AppSettings
 
     @Inject
@@ -126,6 +138,9 @@ class MainActivity : AppCompatActivity() {
 
     private val _newIntents = MutableSharedFlow<Intent>(extraBufferCapacity = 4)
     val newIntents: SharedFlow<Intent> = _newIntents.asSharedFlow()
+
+    private val _providerStartupReady = MutableStateFlow(false)
+    val providerStartupReady: StateFlow<Boolean> = _providerStartupReady.asStateFlow()
 
     /**
      * Cross-account notification deep link, delivered after the switch settles and tagged with the
@@ -173,26 +188,29 @@ class MainActivity : AppCompatActivity() {
                 )
             }
 
-            val malRedirectHandled = handleMalOAuthRedirect(intent)
-            if (!malRedirectHandled) {
-                handleAuthRedirect(intent)
-                routeAccountDeepLink(intent)
-                lifecycleScope.launch(Dispatchers.IO) {
-                    malAuthRepository.resumePendingLogin()
+            lifecycleScope.launch {
+                providerCoordinator.initialize()
+                val malRedirectHandled = handleMalOAuthRedirect(intent)
+                if (!malRedirectHandled) {
+                    handleAuthRedirect(intent)
+                    if (providerStore.snapshot().activeProvider == ActiveProvider.ANILIST_ONLY) {
+                        routeAccountDeepLink(intent)
+                        launch(Dispatchers.IO) { accountManager.reconcileActiveAccount() }
+                    }
+                    launch(Dispatchers.IO) { malAuthRepository.resumePendingLogin() }
                 }
-            }
-
-            // Resolve a migrated legacy login + claim its pre-ownerId library rows for the account.
-            lifecycleScope.launch(Dispatchers.IO) {
-                accountManager.reconcileActiveAccount()
+                _providerStartupReady.value = true
             }
 
             lifecycleScope.launch(Dispatchers.IO) {
                 combine(
                     appSettings.notificationsEnabled,
-                    authRepository.isLoggedIn
-                ) { enabled, loggedIn ->
-                    enabled && loggedIn
+                    authRepository.isLoggedIn,
+                    providerStore.state,
+                ) { enabled, loggedIn, providerState ->
+                    enabled && loggedIn &&
+                        providerState.activeProvider == ActiveProvider.ANILIST_ONLY &&
+                        providerState.providerTrafficAllowed
                 }
                     .distinctUntilChanged()
                     .collect { shouldSchedule ->
@@ -315,22 +333,25 @@ class MainActivity : AppCompatActivity() {
                                       .windowInsetsPadding(WindowInsets.statusBars)
                               }
                           ) {
-                            // Cold Flow — seed from the account store so a logged-in cold start
-                            // doesn't flash LoginScreen for a frame.
-                            val isLoggedIn by authRepository.isLoggedIn.collectAsStateWithLifecycle(
+                            val startupReady by providerStartupReady.collectAsStateWithLifecycle()
+                            val providerState by providerStore.state.collectAsStateWithLifecycle()
+                            val isAniListLoggedIn by authRepository.isLoggedIn.collectAsStateWithLifecycle(
                                 initialValue = accountManager.activeAccount.value != null
                             )
+                            val malAuthState by malAuthRepository.state.collectAsStateWithLifecycle()
 
-                            // Session expired dialog
                             var showSessionExpiredDialog by remember { mutableStateOf(false) }
-
-                            LaunchedEffect(Unit) {
-                                authRepository.sessionExpired.collect {
-                                    showSessionExpiredDialog = true
+                            LaunchedEffect(providerState.activeProvider) {
+                                if (providerState.activeProvider == ActiveProvider.ANILIST_ONLY) {
+                                    authRepository.sessionExpired.collect {
+                                        showSessionExpiredDialog = true
+                                    }
                                 }
                             }
 
-                            if (showSessionExpiredDialog) {
+                            if (showSessionExpiredDialog &&
+                                providerState.activeProvider == ActiveProvider.ANILIST_ONLY
+                            ) {
                                 AlertDialog(
                                     onDismissRequest = { showSessionExpiredDialog = false },
                                     icon = {
@@ -339,10 +360,8 @@ class MainActivity : AppCompatActivity() {
                                             contentDescription = null
                                         )
                                     },
-                                    title = { Text("Session Expired") },
-                                    text = {
-                                        Text("Your session has expired. Please log in again to continue using AniSync.")
-                                    },
+                                    title = { Text("Session expired") },
+                                    text = { Text("Your AniList session has expired. Sign in again to continue.") },
                                     confirmButton = {
                                         TextButton(onClick = { showSessionExpiredDialog = false }) {
                                             Text("OK")
@@ -351,23 +370,27 @@ class MainActivity : AppCompatActivity() {
                                 )
                             }
 
-                            // Keyed on the account session epoch: switching accounts bumps the
-                            // epoch, which tears down and rebuilds the entire MainScreen subtree
-                            // (fresh NavController + ViewModels) so screens refetch the new account.
                             val sessionEpoch by accountManager.sessionEpoch.collectAsStateWithLifecycle()
-                            if (isLoggedIn) {
-                                key(sessionEpoch) {
-                                    MainScreen(builtAtEpoch = sessionEpoch)
-                                }
-                            } else {
-                                LoginScreen()
+                            when {
+                                !startupReady -> Box(
+                                    Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) { AppCircularProgressIndicator() }
+                                !providerState.providerTrafficAllowed -> ProviderOnboardingScreen()
+                                providerState.activeProvider == ActiveProvider.ANILIST_ONLY &&
+                                    isAniListLoggedIn -> key(sessionEpoch) {
+                                        MainScreen(builtAtEpoch = sessionEpoch)
+                                    }
+                                providerState.activeProvider == ActiveProvider.MAL_ONLY &&
+                                    malAuthState is MalAuthState.Connected -> MalProviderMainScreen()
+                                else -> ProviderOnboardingScreen()
                             }
 
                             AppUpdateHandler(updateManager = updateManager)
 
-                            // App-wide options sync-conflict prompt (surfaces right after launch,
-                            // not only on the AniList Settings screen).
-                            if (isLoggedIn) {
+                            if (providerState.activeProvider == ActiveProvider.ANILIST_ONLY &&
+                                isAniListLoggedIn
+                            ) {
                                 com.anisync.android.presentation.settings.UserOptionsConflictHandler(
                                     repository = userOptionsRepository,
                                 )
@@ -425,8 +448,8 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         if (handleMalOAuthRedirect(intent)) return
         handleAuthRedirect(intent)
-        if (!routeAccountDeepLink(intent)) {
-            _newIntents.tryEmit(intent)
+        if (providerStore.snapshot().activeProvider == ActiveProvider.ANILIST_ONLY) {
+            if (!routeAccountDeepLink(intent)) _newIntents.tryEmit(intent)
         }
     }
 
@@ -486,7 +509,12 @@ class MainActivity : AppCompatActivity() {
         // can observe them. The continuation is persisted only in encrypted session storage.
         intent.data = null
         lifecycleScope.launch(Dispatchers.IO) {
-            malAuthRepository.handleCallback(callbackUri)
+            when (malAuthRepository.handleCallback(callbackUri)) {
+                is MalCallbackResult.Success -> providerCoordinator.completeLogin(
+                    ActiveProvider.MAL_ONLY
+                )
+                is MalCallbackResult.Failure -> providerCoordinator.cancelLogin()
+            }
         }
         return true
     }
@@ -504,8 +532,11 @@ class MainActivity : AppCompatActivity() {
         // subtree rebuilds itself, so no activity recreate is needed here.
         lifecycleScope.launch {
             when (accountManager.addAccount(accessToken, expiresIn)) {
-                is AccountManager.AddResult.Success -> Unit
+                is AccountManager.AddResult.Success -> providerCoordinator.completeLogin(
+                    ActiveProvider.ANILIST_ONLY
+                )
                 AccountManager.AddResult.Failed -> {
+                    providerCoordinator.cancelLogin()
                     Toast.makeText(
                         this@MainActivity,
                         getString(R.string.account_sign_in_failed),

@@ -3,6 +3,8 @@ package com.anisync.android.data.tracking
 import android.content.Context
 import com.anisync.android.data.account.AccountStore
 import com.anisync.android.data.mal.account.MalAccountCredentialStore
+import com.anisync.android.data.provider.ActiveProviderStore
+import com.anisync.android.domain.provider.ActiveProvider
 import com.anisync.android.domain.tracking.ProviderNetworkPolicy
 import com.anisync.android.domain.tracking.TrackingFailureKind
 import com.anisync.android.domain.tracking.TrackingProvider
@@ -23,6 +25,7 @@ class TrackingWriteGate @Inject constructor(
     @ApplicationContext context: Context,
     private val accountStore: AccountStore,
     private val malAccounts: MalAccountCredentialStore,
+    private val activeProviderStore: ActiveProviderStore,
 ) {
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
@@ -39,11 +42,14 @@ class TrackingWriteGate @Inject constructor(
             TrackingProvider.ANILIST -> accountStore.activeAccount.value?.id?.toString()
             TrackingProvider.MYANIMELIST -> malAccounts.activeAccount()?.localAccountId
         }
+        val providerState = activeProviderStore.snapshot()
         return evaluateTrackingWriteGate(
             provider = provider,
             policy = currentPolicy(),
             expectedAccountId = expectedAccountId,
             activeAccountId = activeAccountId,
+            activeProvider = providerState.activeProvider,
+            providerTrafficAllowed = providerState.providerTrafficAllowed,
         )
     }
 
@@ -76,7 +82,14 @@ internal fun evaluateTrackingWriteGate(
     policy: ProviderNetworkPolicy,
     expectedAccountId: String,
     activeAccountId: String?,
+    activeProvider: ActiveProvider = when (provider) {
+        TrackingProvider.ANILIST -> ActiveProvider.ANILIST_ONLY
+        TrackingProvider.MYANIMELIST -> ActiveProvider.MAL_ONLY
+    },
+    providerTrafficAllowed: Boolean = true,
 ): TrackingFailureKind? = when {
+    !providerTrafficAllowed -> TrackingFailureKind.PROVIDER_NOT_CONFIGURED
+    activeProvider.trackingProvider != provider -> TrackingFailureKind.PROVIDER_NOT_CONFIGURED
     expectedAccountId.isBlank() -> TrackingFailureKind.MISSING_ACCOUNT
     provider == TrackingProvider.ANILIST && !policy.allowAniList ->
         TrackingFailureKind.NETWORK_BLOCKED

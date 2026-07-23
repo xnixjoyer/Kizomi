@@ -75,24 +75,22 @@ data class MalListEntry(
     val genres: List<String>,
     val desiredState: TrackingDesiredState,
     val providerUpdatedAtEpochMillis: Long?,
-    val rawMediaJson: String,
-    val rawListStatusJson: String,
 ) {
     override fun toString(): String =
         "MalListEntry(malId=$malId, mediaType=${mediaType.name}, title=<redacted>, desiredState=<redacted>, providerUpdatedAtEpochMillis=${providerUpdatedAtEpochMillis ?: "none"})"
 }
 
-sealed interface MalImportResult {
+sealed interface MalLibraryRefreshResult {
     data class Success(
         val importedEntries: Int,
         val removedEntries: Int,
         val pageCount: Int,
-    ) : MalImportResult
+    ) : MalLibraryRefreshResult
 
     data class Failure(
         val error: MalApiFailure,
         val preservedEntryCount: Int,
-    ) : MalImportResult
+    ) : MalLibraryRefreshResult
 }
 
 data class MalLibraryItem(
@@ -164,13 +162,12 @@ data class MalCatalogMedia(
     val rankingPosition: Int? = null,
     val isDetailed: Boolean = false,
     val fetchedAtEpochMillis: Long,
-    val rawJson: String,
 ) {
     override fun toString(): String =
         "MalCatalogMedia(key=${key.stableValue}, title=<redacted>, synopsis=<redacted>, " +
             "images=<redacted>, background=<redacted>, listState=<redacted>, related=${related.size}, " +
             "recommendations=${recommendations.size}, rankingPosition=${rankingPosition ?: "none"}, " +
-            "isDetailed=$isDetailed, fetchedAtEpochMillis=$fetchedAtEpochMillis, rawJson=<redacted>)"
+            "isDetailed=$isDetailed, fetchedAtEpochMillis=$fetchedAtEpochMillis)"
 }
 
 data class MalCatalogPage(

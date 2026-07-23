@@ -361,7 +361,7 @@ class MediaIdentityRepository @Inject constructor(
         val ACTIVE_STATUSES = setOf(
             MediaIdentityVerificationStatus.EXACT,
             MediaIdentityVerificationStatus.CONFIRMED,
-            MediaIdentityVerificationStatus.IMPORTED,
+            MediaIdentityVerificationStatus.PROVIDER_CONFIRMED,
         )
     }
 }

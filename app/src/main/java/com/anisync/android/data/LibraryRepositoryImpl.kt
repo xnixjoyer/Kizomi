@@ -454,7 +454,7 @@ private fun Long?.toIsoDate(): String? = this?.let { epochMillis ->
 private fun TrackingEnqueueResult.toDomainResult(): Result<Unit> = when (this) {
     is TrackingEnqueueResult.Rejected -> Result.Error("Tracking command rejected: ${reason.name}")
     is TrackingEnqueueResult.Accepted -> when (
-        receipt.targetStates[com.anisync.android.domain.tracking.TrackingProvider.ANILIST]
+        receipt.targetState.takeIf { receipt.provider == com.anisync.android.domain.tracking.TrackingProvider.ANILIST }
     ) {
         TrackingTargetState.BLOCKED,
         TrackingTargetState.FAILED,

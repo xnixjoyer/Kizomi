@@ -4,13 +4,6 @@ import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
 
 @Serializable
-enum class TrackingMode {
-    ANILIST_ONLY,
-    MYANIMELIST_ONLY,
-    DUAL,
-}
-
-@Serializable
 enum class TrackingProvider {
     ANILIST,
     MYANIMELIST,
@@ -51,8 +44,6 @@ enum class TrackingField {
 enum class TrackingOperationState {
     PENDING,
     RUNNING,
-    PARTIAL,
-    PARTIAL_FAILURE,
     SUCCEEDED,
     BLOCKED,
     FAILED,
@@ -144,8 +135,8 @@ data class TrackingCommandDraft(
     val desired: TrackingDesiredState,
     val fields: Set<TrackingField>,
     val deleteIntent: Boolean = false,
-    /** Provider-native list-entry handles needed for delete without a second lookup. */
-    val providerListEntryIds: Map<TrackingProvider, Long> = emptyMap(),
+    /** Provider-native list-entry handle needed for delete without a second lookup. */
+    val providerListEntryId: Long? = null,
 ) {
     init {
         require(localMediaId.isNotBlank()) { "localMediaId must not be blank" }
@@ -154,15 +145,15 @@ data class TrackingCommandDraft(
             "delete intent and DELETE field must agree"
         }
         require(deleteIntent || desired.status != null) { "non-delete state requires a status" }
-        require(providerListEntryIds.values.all { it > 0L }) {
-            "provider list-entry ids must be positive"
+        require(providerListEntryId == null || providerListEntryId > 0L) {
+            "provider list-entry id must be positive"
         }
     }
 
     override fun toString(): String =
         "TrackingCommandDraft(localMediaId=<redacted>, mediaType=${mediaType.name}, desired=$desired, " +
             "fields=${fields.map { it.name }.sorted()}, deleteIntent=$deleteIntent, " +
-            "providerListEntryIds=<redacted>)"
+            "providerListEntryId=<redacted>)"
 }
 
 /** Immutable payload stored before any remote call. */
@@ -181,7 +172,7 @@ data class TrackingCommand(
         "TrackingCommand(operationId=<redacted>, generation=$generation, draft=$draft)"
 }
 
-/** One configured saga target; blockers are persisted rather than silently dropping the target. */
+/** The one immutable provider target for a tracking command. */
 @Serializable
 data class TrackingCommandTarget(
     val provider: TrackingProvider,
@@ -203,11 +194,12 @@ data class TrackingEnqueueReceipt(
     val operationId: String,
     val generation: Long,
     val deduplicated: Boolean,
-    val targetStates: Map<TrackingProvider, TrackingTargetState>,
+    val provider: TrackingProvider,
+    val targetState: TrackingTargetState,
 ) {
     override fun toString(): String =
         "TrackingEnqueueReceipt(operationId=<redacted>, generation=$generation, " +
-            "deduplicated=$deduplicated, targetStates=$targetStates)"
+            "deduplicated=$deduplicated, provider=${provider.name}, targetState=${targetState.name})"
 }
 
 sealed interface TrackingEnqueueResult {
@@ -234,7 +226,6 @@ data class TrackingConfirmedSnapshot(
     val coverUrl: String? = null,
     val state: TrackingDesiredState,
     val providerUpdatedAtEpochMillis: Long? = null,
-    val rawProviderFieldsJson: String = "{}",
     val remoteRevision: String? = null,
     val deleted: Boolean = false,
 ) {
@@ -242,7 +233,7 @@ data class TrackingConfirmedSnapshot(
         "TrackingConfirmedSnapshot(providerListEntryId=<redacted>, title=$title, " +
             "coverUrl=${if (coverUrl == null) "absent" else "present"}, state=$state, " +
             "providerUpdatedAtEpochMillis=${providerUpdatedAtEpochMillis ?: "none"}, " +
-            "rawProviderFieldsJson=<redacted>, remoteRevision=<redacted>, deleted=$deleted)"
+            "remoteRevision=<redacted>, deleted=$deleted)"
 }
 
 sealed interface TrackingDeliveryResult {

@@ -47,111 +47,86 @@ class TrackingOutboxExecutorTest {
     fun tearDown() = database.close()
 
     @Test
-    fun `dual delivery records success and retry independently without duplicate success`() = runTest {
+    fun `single target succeeds and writes normalized snapshot`() = runTest {
         seedLocal()
-        val receipt = enqueue(
-            listOf(
-                target(TrackingProvider.ANILIST, "ani-account", 10),
-                target(TrackingProvider.MYANIMELIST, "mal-account", 20),
-            )
-        )
-        val aniList = RecordingAdapter(TrackingProvider.ANILIST) { request ->
+        val receipt = enqueue(target(TrackingProvider.ANILIST, "ani-account", 10))
+        val adapter = RecordingAdapter(TrackingProvider.ANILIST) { request ->
             TrackingDeliveryResult.Success(
                 TrackingConfirmedSnapshot(
+                    title = "Title",
                     state = request.command.draft.desired,
-                    remoteRevision = "ani-revision",
+                    remoteRevision = "revision",
                 )
             )
         }
-        val mal = RecordingAdapter(TrackingProvider.MYANIMELIST) {
+
+        val drained = TrackingOutboxExecutor(database.trackingDao(), codec, setOf(adapter)).drain()
+
+        assertEquals(1, adapter.calls)
+        assertEquals("SUCCEEDED", database.trackingDao().getTarget(receipt.operationId)?.state)
+        assertEquals("SUCCEEDED", database.trackingDao().getOperation(receipt.operationId)?.state)
+        assertFalse(drained.hasUnsettledDeliveries)
+        assertTrue(
+            database.trackingDao().findSnapshot("ANILIST", "ani-account", "local-anime") != null
+        )
+    }
+
+    @Test
+    fun `retryable target remains unsettled and is not duplicated immediately`() = runTest {
+        seedLocal()
+        val receipt = enqueue(target(TrackingProvider.MYANIMELIST, "mal", 20))
+        val adapter = RecordingAdapter(TrackingProvider.MYANIMELIST) {
             TrackingDeliveryResult.RetryableFailure(
                 TrackingFailureKind.RATE_LIMITED,
                 httpStatus = 429,
                 retryAfterMillis = 60_000,
             )
         }
-        val executor = TrackingOutboxExecutor(database.trackingDao(), codec, setOf(aniList, mal))
+        val executor = TrackingOutboxExecutor(database.trackingDao(), codec, setOf(adapter))
 
-        val drained = executor.drain(maxDeliveries = 2)
-        val targets = database.trackingDao().getTargets(receipt.operationId).associateBy { it.provider }
-
-        assertEquals(1, aniList.calls)
-        assertEquals(1, mal.calls)
-        assertEquals("SUCCEEDED", targets.getValue("ANILIST").state)
-        assertEquals("RETRYING", targets.getValue("MYANIMELIST").state)
-        assertEquals("PARTIAL", database.trackingDao().getOperation(receipt.operationId)?.state)
+        val drained = executor.drain()
+        assertEquals(1, adapter.calls)
+        assertEquals("RETRYING", database.trackingDao().getTarget(receipt.operationId)?.state)
+        assertEquals("RETRYING", database.trackingDao().getOperation(receipt.operationId)?.state)
         assertTrue(drained.hasUnsettledDeliveries)
-        assertEquals(1, database.trackingDao().countTargetsInState(receipt.operationId, "SUCCEEDED"))
-        assertTrue(
-            database.trackingDao().findSnapshot(
-                "ANILIST",
-                "ani-account",
-                "local-anime",
-            ) != null
-        )
 
-        executor.drain(maxDeliveries = 2)
-        assertEquals(1, aniList.calls)
-        assertEquals(1, mal.calls)
+        executor.drain()
+        assertEquals(1, adapter.calls)
     }
 
     @Test
-    fun `worker kill switch blocks every provider with zero adapter calls`() = runTest {
+    fun `delivery gate blocks target with zero adapter calls`() = runTest {
         seedLocal()
-        val receipt = enqueue(
-            listOf(
-                target(TrackingProvider.ANILIST, "ani-account", 10),
-                target(TrackingProvider.MYANIMELIST, "mal-account", 20),
-            )
-        )
-        val aniList = RecordingAdapter(TrackingProvider.ANILIST) {
-            error("AniList adapter must not run while blocked")
-        }
-        val mal = RecordingAdapter(TrackingProvider.MYANIMELIST) {
-            error("MAL adapter must not run while blocked")
-        }
-        val executor = TrackingOutboxExecutor(
-            database.trackingDao(),
-            codec,
-            setOf(aniList, mal),
-        ) { _, _ -> TrackingFailureKind.NETWORK_BLOCKED }
+        val receipt = enqueue(target(TrackingProvider.ANILIST, "ani", 10))
+        val adapter = RecordingAdapter(TrackingProvider.ANILIST) { error("must not run") }
+        val drained = TrackingOutboxExecutor(
+            database.trackingDao(), codec, setOf(adapter),
+        ) { _, _ -> TrackingFailureKind.NETWORK_BLOCKED }.drain()
 
-        val drained = executor.drain(maxDeliveries = 2)
-        val targets = database.trackingDao().getTargets(receipt.operationId)
-
-        assertEquals(0, aniList.calls)
-        assertEquals(0, mal.calls)
-        assertTrue(targets.all { it.state == "BLOCKED" })
-        assertTrue(targets.all { it.lastErrorKind == TrackingFailureKind.NETWORK_BLOCKED.name })
-        assertEquals("BLOCKED", database.trackingDao().getOperation(receipt.operationId)?.state)
+        val target = requireNotNull(database.trackingDao().getTarget(receipt.operationId))
+        assertEquals(0, adapter.calls)
+        assertEquals("BLOCKED", target.state)
+        assertEquals(TrackingFailureKind.NETWORK_BLOCKED.name, target.lastErrorKind)
         assertFalse(drained.hasUnsettledDeliveries)
     }
 
     @Test
-    fun `delivery-time account switch blocks queued target with zero network calls`() = runTest {
+    fun `delivery-time account switch blocks stale target`() = runTest {
         seedLocal()
-        val receipt = enqueue(listOf(target(TrackingProvider.ANILIST, "old-account", 10)))
-        val adapter = RecordingAdapter(TrackingProvider.ANILIST) {
-            error("Adapter must not run for a stale account binding")
-        }
-        TrackingOutboxExecutor(
-            database.trackingDao(),
-            codec,
-            setOf(adapter),
-        ) { _, expected ->
+        val receipt = enqueue(target(TrackingProvider.ANILIST, "old-account", 10))
+        val adapter = RecordingAdapter(TrackingProvider.ANILIST) { error("must not run") }
+        TrackingOutboxExecutor(database.trackingDao(), codec, setOf(adapter)) { _, expected ->
             if (expected == "new-account") null else TrackingFailureKind.MISSING_ACCOUNT
         }.drain()
 
-        val target = database.trackingDao().getTargets(receipt.operationId).single()
         assertEquals(0, adapter.calls)
-        assertEquals("BLOCKED", target.state)
-        assertEquals(TrackingFailureKind.MISSING_ACCOUNT.name, target.lastErrorKind)
+        assertEquals("BLOCKED", database.trackingDao().getTarget(receipt.operationId)?.state)
     }
 
     @Test
-    fun `successful absolute delivery is idempotent across executor recreation`() = runTest {
+    fun `successful delivery is idempotent across executor recreation`() = runTest {
         seedLocal()
-        val receipt = enqueue(listOf(target(TrackingProvider.MYANIMELIST, "mal", 20)))
+        val receipt = enqueue(target(TrackingProvider.MYANIMELIST, "mal", 20))
         val adapter = RecordingAdapter(TrackingProvider.MYANIMELIST) { request ->
             TrackingDeliveryResult.Success(TrackingConfirmedSnapshot(state = request.command.draft.desired))
         }
@@ -161,27 +136,26 @@ class TrackingOutboxExecutorTest {
 
         assertEquals(1, adapter.calls)
         assertEquals("SUCCEEDED", database.trackingDao().getOperation(receipt.operationId)?.state)
-        assertEquals(0, database.trackingDao().countUnsettledDeliveries())
     }
 
     @Test
-    fun `missing provider adapter is blocked and never reported as success`() = runTest {
+    fun `missing adapter blocks instead of reporting success`() = runTest {
         seedLocal()
-        val receipt = enqueue(listOf(target(TrackingProvider.MYANIMELIST, "mal", 20)))
-
+        val receipt = enqueue(target(TrackingProvider.MYANIMELIST, "mal", 20))
         val drained = TrackingOutboxExecutor(database.trackingDao(), codec, emptySet()).drain()
-        val target = database.trackingDao().getTargets(receipt.operationId).single()
 
-        assertEquals("BLOCKED", target.state)
-        assertEquals(TrackingFailureKind.PROVIDER_NOT_CONFIGURED.name, target.lastErrorKind)
-        assertEquals("BLOCKED", database.trackingDao().getOperation(receipt.operationId)?.state)
+        assertEquals("BLOCKED", database.trackingDao().getTarget(receipt.operationId)?.state)
+        assertEquals(
+            TrackingFailureKind.PROVIDER_NOT_CONFIGURED.name,
+            database.trackingDao().getTarget(receipt.operationId)?.lastErrorKind,
+        )
         assertFalse(drained.hasUnsettledDeliveries)
     }
 
     @Test
-    fun `cancellation leaves a lease for process-death recovery instead of concurrent redelivery`() = runTest {
+    fun `cancellation preserves lease for restart recovery`() = runTest {
         seedLocal()
-        val receipt = enqueue(listOf(target(TrackingProvider.MYANIMELIST, "mal", 20)))
+        val receipt = enqueue(target(TrackingProvider.MYANIMELIST, "mal", 20))
         val adapter = RecordingAdapter(TrackingProvider.MYANIMELIST) {
             throw CancellationException("worker stopped")
         }
@@ -192,7 +166,7 @@ class TrackingOutboxExecutorTest {
             propagated = true
         }
 
-        val target = database.trackingDao().getTargets(receipt.operationId).single()
+        val target = requireNotNull(database.trackingDao().getTarget(receipt.operationId))
         assertTrue(propagated)
         assertEquals("RUNNING", target.state)
         assertTrue(target.leaseToken != null)
@@ -205,31 +179,24 @@ class TrackingOutboxExecutorTest {
         val databaseFile: File = context.getDatabasePath("tracking-outbox-restart-test.db")
         context.deleteDatabase(databaseFile.name)
         database = Room.databaseBuilder(context, AppDatabase::class.java, databaseFile.name)
-            .allowMainThreadQueries()
-            .build()
+            .allowMainThreadQueries().build()
         seedLocal()
-        val receipt = enqueue(listOf(target(TrackingProvider.MYANIMELIST, "mal", 20)))
+        val receipt = enqueue(target(TrackingProvider.MYANIMELIST, "mal", 20))
         database.close()
 
         database = Room.databaseBuilder(context, AppDatabase::class.java, databaseFile.name)
-            .allowMainThreadQueries()
-            .build()
+            .allowMainThreadQueries().build()
         val adapter = RecordingAdapter(TrackingProvider.MYANIMELIST) { request ->
             TrackingDeliveryResult.Success(TrackingConfirmedSnapshot(state = request.command.draft.desired))
         }
-        TrackingOutboxExecutor(
-            database.trackingDao(),
-            TrackingCommandCodec(),
-            setOf(adapter),
-        ).drain()
+        TrackingOutboxExecutor(database.trackingDao(), TrackingCommandCodec(), setOf(adapter)).drain()
 
         assertEquals(1, adapter.calls)
         assertEquals("SUCCEEDED", database.trackingDao().getOperation(receipt.operationId)?.state)
         database.close()
         context.deleteDatabase(databaseFile.name)
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
-            .allowMainThreadQueries()
-            .build()
+            .allowMainThreadQueries().build()
     }
 
     private suspend fun seedLocal() {
@@ -238,7 +205,7 @@ class TrackingOutboxExecutorTest {
         )
     }
 
-    private suspend fun enqueue(targets: List<TrackingCommandTarget>) =
+    private suspend fun enqueue(target: TrackingCommandTarget) =
         ((TrackingOutboxRepository(
             database,
             database.trackingDao(),
@@ -251,14 +218,11 @@ class TrackingOutboxExecutorTest {
                 desired = TrackingDesiredState(TrackingStatus.CURRENT, progress = 4),
                 fields = setOf(TrackingField.STATUS, TrackingField.PROGRESS),
             ),
-            targets,
+            target,
         )) as TrackingEnqueueResult.Accepted).receipt
 
-    private fun target(
-        provider: TrackingProvider,
-        account: String,
-        mediaId: Long,
-    ) = TrackingCommandTarget(provider, account, mediaId)
+    private fun target(provider: TrackingProvider, account: String, mediaId: Long) =
+        TrackingCommandTarget(provider, account, mediaId)
 
     private class RecordingAdapter(
         override val provider: TrackingProvider,

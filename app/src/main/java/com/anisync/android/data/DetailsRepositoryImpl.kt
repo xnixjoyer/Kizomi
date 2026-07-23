@@ -1307,7 +1307,7 @@ private fun Long?.toIsoDate(): String? = this?.let { epochMillis ->
 
 private fun TrackingEnqueueResult.toDomainResult(): Result<Unit> = when (this) {
     is TrackingEnqueueResult.Rejected -> Result.Error("Tracking command rejected: ${reason.name}")
-    is TrackingEnqueueResult.Accepted -> when (receipt.targetStates[TrackingProvider.ANILIST]) {
+    is TrackingEnqueueResult.Accepted -> when (receipt.targetState.takeIf { receipt.provider == TrackingProvider.ANILIST }) {
         TrackingTargetState.BLOCKED,
         TrackingTargetState.FAILED,
         TrackingTargetState.SUPERSEDED,

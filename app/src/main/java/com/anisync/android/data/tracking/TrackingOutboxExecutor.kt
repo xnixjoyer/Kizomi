@@ -220,7 +220,6 @@ class TrackingOutboxExecutor internal constructor(
                     completedAt = snapshot.state.completedAt,
                     providerUpdatedAtEpochMillis = snapshot.providerUpdatedAtEpochMillis,
                     fetchedAtEpochMillis = now,
-                    rawProviderFieldsJson = snapshot.rawProviderFieldsJson,
                     isDeleted = snapshot.deleted,
                 )
             )
@@ -228,8 +227,8 @@ class TrackingOutboxExecutor internal constructor(
     }
 
     private suspend fun refreshAggregateState(operationId: String) {
-        val states = dao.getTargets(operationId).map { TrackingTargetState.valueOf(it.state) }
-        val state = aggregateTrackingOperationState(states) ?: return
+        val target = dao.getTarget(operationId) ?: return
+        val state = aggregateTrackingOperationState(TrackingTargetState.valueOf(target.state))
         dao.updateOperationState(operationId, state.name, System.currentTimeMillis())
     }
 
@@ -263,22 +262,13 @@ class TrackingOutboxExecutor internal constructor(
 }
 
 internal fun aggregateTrackingOperationState(
-    states: List<TrackingTargetState>,
-): TrackingOperationState? {
-    if (states.isEmpty()) return null
-    val successes = states.count { it == TrackingTargetState.SUCCEEDED }
-    return when {
-        states.all { it == TrackingTargetState.SUCCEEDED } -> TrackingOperationState.SUCCEEDED
-        states.all { it == TrackingTargetState.SUPERSEDED } -> TrackingOperationState.SUPERSEDED
-        states.any { it == TrackingTargetState.RUNNING } -> TrackingOperationState.RUNNING
-        successes > 0 && states.any {
-            it == TrackingTargetState.FAILED || it == TrackingTargetState.BLOCKED
-        } -> TrackingOperationState.PARTIAL_FAILURE
-        successes > 0 -> TrackingOperationState.PARTIAL
-        states.any {
-            it == TrackingTargetState.PENDING || it == TrackingTargetState.RETRYING
-        } -> TrackingOperationState.PENDING
-        states.all { it == TrackingTargetState.BLOCKED } -> TrackingOperationState.BLOCKED
-        else -> TrackingOperationState.FAILED
-    }
+    state: TrackingTargetState,
+): TrackingOperationState = when (state) {
+    TrackingTargetState.PENDING,
+    TrackingTargetState.RETRYING -> TrackingOperationState.PENDING
+    TrackingTargetState.RUNNING -> TrackingOperationState.RUNNING
+    TrackingTargetState.SUCCEEDED -> TrackingOperationState.SUCCEEDED
+    TrackingTargetState.BLOCKED -> TrackingOperationState.BLOCKED
+    TrackingTargetState.FAILED -> TrackingOperationState.FAILED
+    TrackingTargetState.SUPERSEDED -> TrackingOperationState.SUPERSEDED
 }

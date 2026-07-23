@@ -5,14 +5,12 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
-import com.anisync.android.data.local.entity.MalImportStateEntity
-import com.anisync.android.data.local.entity.MalImportEntryEntity
+import com.anisync.android.data.local.entity.MalLibraryRefreshStateEntity
+import com.anisync.android.data.local.entity.MalLibraryRefreshEntryEntity
 import com.anisync.android.data.local.entity.MalMediaCacheEntity
 import com.anisync.android.data.local.entity.ProviderTrackingSnapshotEntity
 import com.anisync.android.data.local.entity.TrackingOperationEntity
 import com.anisync.android.data.local.entity.TrackingOperationTargetEntity
-import com.anisync.android.data.local.entity.TrackingReconciliationItemEntity
-import com.anisync.android.data.local.entity.TrackingReconciliationPlanEntity
 import kotlinx.coroutines.flow.Flow
 
 /** Durable storage boundary for provider snapshots, the command journal, and reconciliation. */
@@ -103,15 +101,15 @@ interface TrackingDao {
     suspend fun insertOperation(operation: TrackingOperationEntity)
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertTargets(targets: List<TrackingOperationTargetEntity>)
+    suspend fun insertTarget(target: TrackingOperationTargetEntity)
 
     @Transaction
-    suspend fun insertOperationWithTargets(
+    suspend fun insertOperationWithTarget(
         operation: TrackingOperationEntity,
-        targets: List<TrackingOperationTargetEntity>,
+        target: TrackingOperationTargetEntity,
     ) {
         insertOperation(operation)
-        insertTargets(targets)
+        insertTarget(target)
     }
 
     @Query("SELECT COALESCE(MAX(generation), 0) FROM tracking_operations WHERE logicalKey = :logicalKey")
@@ -135,11 +133,8 @@ interface TrackingDao {
         deduplicationKey: String,
     ): TrackingOperationEntity?
 
-    @Query(
-        "SELECT * FROM tracking_operation_targets " +
-            "WHERE operationId = :operationId ORDER BY provider"
-    )
-    suspend fun getTargets(operationId: String): List<TrackingOperationTargetEntity>
+    @Query("SELECT * FROM tracking_operation_targets WHERE operationId = :operationId LIMIT 1")
+    suspend fun getTarget(operationId: String): TrackingOperationTargetEntity?
 
     @Query(
         "SELECT * FROM tracking_operation_targets ORDER BY updatedAtEpochMillis DESC, provider"
@@ -300,87 +295,96 @@ interface TrackingDao {
     suspend fun searchCachedMalMedia(mediaType: String, query: String, limit: Int): List<MalMediaCacheEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertImportState(state: MalImportStateEntity)
-
-    @Query("SELECT * FROM mal_import_states WHERE localAccountId = :localAccountId AND mediaType = :mediaType LIMIT 1")
-    suspend fun getImportState(localAccountId: String, mediaType: String): MalImportStateEntity?
-
-    @Query("DELETE FROM mal_import_states WHERE localAccountId = :localAccountId")
-    suspend fun deleteImportStates(localAccountId: String): Int
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertImportEntries(entries: List<MalImportEntryEntity>)
+    suspend fun upsertLibraryRefreshState(state: MalLibraryRefreshStateEntity)
 
     @Query(
-        "SELECT * FROM mal_import_entries WHERE localAccountId = :localAccountId " +
+        "SELECT * FROM mal_library_refresh_states " +
+            "WHERE localAccountId = :localAccountId AND mediaType = :mediaType LIMIT 1"
+    )
+    suspend fun getLibraryRefreshState(
+        localAccountId: String,
+        mediaType: String,
+    ): MalLibraryRefreshStateEntity?
+
+    @Query("DELETE FROM mal_library_refresh_states WHERE localAccountId = :localAccountId")
+    suspend fun deleteLibraryRefreshStates(localAccountId: String): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertLibraryRefreshEntries(entries: List<MalLibraryRefreshEntryEntity>)
+
+    @Query(
+        "SELECT * FROM mal_library_refresh_entries WHERE localAccountId = :localAccountId " +
             "AND mediaType = :mediaType AND generation = :generation ORDER BY malId"
     )
-    suspend fun getImportEntries(
+    suspend fun getLibraryRefreshEntries(
         localAccountId: String,
         mediaType: String,
         generation: Long,
-    ): List<MalImportEntryEntity>
+    ): List<MalLibraryRefreshEntryEntity>
 
     @Query(
-        "SELECT malId FROM mal_import_entries WHERE localAccountId = :localAccountId " +
+        "SELECT malId FROM mal_library_refresh_entries WHERE localAccountId = :localAccountId " +
             "AND mediaType = :mediaType AND generation = :generation"
     )
-    suspend fun getImportEntryIds(
+    suspend fun getLibraryRefreshEntryIds(
         localAccountId: String,
         mediaType: String,
         generation: Long,
     ): List<Long>
 
     @Query(
-        "DELETE FROM mal_import_entries WHERE localAccountId = :localAccountId " +
+        "DELETE FROM mal_library_refresh_entries WHERE localAccountId = :localAccountId " +
             "AND mediaType = :mediaType"
     )
-    suspend fun deleteImportEntries(localAccountId: String, mediaType: String): Int
+    suspend fun deleteLibraryRefreshEntries(localAccountId: String, mediaType: String): Int
 
-    @Query("DELETE FROM mal_import_entries WHERE localAccountId = :localAccountId")
-    suspend fun deleteImportEntriesForAccount(localAccountId: String): Int
+    @Query("DELETE FROM mal_library_refresh_entries WHERE localAccountId = :localAccountId")
+    suspend fun deleteLibraryRefreshEntriesForAccount(localAccountId: String): Int
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertReconciliationPlan(plan: TrackingReconciliationPlanEntity)
+    @Query("DELETE FROM tracking_operation_targets")
+    suspend fun deleteAllOperationTargets(): Int
 
-    @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertReconciliationItems(items: List<TrackingReconciliationItemEntity>)
+    @Query("DELETE FROM tracking_operations")
+    suspend fun deleteAllOperations(): Int
+
+    @Query("DELETE FROM provider_tracking_snapshots")
+    suspend fun deleteAllProviderSnapshots(): Int
+
+    @Query("DELETE FROM mal_media_cache")
+    suspend fun deleteAllMalMediaCache(): Int
+
+    @Query("DELETE FROM mal_library_refresh_states")
+    suspend fun deleteAllMalLibraryRefreshStates(): Int
+
+    @Query("DELETE FROM mal_library_refresh_entries")
+    suspend fun deleteAllMalLibraryRefreshEntries(): Int
 
     @Transaction
-    suspend fun insertReconciliation(
-        plan: TrackingReconciliationPlanEntity,
-        items: List<TrackingReconciliationItemEntity>,
-    ) {
-        insertReconciliationPlan(plan)
-        insertReconciliationItems(items)
+    suspend fun purgeAllProviderBoundState() {
+        deleteAllOperationTargets()
+        deleteAllOperations()
+        deleteAllProviderSnapshots()
+        deleteAllMalLibraryRefreshEntries()
+        deleteAllMalLibraryRefreshStates()
     }
 
-    @Query("SELECT * FROM tracking_reconciliation_plans WHERE planId = :planId LIMIT 1")
-    fun observeReconciliationPlan(planId: String): Flow<TrackingReconciliationPlanEntity?>
+    @Transaction
+    suspend fun purgeMalLocalData() {
+        deleteAllMalMediaCache()
+        deleteAllMalLibraryRefreshEntries()
+        deleteAllMalLibraryRefreshStates()
+        deleteSnapshotsForProvider("MYANIMELIST")
+        deleteTargetsForProvider("MYANIMELIST")
+        deleteOrphanOperations()
+    }
 
-    @Query(
-        "SELECT * FROM tracking_reconciliation_items WHERE planId = :planId " +
-            "ORDER BY action, itemKey"
-    )
-    fun observeReconciliationItems(planId: String): Flow<List<TrackingReconciliationItemEntity>>
+    @Query("DELETE FROM provider_tracking_snapshots WHERE provider = :provider")
+    suspend fun deleteSnapshotsForProvider(provider: String): Int
 
-    @Query(
-        "UPDATE tracking_reconciliation_items SET state = :state, operationId = :operationId, " +
-            "lastErrorKind = :lastErrorKind, updatedAtEpochMillis = :nowEpochMillis " +
-            "WHERE planId = :planId AND itemKey = :itemKey"
-    )
-    suspend fun updateReconciliationItem(
-        planId: String,
-        itemKey: String,
-        state: String,
-        operationId: String?,
-        lastErrorKind: String?,
-        nowEpochMillis: Long,
-    ): Int
+    @Query("DELETE FROM tracking_operation_targets WHERE provider = :provider")
+    suspend fun deleteTargetsForProvider(provider: String): Int
 
-    @Query(
-        "UPDATE tracking_reconciliation_plans SET state = :state, updatedAtEpochMillis = :nowEpochMillis " +
-            "WHERE planId = :planId"
-    )
-    suspend fun updateReconciliationPlan(planId: String, state: String, nowEpochMillis: Long): Int
+    @Query("DELETE FROM tracking_operations WHERE NOT EXISTS (SELECT 1 FROM tracking_operation_targets target WHERE target.operationId = tracking_operations.operationId)")
+    suspend fun deleteOrphanOperations(): Int
+
 }
