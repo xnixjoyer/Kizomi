@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify credential redaction and Android backup/transfer exclusions."""
+"""Verify credential, account-binding and provider-payload redaction contracts."""
 
 from __future__ import annotations
 
@@ -39,7 +39,8 @@ def main() -> int:
                 violations.append(
                     f"{path.relative_to(ROOT)}:{index}: sensitive value referenced in log call"
                 )
-            if "printStackTrace(" in line and SENSITIVE_WORDS.search("\n".join(lines[max(0, index - 4):index + 2])):
+            nearby = "\n".join(lines[max(0, index - 4):index + 2])
+            if "printStackTrace(" in line and SENSITIVE_WORDS.search(nearby):
                 violations.append(
                     f"{path.relative_to(ROOT)}:{index}: sensitive exception may be printed"
                 )
@@ -56,6 +57,28 @@ def main() -> int:
     for marker in ("accessToken=<redacted>", "MalAccountResult.Success(value=<redacted>)"):
         if marker not in mal_models:
             violations.append(f"MalAccountModels.kt: missing redaction marker {marker}")
+
+    tracking_models = (
+        ROOT / "app/src/main/java/com/anisync/android/domain/tracking/TrackingModels.kt"
+    ).read_text(encoding="utf-8")
+    tracking_markers = (
+        "localMediaId=<redacted>",
+        "operationId=<redacted>",
+        "providerAccountId=<redacted>",
+        "providerMediaId=<redacted>",
+        "providerListEntryIds=<redacted>",
+        "rawProviderFieldsJson=<redacted>",
+        "remoteRevision=<redacted>",
+    )
+    for marker in tracking_markers:
+        if marker not in tracking_models:
+            violations.append(f"TrackingModels.kt: missing redaction marker {marker}")
+
+    tracking_test = (
+        ROOT / "app/src/test/java/com/anisync/android/domain/tracking/TrackingModelRedactionTest.kt"
+    ).read_text(encoding="utf-8")
+    if "tracking transport models never render account media operation or private fields" not in tracking_test:
+        violations.append("Tracking model redaction regression test is missing")
 
     if violations:
         print("::error::Redaction or backup contract failed")
