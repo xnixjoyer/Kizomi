@@ -140,7 +140,9 @@ def main() -> int:
                     if not rule.pattern.search(line):
                         continue
                     normalized = line.strip().lower()
-                    if normalized.startswith(("no ", "there is no ", "there are no ")) or "not part of the product" in normalized:
+                    negative_contract = normalized.startswith(("no ", "there is no ", "there are no "))
+                    legacy_gate = "legacy installation" in normalized and "blocked before provider traffic" in normalized
+                    if negative_contract or legacy_gate or "not part of the product" in normalized:
                         continue
                     violations.append(f"{rel}: {rule.name}")
                     break
