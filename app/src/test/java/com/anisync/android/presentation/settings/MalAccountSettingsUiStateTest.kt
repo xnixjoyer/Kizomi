@@ -33,11 +33,14 @@ class MalAccountSettingsUiStateTest {
     }
 
     @Test
-    fun `sanitized error retains account context without sensitive fields`() {
+    fun `sanitized error retains account context without rendering account data`() {
+        val accountSentinel = "local-account-private-sentinel"
+        val displaySentinel = "display-name-private-sentinel"
         val previous = MalAccountSettingsUiState(
             connectionState = MalAccountConnectionState.CONNECTED,
             configured = true,
-            localAccountId = "local-1",
+            localAccountId = accountSentinel,
+            displayName = displaySentinel,
         )
 
         val error = MalAuthState.Error(
@@ -46,11 +49,16 @@ class MalAccountSettingsUiStateTest {
         ).toMalAccountSettingsUiState(previous)
 
         assertEquals(MalAccountConnectionState.ERROR, error.connectionState)
-        assertEquals("local-1", error.localAccountId)
+        assertEquals(accountSentinel, error.localAccountId)
+        assertEquals(displaySentinel, error.displayName)
         assertEquals(MalAuthFailureReason.INVALID_GRANT, error.failureReason)
         assertEquals(10L, error.retryAfterSeconds)
+        assertFalse(error.toString().contains(accountSentinel))
+        assertFalse(error.toString().contains(displaySentinel))
         assertFalse(error.toString().contains("access-token"))
         assertFalse(error.toString().contains("refresh-token"))
+        assertTrue(error.toString().contains("localAccountId=<redacted>"))
+        assertTrue(error.toString().contains("displayName=<redacted>"))
     }
 
     @Test
