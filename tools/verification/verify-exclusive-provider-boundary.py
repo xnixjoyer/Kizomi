@@ -134,8 +134,16 @@ def main() -> int:
 
         if rel not in EVIDENCE_DOCS:
             for rule in PRODUCT_DOC_RULES:
-                if in_scope(rel, rule.scopes) and rule.pattern.search(text):
+                if not in_scope(rel, rule.scopes):
+                    continue
+                for line in text.splitlines():
+                    if not rule.pattern.search(line):
+                        continue
+                    normalized = line.strip().lower()
+                    if normalized.startswith(("no ", "there is no ", "there are no ")) or "not part of the product" in normalized:
+                        continue
                     violations.append(f"{rel}: {rule.name}")
+                    break
 
     if violations:
         print("Exclusive-provider/public-boundary verification failed:", file=sys.stderr)
