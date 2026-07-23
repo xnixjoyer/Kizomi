@@ -1,0 +1,35 @@
+name: Branch source audit export
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'compliance/mal-api-agreement-readiness'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact pull request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Create public tracked-source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          git archive --format=zip --output="$RUNNER_TEMP/kizomi-public-source.zip" HEAD
+
+      - name: Upload public tracked-source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-source-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/kizomi-public-source.zip
+          if-no-files-found: error
+          retention-days: 1
