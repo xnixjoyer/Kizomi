@@ -53,6 +53,9 @@ jobs:
         if: github.repository == 'xnixjoyer/Kizomi'
         run: bash tools/verification/verify-public-source-boundary.sh
 
+      - name: Verify provider-native boundaries
+        run: python3 tools/verification/verify-provider-native-boundary.py
+
       - name: Verify tracking write boundary
         run: python3 tools/verification/verify-tracking-write-boundary.py
 
@@ -64,6 +67,9 @@ jobs:
 
       - name: Verify redaction and backup contracts
         run: python3 tools/verification/verify-redaction-and-backup.py
+
+      - name: Verify product readiness contracts
+        run: python3 tools/verification/verify-product-readiness-contract.py
 
       - name: Verify signing workflow contracts
         run: bash tools/verification/verify-signing-workflows.sh
