@@ -1,130 +1,94 @@
 # MAL production completion — execution state
 
-Last updated: 2026-07-22T20:31:00Z
+Last architecture update: 2026-07-23
 
-This is the canonical resumable checkpoint for the public MAL completion branch. It contains no
-credentials, tokens, authorization headers, response bodies, real account identifiers or private
-provider implementation data.
+This is the resumable public implementation checkpoint. It contains no credentials, authorization material, raw provider bodies, real account identifiers or non-public provider details.
 
 ## Immutable baseline
 
 - Repository: `xnixjoyer/Kizomi`
-- Public clean root and PR base: `7dcfdefda10b6eaccfef14917b145ad2d286e62e`
+- Public clean base: `7dcfdefda10b6eaccfef14917b145ad2d286e62e`
 - Branch: `test/mal-production-completion`
-- Draft PR: `#2`; leave Draft, open, unmerged
-- Private migration PR `xnixjoyer/Kizomi-Plus#1`: leave unmerged and unchanged
-- Never merge, enable auto-merge, force-push, rebase or rewrite history
+- Pull request: `#2`
+- Required state until owner acceptance: open, Draft and unmerged
+- Never merge, approve, enable auto-merge, force-push, rebase or rewrite history
 
-## CI evidence rule
+The PR description is authoritative for the latest remote head, exact-head run/job, unit-test count and artifact/APK hashes. Do not treat a head or run copied into documentation as newer evidence than the PR.
 
-A phase is complete only when the published branch commit containing that phase passes the full gate:
+## Completion evidence rule
 
-- exact branch-head checkout and SHA assertion;
-- public-provider boundary scan;
-- signing workflow contracts;
-- all Stable Debug unit tests;
-- Android lint Stable Debug;
-- Stable Debug APK;
-- Stable Debug AndroidTest APK;
-- committed Room schema cleanliness;
-- exactly one universal diagnostic APK with archive/APK hashes.
+A phase is technically verified only when the exact published branch head containing it passes the complete workflow:
 
-The workflow was hardened after Phase 11 to check out
-`${{ github.event.pull_request.head.sha || github.sha }}` explicitly. All Phase-12-and-later evidence
-must therefore name the exact branch commit, not GitHub's synthetic PR merge SHA. The first green
-run using that hardened workflow also revalidates all earlier code included in the head.
+- exact head checkout and SHA assertion;
+- public full-tree source boundary;
+- provider-native no-fallback boundary;
+- tracking-write boundary;
+- Room migration graph and generated-schema cleanliness;
+- secret, redaction, backup and signing contracts;
+- product-readiness evidence contract;
+- all Stable Debug unit tests and lint;
+- Stable Debug and AndroidTest APK assemblies;
+- exactly one universal diagnostic APK;
+- machine-readable unit-test count and artifact/APK hashes.
 
-## Verified checkpoints
+A pending, cancelled or older green run is not final evidence for a newer head.
 
-| Phase | Published commit | Run / job | State |
-|---|---|---|---|
-| 1–4 | baseline through Room 25 | baseline run `29914528154` | audited foundation |
-| 5 | `b157b997ceae16d7c569a84360b8a9130a85f92f` | `29939518580` / `88989543253` | green, 340 tests |
-| 6 | `83b07924332df86211a353d01a9d81bc59f98114` | `29944016411` / `89004727597` | green, 357 tests |
-| 7 | `d6cd0eb8bbeea849019ad2028c8a0d70a1fba60e` | `29945948142` / `89011221480` | green, 366 tests |
-| 8 | `ee4710deec4484fddd62012f4747799508c4d377` | `29947715268` / `89017295939` | green, 372 tests |
-| 9 | `113759e3e9358c58b44eaa05a45c0546cf78a9bc` | `29948954856` / `89021494341` | green, 375 tests |
-| 10 | `477376e984978f9aea9e4a4ed5dd53ca6dc4fcd0` | `29950025448` / `89025094317` | green, 382 tests |
-| 11 | `0606c86ecb4d7d0a3f93f8786de01b3e5e02c2a2` | `29954543265` / `89040171409` | full gate green; exact-head revalidation occurs with hardened Phase-12 workflow |
-| 12 | local implementation prepared | pending publish/gate | compare/missing-only under verification |
-| 13 | not started | — | hard AniList network boundary |
-| 14 | not started | — | hardening/release evidence |
+## Phase state
 
-## Phase 10 verified behavior
+| Phase | Stable outcome | Verification source |
+|---|---|---|
+| 1–4 | OAuth environment, encrypted account persistence, refresh coordination and provider-neutral identity | consolidated public base and historical exact-head evidence |
+| 5 | provider snapshots and durable outbox | PR exact-head history |
+| 6 | MyAnimeList list reads/import | PR exact-head history |
+| 7 | provider-native search, discovery, details and offline cache | PR exact-head history |
+| 8 | all production tracking writes routed through the durable command boundary | PR exact-head history |
+| 9 | independent Anime/Manga routing | PR exact-head history |
+| 10 | production MyAnimeList write/delete plus controlled read-back | PR exact-head history |
+| 11 | independent dual-target saga and account-bound conflict center | PR exact-head history |
+| 12 | durable compare plan and strict missing-only sync | last verified checkpoint before final hardening |
+| 13 | central provider/account write gate, direct-mutation scan, pure-provider null-write matrix and worker enforcement implemented | final PR exact-head gate required |
+| 14 | non-destructive migration chain, security/redaction/backup hardening, accessibility contracts and release evidence implemented | final PR exact-head gate required |
+| Product readiness | whole-tree CI contract covers auth rotation, rate limit, offline, cancellation, deduplication, restart, migration, adaptive UI and artifact selection | final PR exact-head gate required |
 
-- Official MAL Anime/Manga PATCH and DELETE through the durable outbox.
-- Exactly one refresh and one retry for authentication.
-- Absolute sparse requests and explicit capability checks.
-- Integer score projection; progress/status/repeat/date/chapter/volume support.
-- Controlled read-back after every write/delete.
-- Typed rate-limit, auth, identity, validation, transport, server and malformed-response failures.
-- Cancellation and redaction guarantees plus exact request tests.
-- Artifact `8541980145`; one APK SHA-256
-  `b3eab6ebdc5317784e62bce795b6fdd9142345d8671b130cf0574eb74cac7281`.
+## Phase 13 stable contract
 
-## Phase 11 verified behavior
+- `TrackingCommandService` applies current provider network policy before persistence.
+- `TrackingWriteGate` rechecks provider enablement and exact active account immediately before adapter delivery.
+- A blocked target produces zero adapter calls and remains explicitly `BLOCKED`.
+- AniList list mutation symbols may exist only in the canonical AniList adapter and generated GraphQL operations.
+- Default pure AniList mode never consults MyAnimeList configuration, account or identity paths.
+- MyAnimeList-only creates zero AniList targets; AniList-only creates zero MyAnimeList targets.
+- Dual mode creates exactly one independently account-bound target per provider.
+- Native catalog/detail paths do not silently fall back across providers.
+- Reading, calendar, profile and social functionality is outside the tracking-write kill switch.
+- Cancellation is propagated by command, adapter, executor and worker boundaries.
 
-- Independent provider outcomes; partial success never reports total success.
-- Retry reopens only explicitly failed targets; successful writes are never rolled back.
-- Conflicts are reconstructed from provider snapshots plus the persisted exact dual-account target
-  pair, so unrelated accounts are never cross-paired.
-- Conflict binding includes provider, account, media type, local identity and provider identity.
-- Resolution re-reads the full conflict to reject stale UI generations.
-- Explicit resolution creates exactly one exact-target outbox command.
-- Account switches preserve the captured target and block instead of redirecting.
-- Unsupported/provider-exclusive fields fail closed.
-- Active/deleted divergence supports exact restore or exact delete; missing delete handles block.
-- Database recreation preserves conflicts and bindings.
-- Run `29954543265`, job `89040171409`; artifact `8543669497`.
-- Archive size `39494042`, SHA-256
-  `feb0b4852fbb02b7f1f23ae531a85ac8a9d11224c78fdf47b3499772cb6ff540`.
-- Exactly one APK, size `42075104`, SHA-256
-  `df97491f638a09891f610af19f0913ca48124b12baf95ab056a83602d1aa4695`.
+## Phase 14 stable contract
 
-## Phase 12 implementation checkpoint
+- Destructive Room fallback is removed.
+- Real 1→2 data-preserving migration is registered with the 25→26→27 chain.
+- Empty and populated legacy database upgrades are tested; later tracking migrations retain schema tests.
+- Credential/OAuth stores are excluded from backup and device transfer.
+- AniList account tokens and provider/account/media identifiers are redacted from model strings.
+- Repository secret, redaction, backup, source and signing scans are hard CI gates.
+- Existing tests cover large provider pages, hostile paging URLs, offline, 401 refresh/re-login, 429 retry metadata, malformed data, cancellation, parallel refresh, concurrent deduplication, process restart and idempotent delivery.
+- MAL catalog UI has loading, cache/offline, error and empty states plus adaptive grid, large-font/narrow-width and accessibility semantics contracts.
+- CI selects exactly one universal diagnostic APK and records a machine-readable test count.
 
-Prepared but not yet complete until published exact-head CI is green:
+## Current technical continuation procedure
 
-- explicit Anime/Manga and provider direction;
-- immutable persistent preview plan and per-item state;
-- classifications `EQUAL`, `DIFFERENT`, `ONLY_SOURCE`, `ONLY_TARGET`, `UNMAPPED`,
-  `BLOCKED_CONFLICT`;
-- stable-local-identity matching only; no fuzzy/title matching;
-- trusted target identity requirement;
-- deterministic creation command only for safe `ONLY_SOURCE` items;
-- strict target-presence recheck before enqueue;
-- no update/delete command path in missing-only execution;
-- execution through `TrackingCommandService.enqueueExact` and durable outbox;
-- process-restart persistence, pause/resume, account-switch blocker and result reconciliation;
-- adaptive Tracking Center preview/result UI and source-level UI contract test;
-- exact-head CI checkout and artifact naming.
-
-## Current AI-executable TODO
-
-1. Publish Phase 12, inspect exact-head CI, fix only evidenced failures, then capture artifact/APK hashes.
-2. Phase 13: central AniList tracking network boundary, worker kill switch, MAL-only catalog/detail
-   protection and direct-mutation source scans while preserving allowed calendar/social functions.
-3. Phase 14: remove destructive migration fallback; verify every supported migration; add empty/large/
-   conflict DB, offline/rate-limit/auth-rotation/cancellation/duplicate/parallel/security/accessibility
-   coverage; produce final exact-head release evidence.
-4. Run a whole-app product-readiness audit and remediation loop.
-5. Forensically inspect the unchanged private `Kizomi-Plus#1` only as a reference for Calendar and
-   Release Compass; implement and verify public-safe equivalents in Kizomi without copying private
-   provider code or modifying the private PR.
-6. Create a detailed continuation prompt from the audit, execute it, generate the next plan and repeat
-   until no AI-executable work remains.
+1. Read PR #2 and obtain its actual remote head.
+2. Inspect only the workflow run associated with that exact head.
+3. If red, read the failed step/log and fix only the first concrete cause without weakening a gate.
+4. If green, download and independently verify the diagnostic artifact, test count, single APK, sizes and SHA-256 values.
+5. Update the PR description with final evidence and verify there are no unresolved review findings.
+6. Mark Ready for review only when no safe AI-executable task remains; never merge.
 
 ## External acceptance gates
 
-These remain external and must never be fabricated:
-
-- real MAL developer registration/client ID and approved redirect URI;
-- browser login, refresh and controlled real-account read/write/read-back;
-- physical-device accessibility, narrow-display and large-font acceptance;
+- real MyAnimeList developer registration/client ID and approved redirect URI;
+- controlled browser login/refresh and real-account write/read-back;
+- physical-device TalkBack, focus-order, narrow-display and large-font acceptance;
 - permanent release signing and store acceptance.
 
-## Stop condition
-
-Do not stop while any safe AI-executable task remains. Final output must include a visible TODO list,
-even when it contains no AI-executable entries, plus the external acceptance gates and a reusable
-follow-up prompt produced from the final product-readiness analysis.
+These gates remain external even after a fully green technical head.
