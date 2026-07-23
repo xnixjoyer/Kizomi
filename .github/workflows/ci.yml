@@ -8,9 +8,7 @@ on:
       - main
       - dev
       - 'codex/**'
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
+      - 'compliance/**'
 
 permissions:
   contents: read
@@ -52,6 +50,9 @@ jobs:
       - name: Verify public provider boundary
         if: github.repository == 'xnixjoyer/Kizomi'
         run: bash tools/verification/verify-public-source-boundary.sh
+
+      - name: Verify exclusive-provider and private-reference boundary
+        run: python3 tools/verification/verify-exclusive-provider-boundary.py
 
       - name: Verify provider-native boundaries
         run: python3 tools/verification/verify-provider-native-boundary.py
@@ -140,7 +141,7 @@ jobs:
           apk_size="$(stat -c '%s' "$apk")"
           apk_sha="$(sha256sum "$apk" | awk '{print $1}')"
           printf '%s\n' "$test_count" > "$evidence_dir/unit-test-count.txt"
-          EXACT_SHA="$EXACT_SHA" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" \
+          EXACT_SHA="$EXACT_SHA" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" GITHUB_JOB="$GITHUB_JOB" \
             TEST_COUNT="$test_count" APK_NAME="$(basename "$apk")" APK_SIZE="$apk_size" APK_SHA="$apk_sha" \
             python3 - <<'PY' > "$evidence_dir/evidence.json"
           import json
@@ -149,6 +150,7 @@ jobs:
               'exactHead': os.environ['EXACT_SHA'],
               'runId': int(os.environ['GITHUB_RUN_ID']),
               'runNumber': int(os.environ['GITHUB_RUN_NUMBER']),
+              'job': os.environ['GITHUB_JOB'],
               'unitTestCount': int(os.environ['TEST_COUNT']),
               'apkName': os.environ['APK_NAME'],
               'apkSizeBytes': int(os.environ['APK_SIZE']),
