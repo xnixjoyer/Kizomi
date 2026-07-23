@@ -6,7 +6,18 @@ package com.anisync.android.domain
  */
 sealed interface Result<out T> {
     data class Success<T>(val data: T) : Result<T>
-    data class Error(val message: String, val code: Int? = null, val countdownSeconds: Long? = null, val exception: Throwable? = null) : Result<Nothing>
+
+    data class Error(
+        val message: String,
+        val code: Int? = null,
+        val countdownSeconds: Long? = null,
+        val exception: Throwable? = null,
+    ) : Result<Nothing> {
+        /** Exceptions can contain URLs, headers or response fragments and are never diagnostic text. */
+        override fun toString(): String =
+            "Result.Error(message=$message, code=${code ?: "none"}, " +
+                "countdownSeconds=${countdownSeconds ?: "none"}, exception=<redacted>)"
+    }
 }
 
 /**
