@@ -114,6 +114,7 @@ class TrackingCommandService internal constructor(
         malAccounts: MalAccountCredentialStore,
         malConfiguration: MalOAuthConfigurationSource,
         appSettings: AppSettings,
+        writeGate: TrackingWriteGate,
         outbox: TrackingOutboxRepository,
     ) : this(
         ensureLocalIdentity = identityAdapter::ensureLocalIdentity,
@@ -121,6 +122,7 @@ class TrackingCommandService internal constructor(
         getProviderIdentities = identityStore::getProviderIdentities,
         activeMalAccountId = { malAccounts.activeAccount()?.localAccountId },
         routingPolicy = appSettings::currentTrackingPolicy,
+        providerNetworkPolicy = writeGate::currentPolicy,
         isMalConfigured = { malConfiguration.isLoginConfigured },
         enqueueCommand = outbox::enqueue,
     )
