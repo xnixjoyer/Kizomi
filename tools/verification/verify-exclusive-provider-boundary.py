@@ -78,6 +78,7 @@ PRODUCT_DOC_RULES = (
 )
 
 TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9._/-]*")
+MARKDOWN_PREFIX_RE = re.compile(r"^(?:(?:[-*+]|\d+[.)])\s*)+")
 
 
 def tracked_files() -> list[pathlib.Path]:
@@ -139,7 +140,7 @@ def main() -> int:
                 for line in text.splitlines():
                     if not rule.pattern.search(line):
                         continue
-                    normalized = line.strip().lower()
+                    normalized = MARKDOWN_PREFIX_RE.sub("", line.strip().lower())
                     negative_contract = normalized.startswith(("no ", "there is no ", "there are no "))
                     legacy_gate = "legacy installation" in normalized and "blocked before provider traffic" in normalized
                     if negative_contract or legacy_gate or "not part of the product" in normalized:
