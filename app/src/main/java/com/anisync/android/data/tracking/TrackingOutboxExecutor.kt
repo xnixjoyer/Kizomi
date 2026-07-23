@@ -23,11 +23,37 @@ data class TrackingDrainResult(
 )
 
 @Singleton
-class TrackingOutboxExecutor @Inject constructor(
+class TrackingOutboxExecutor internal constructor(
     private val dao: TrackingDao,
     private val codec: TrackingCommandCodec,
     adapters: Set<@JvmSuppressWildcards TrackingProviderAdapter>,
+    private val writeGate: suspend (TrackingProvider, String) -> TrackingFailureKind?,
 ) {
+    @Inject
+    constructor(
+        dao: TrackingDao,
+        codec: TrackingCommandCodec,
+        adapters: Set<@JvmSuppressWildcards TrackingProviderAdapter>,
+        writeGate: TrackingWriteGate,
+    ) : this(
+        dao = dao,
+        codec = codec,
+        adapters = adapters,
+        writeGate = writeGate::blocker,
+    )
+
+    /** Test-only compatibility constructor; production always receives [TrackingWriteGate]. */
+    internal constructor(
+        dao: TrackingDao,
+        codec: TrackingCommandCodec,
+        adapters: Set<@JvmSuppressWildcards TrackingProviderAdapter>,
+    ) : this(
+        dao = dao,
+        codec = codec,
+        adapters = adapters,
+        writeGate = { _, _ -> null },
+    )
+
     private val adaptersByProvider = adapters.associateBy(TrackingProviderAdapter::provider)
 
     suspend fun drain(maxDeliveries: Int = DEFAULT_BATCH_SIZE): TrackingDrainResult {
@@ -60,27 +86,37 @@ class TrackingOutboxExecutor @Inject constructor(
         val operation = dao.getOperation(target.operationId)
         val command = try {
             operation?.let { codec.decode(it.commandJson) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Throwable) {
             null
         }
         val provider = runCatching { TrackingProvider.valueOf(target.provider) }.getOrNull()
         val attempt = target.attemptCount + 1
+        val accountId = target.providerAccountId
         val result = when {
             operation == null || command == null || provider == null ->
                 TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.INVALID_RESPONSE)
-            target.providerAccountId == null ->
+            accountId == null ->
                 TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.MISSING_ACCOUNT)
             target.providerMediaId == null ->
                 TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.MISSING_IDENTITY)
             adaptersByProvider[provider] == null ->
                 TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.PROVIDER_NOT_CONFIGURED)
-            else -> applySafely(
-                adapter = requireNotNull(adaptersByProvider[provider]),
-                command = command,
-                provider = provider,
-                target = target,
-                attempt = attempt,
-            )
+            else -> {
+                val gateBlocker = writeGate(provider, accountId)
+                if (gateBlocker != null) {
+                    TrackingDeliveryResult.TerminalFailure(gateBlocker)
+                } else {
+                    applySafely(
+                        adapter = requireNotNull(adaptersByProvider[provider]),
+                        command = command,
+                        provider = provider,
+                        target = target,
+                        attempt = attempt,
+                    )
+                }
+            }
         }
 
         finish(target, leaseToken, command, result, attempt)
@@ -121,8 +157,10 @@ class TrackingOutboxExecutor @Inject constructor(
         val now = System.currentTimeMillis()
         val terminalRetry = result is TrackingDeliveryResult.RetryableFailure &&
             attempt >= MAX_DELIVERY_ATTEMPTS
+        val terminalKind = (result as? TrackingDeliveryResult.TerminalFailure)?.kind
         val state = when {
             result is TrackingDeliveryResult.Success -> TrackingTargetState.SUCCEEDED
+            terminalKind in BLOCKING_FAILURES -> TrackingTargetState.BLOCKED
             terminalRetry -> TrackingTargetState.FAILED
             result is TrackingDeliveryResult.RetryableFailure -> TrackingTargetState.RETRYING
             else -> TrackingTargetState.FAILED
@@ -215,6 +253,12 @@ class TrackingOutboxExecutor @Inject constructor(
         private const val LEASE_DURATION_MILLIS = 10 * 60_000L
         private const val BASE_BACKOFF_MILLIS = 15_000L
         private const val MAX_BACKOFF_MILLIS = 6 * 60 * 60_000L
+        private val BLOCKING_FAILURES = setOf(
+            TrackingFailureKind.NETWORK_BLOCKED,
+            TrackingFailureKind.MISSING_ACCOUNT,
+            TrackingFailureKind.MISSING_IDENTITY,
+            TrackingFailureKind.PROVIDER_NOT_CONFIGURED,
+        )
     }
 }
 
