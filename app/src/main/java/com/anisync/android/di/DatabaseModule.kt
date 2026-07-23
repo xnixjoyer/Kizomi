@@ -3,6 +3,7 @@ package com.anisync.android.di
 import android.content.Context
 import androidx.room.Room
 import com.anisync.android.data.local.AppDatabase
+import com.anisync.android.data.local.LegacyMigrations
 import com.anisync.android.data.local.Migrations
 import com.anisync.android.data.local.dao.CommunityScoreDao
 import com.anisync.android.data.local.dao.FranchiseGraphDao
@@ -28,12 +29,13 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        val migrations = LegacyMigrations.ALL_MIGRATIONS + Migrations.ALL_MIGRATIONS
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "anisync.db"
         )
-            .addMigrations(*Migrations.ALL_MIGRATIONS)
+            .addMigrations(*migrations)
             // Missing migration paths must fail closed. Production data is never dropped to make an
             // upgrade appear successful; supported upgrades are covered by committed Room schemas
             // and instrumentation migration tests.
