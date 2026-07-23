@@ -1,54 +1,49 @@
 # MyAnimeList integration context
 
-This directory contains the public architecture, migration, security and verification contracts for MyAnimeList as an optional provider in Kizomi.
+This directory records the public architecture and implementation contracts for MyAnimeList when it is the application's one active provider.
 
 ## Active implementation
 
 - Repository: `xnixjoyer/Kizomi`
-- Branch: `test/mal-production-completion`
-- Draft PR: `#2`, leave open and unmerged until owner review
-- Canonical resumable checkpoint: `EXECUTION_STATE.md`
-- Architecture and next-agent briefing: `AI_AGENT_BRIEFING_AND_ROADMAP.md`
+- Base branch: `main`
+- Base SHA for the active work: `e44efaffae565b0d6a642547d5e37e0f402ea12e`
+- Working branch: `compliance/mal-api-agreement-readiness`
+- Draft pull request: `#3 – MAL compliance and exclusive provider readiness`
+- Canonical resumable checkpoint: `../mal-compliance/EXECUTION_STATE.md`
+- Continuation handoff: `../mal-compliance/AI_HANDOFF.md`
 
-The PR description is authoritative for the latest exact head, workflow run/job, test count and artifact/APK hashes.
+The pull-request description is authoritative for the final exact head, workflow run and job, test count, artifact identifiers, archive digest, APK size, and APK SHA-256.
 
-## Phase documents
+## Product boundary
 
-- `phase-4-identity-contract.md` — provider-neutral local/provider identity invariants.
-- `phase-4-media-identity-audit.md` — inventory and migration treatment of legacy identities.
-- `phase-4-migration-matrix.md` — safe, missing, duplicate, conflicting and rejected identity migration behavior.
-- `phase-5-outbox-contract.md` — durable command, target, lease, retry and partial-success rules.
-- `phase-9-routing-contract.md` — independent Anime/Manga and provider routing.
-- `phase-10-write-contract.md` — MyAnimeList write/delete, capability and controlled read-back rules.
-- `phase-11-saga-contract.md` — independent dual-target delivery and conflict binding.
-- `phase-12-compare-missing-only-contract.md` — durable compare plan and non-destructive missing-only execution.
-- `phase-13-network-gate-contract.md` — fail-closed provider/account write boundary and pure-provider proof matrix.
-- `phase-14-product-readiness-contract.md` — migrations, security, accessibility, failure handling and release evidence.
-- `OWNER_ACTIONS_PHASE_3_AND_4.md` — owner-only provider registration and physical-device acceptance context.
+Kizomi has exactly one app-wide provider state:
 
-## Current schema and persistence
+- `UNCONFIGURED`
+- `ANILIST_ONLY`
+- `MAL_ONLY`
 
-The public app uses additive Room migrations through schema 27:
+There is no combined provider runtime, no separate Anime/Manga provider choice, no cross-provider comparison or transfer, no mirrored write, and no fallback to the inactive provider. A provider change is destructive and returns the app to `UNCONFIGURED` before a fresh login.
 
-- 1→2: data-preserving rebuild of the early media-details table;
-- 2→25: Room auto-migration chain from committed schemas;
-- 25→26: durable provider snapshots and command outbox;
-- 26→27: conflict and reconciliation persistence.
+## MyAnimeList boundary
 
-Destructive migration fallback is forbidden. CI verifies every committed schema can reach the current version and that Room does not generate uncommitted schema changes.
+- Android is a native public client and never uses a client secret.
+- Login uses an external browser and Authorization Code Grant with PKCE.
+- Only official OAuth endpoints and documented API v2 endpoints are allowed.
+- HTML scraping, cookie/password login, login WebViews, unofficial endpoints, arbitrary paging hosts, and third-party authorization forwarding are forbidden.
+- MyAnimeList credentials and content remain local, are excluded from backup/transfer, are not sent to AniList or a Kizomi backend, and can be fully purged.
+- Endpoint-level compliance requires checking every used method, path, parameter, field, enum, and documented page constraint against a complete current official reference.
 
-## Security and provider boundaries
+## Architecture documents
 
-- The public tree contains only documented public provider integrations.
-- Private provider terms, domains, parsers, fixtures and implementation notes are forbidden by a full-tree scan.
-- Provider-native catalog/detail paths do not silently fall back across providers.
-- All tracking writes pass through `TrackingCommandService`, the durable outbox, `TrackingWriteGate` and one provider adapter.
-- Provider/account switching fails closed with an explicit blocked target and zero writes.
-- Credential stores and OAuth continuation stores are encrypted and excluded from backup/transfer.
-- Tokens, account/media IDs, notes, raw bodies and revisions are redacted from diagnostics and model strings.
+- `SINGLE_PROVIDER_ARCHITECTURE.md` — state machine, migration, onboarding, switching, routing, workers, widgets, and tracking invariants.
+- `MAL_OAUTH_AND_API_BOUNDARY.md` — public-client OAuth, token handling, endpoints, redirect rules, redaction, and no-scraping contract.
+- `DATA_AND_DELETION_CONTRACT.md` — local data inventory, backup exclusion, minimization, retention, and central purge behavior.
+- `CALENDAR_EXTENSION_CONTRACT.md` — neutral modular extension registry, provider/capability filtering, settings isolation, lifecycle cleanup, and failure isolation.
 
-## Final verification
+Historical multi-provider phase documents are not product requirements and are removed rather than retained as active guidance.
 
-A reviewable exact head must pass public/provider/tracking source boundaries, migration graph, schema cleanliness, secret/redaction/backup/signing scans, product-readiness contracts, all Stable Debug unit tests and lint, Stable Debug and AndroidTest builds, and one universal diagnostic APK with machine-readable test count and hashes.
+## Verification
 
-No implementation agent merges, approves or enables auto-merge. The repository owner performs final review and uses **Create a merge commit** after external acceptance.
+A reviewable exact head must pass public/private-reference boundaries, exclusive-provider and inactive-provider isolation, single-target tracking, onboarding/consent/migration/switch/purge, OAuth public-client and endpoint checks, no scraping, Room migrations, backup and redaction, request budgeting, calendar-extension contracts, non-commercial scans, legal-document checks, Stable Debug tests/lint/builds, and independent verification of one universal diagnostic APK artifact.
+
+No implementation agent merges, approves, or enables auto-merge. The repository owner performs final review and uses **Create a merge commit** after automated and external acceptance.
