@@ -29,13 +29,15 @@ TEXT_SUFFIXES = {
     ".yml",
 }
 
-# Compliance evidence is allowed to describe prohibited historical concepts in a
-# clearly negative/audit context. Product docs and runtime sources are not.
+# Compliance evidence and historical implementation records may describe
+# prohibited concepts for audit purposes. Product guidance and runtime sources may not.
 EVIDENCE_DOCS = {
     "docs/mal-compliance/AI_HANDOFF.md",
     "docs/mal-compliance/API_AGREEMENT_MATRIX.md",
     "docs/mal-compliance/EXECUTION_STATE.md",
     "docs/mal-compliance/OWNER_ACTIONS.md",
+    "docs/mal-integration/phase-1-oauth-environment-contract.md",
+    "docs/mal-integration/phase-2-account-token-persistence.md",
 }
 
 # Hash-only denylist: the corresponding private names/paths must never be stored
