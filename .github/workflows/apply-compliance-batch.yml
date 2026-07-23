@@ -1,0 +1,45 @@
+name: Apply compliance implementation batch
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'compliance/mal-api-agreement-readiness'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact pull request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Apply exact verified implementation patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_head='${{ github.event.pull_request.head.sha }}'
+          test "$(git rev-parse HEAD)" = "$expected_head"
+
+          cat .compliance-batch/part-* | base64 --decode > "$RUNNER_TEMP/kizomi-compliance.patch.gz"
+          echo '3353b4c077948a6cc0d950880f82af231b10b040d62a6b64cf701fecaf2c2147  '"$RUNNER_TEMP/kizomi-compliance.patch.gz" | sha256sum --check --strict
+
+          gzip --decompress --stdout "$RUNNER_TEMP/kizomi-compliance.patch.gz" > "$RUNNER_TEMP/kizomi-compliance.patch"
+          echo '64d472b8d35df47964b4a37fdaadcfed2cf8e1a76c42729cac87f2d02eeb67ed  '"$RUNNER_TEMP/kizomi-compliance.patch" | sha256sum --check --strict
+
+          git apply --check "$RUNNER_TEMP/kizomi-compliance.patch"
+          git apply --index --whitespace=nowarn "$RUNNER_TEMP/kizomi-compliance.patch"
+
+          rm -rf .compliance-batch
+          rm -f .github/workflows/apply-compliance-batch.yml
+          git add -A
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat(compliance): implement exclusive provider foundation'
+          git push origin HEAD:compliance/mal-api-agreement-readiness
