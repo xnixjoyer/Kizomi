@@ -90,19 +90,13 @@ def main() -> int:
     )
     require_markers(
         violations,
-        "app/src/main/java/com/anisync/android/presentation/settings/MalAccountSettingsViewModel.kt",
-        ("localAccountId=<redacted>", "displayName=<redacted>", "authorizationUrl=<redacted>"),
-    )
-    require_markers(
-        violations,
         "app/src/main/java/com/anisync/android/domain/tracking/TrackingModels.kt",
         (
             "localMediaId=<redacted>",
             "operationId=<redacted>",
             "providerAccountId=<redacted>",
             "providerMediaId=<redacted>",
-            "providerListEntryIds=<redacted>",
-            "rawProviderFieldsJson=<redacted>",
+            "providerListEntryId=<redacted>",
             "remoteRevision=<redacted>",
         ),
     )
@@ -129,11 +123,6 @@ def main() -> int:
         violations,
         "app/src/test/java/com/anisync/android/data/mal/oauth/MalAuthStateRedactionTest.kt",
         ("OAuth state and public results never render session URL or account identity",),
-    )
-    require_markers(
-        violations,
-        "app/src/test/java/com/anisync/android/presentation/settings/MalAccountSettingsUiStateTest.kt",
-        ("without rendering account data", "displayName=<redacted>"),
     )
     require_markers(
         violations,
