@@ -3,6 +3,7 @@ package com.anisync.android.di
 import android.content.Context
 import androidx.room.Room
 import com.anisync.android.data.local.AppDatabase
+import com.anisync.android.data.local.LegacyMigrations
 import com.anisync.android.data.local.Migrations
 import com.anisync.android.data.local.dao.CommunityScoreDao
 import com.anisync.android.data.local.dao.FranchiseGraphDao
@@ -10,6 +11,9 @@ import com.anisync.android.data.local.dao.LibraryDao
 import com.anisync.android.data.local.dao.MalAccountDao
 import com.anisync.android.data.local.dao.MediaDetailsDao
 import com.anisync.android.data.local.dao.SavedForumThreadDao
+import com.anisync.android.data.local.dao.TrackingConflictDao
+import com.anisync.android.data.local.dao.TrackingDao
+import com.anisync.android.data.local.dao.TrackingReconciliationDao
 import com.anisync.android.data.local.dao.UserProfileDao
 import dagger.Module
 import dagger.Provides
@@ -25,24 +29,16 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        val migrations = LegacyMigrations.ALL_MIGRATIONS + Migrations.ALL_MIGRATIONS
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "anisync.db"
         )
-            .addMigrations(*Migrations.ALL_MIGRATIONS)
-            // ┌─────────────────────────────────────────────────────────────────┐
-            // │  ⚠️  DEVELOPMENT ONLY - REMOVE BEFORE PRODUCTION RELEASE  ⚠️   │
-            // ├─────────────────────────────────────────────────────────────────┤
-            // │  This allows destructive recreation when migrations are missing │
-            // │                                                                 │
-            // │  Before publishing to Play Store:                               │
-            // │  1. Remove the .fallbackToDestructiveMigration() call below     │
-            // │  2. Ensure all migrations are defined in Migrations.kt          │
-            // │  3. Test upgrade paths from version 1 to current                │
-            // │  4. Run MigrationTest.kt to verify all migrations               │
-            // └─────────────────────────────────────────────────────────────────┘
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            .addMigrations(*migrations)
+            // Missing migration paths must fail closed. Production data is never dropped to make an
+            // upgrade appear successful; supported upgrades are covered by committed Room schemas
+            // and instrumentation migration tests.
             .build()
     }
 
@@ -79,4 +75,15 @@ object DatabaseModule {
 
     @Provides
     fun provideMalAccountDao(database: AppDatabase): MalAccountDao = database.malAccountDao()
+
+    @Provides
+    fun provideTrackingDao(database: AppDatabase): TrackingDao = database.trackingDao()
+
+    @Provides
+    fun provideTrackingConflictDao(database: AppDatabase): TrackingConflictDao =
+        database.trackingConflictDao()
+
+    @Provides
+    fun provideTrackingReconciliationDao(database: AppDatabase): TrackingReconciliationDao =
+        database.trackingReconciliationDao()
 }

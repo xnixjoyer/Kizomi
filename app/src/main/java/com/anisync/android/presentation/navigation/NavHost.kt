@@ -54,6 +54,8 @@ import com.anisync.android.presentation.forum.ThreadDetailScreen
 import com.anisync.android.presentation.library.LibraryListDetail
 import com.anisync.android.presentation.library.LibraryScreen
 import com.anisync.android.presentation.login.LoginScreen
+import com.anisync.android.presentation.mal.MalCatalogScreen
+import com.anisync.android.presentation.mal.MalDetailsScreen
 import com.anisync.android.presentation.notifications.NotificationsListDetail
 import com.anisync.android.presentation.profile.ProfileScreen
 import com.anisync.android.presentation.review.RecentReviewsScreen
@@ -73,6 +75,7 @@ import com.anisync.android.presentation.settings.LinksScreen
 import com.anisync.android.presentation.settings.LookAndFeelScreen
 import com.anisync.android.presentation.settings.MediaUploadSettingsScreen
 import com.anisync.android.presentation.settings.MalAccountSettingsScreen
+import com.anisync.android.presentation.settings.TrackingCenterScreen
 import com.anisync.android.presentation.settings.NotificationsScreen
 import com.anisync.android.presentation.settings.OpenSourceLicensesScreen
 import com.anisync.android.presentation.settings.SettingsListDetail
@@ -272,6 +275,38 @@ fun AniSyncNavHost(
                 popExitTransition = { sharedAxisXExit(forward = false) }
             ) {
                 LoginScreen()
+            }
+
+            composable<MalCatalog>(
+                enterTransition = { sharedAxisZEnter() },
+                exitTransition = { sharedAxisZExit() },
+                popEnterTransition = { sharedAxisZPopEnter() },
+                popExitTransition = { sharedAxisZPopExit() },
+            ) {
+                MalCatalogScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onMediaClick = { key ->
+                        navController.navigate(
+                            MalNativeDetails(key.mediaType.name, key.malId)
+                        )
+                    },
+                )
+            }
+
+            composable<MalNativeDetails>(
+                enterTransition = { sharedAxisZEnter() },
+                exitTransition = { sharedAxisZExit() },
+                popEnterTransition = { sharedAxisZPopEnter() },
+                popExitTransition = { sharedAxisZPopExit() },
+            ) {
+                MalDetailsScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onRelatedClick = { key ->
+                        navController.navigate(
+                            MalNativeDetails(key.mediaType.name, key.malId)
+                        )
+                    },
+                )
             }
 
             // =================================================================
@@ -1299,8 +1334,19 @@ fun AniSyncNavHost(
                 popExitTransition = { sharedAxisZPopExit() }
             ) {
                 MalAccountSettingsScreen(
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    onBrowseMal = { navController.navigate(MalCatalog) },
+                    onOpenTrackingCenter = { navController.navigate(SettingsTrackingCenter) },
                 )
+            }
+
+            composable<SettingsTrackingCenter>(
+                enterTransition = { sharedAxisZEnter() },
+                exitTransition = { sharedAxisZExit() },
+                popEnterTransition = { sharedAxisZPopEnter() },
+                popExitTransition = { sharedAxisZPopExit() }
+            ) {
+                TrackingCenterScreen(onBackClick = { navController.popBackStack() })
             }
 
             // Notifications Settings

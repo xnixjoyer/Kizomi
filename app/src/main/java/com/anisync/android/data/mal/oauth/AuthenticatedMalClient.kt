@@ -10,6 +10,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,6 +28,7 @@ enum class MalAuthenticatedFailureReason {
     TOKEN_UNAVAILABLE,
     REFRESH_FAILED,
     RELOGIN_REQUIRED,
+    OFFLINE,
     TIMEOUT,
     TRANSPORT,
     CANCELLED,
@@ -44,7 +46,8 @@ sealed interface MalAuthenticatedResult {
         val refreshFailure: MalRefreshFailureReason? = null,
     ) : MalAuthenticatedResult {
         override fun toString(): String =
-            "MalAuthenticatedResult.Failure(reason=${reason.name}, localAccountId=$localAccountId, refreshFailure=${refreshFailure?.name ?: "none"})"
+            "MalAuthenticatedResult.Failure(reason=${reason.name}, localAccountId=<redacted>, " +
+                "refreshFailure=${refreshFailure?.name ?: "none"})"
     }
 }
 
@@ -136,6 +139,8 @@ class AuthenticatedMalClient @Inject constructor(
             throw cancellation
         } catch (_: SocketTimeoutException) {
             ExecuteResult.Failure(MalAuthenticatedFailureReason.TIMEOUT)
+        } catch (_: UnknownHostException) {
+            ExecuteResult.Failure(MalAuthenticatedFailureReason.OFFLINE)
         } catch (_: IOException) {
             ExecuteResult.Failure(
                 if (call.isCanceled()) {

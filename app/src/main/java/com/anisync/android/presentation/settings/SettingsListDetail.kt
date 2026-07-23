@@ -42,6 +42,7 @@ import com.anisync.android.presentation.navigation.SettingsOpenSourceLicenses
 import com.anisync.android.presentation.navigation.SettingsSponsors
 import com.anisync.android.presentation.navigation.SettingsStorage
 import com.anisync.android.presentation.navigation.SettingsTheme
+import com.anisync.android.presentation.navigation.SettingsTrackingCenter
 import com.anisync.android.presentation.navigation.SettingsUpdates
 import com.anisync.android.presentation.navigation.TwoPaneListDetailScaffold
 import com.anisync.android.presentation.util.LocalAdaptiveInfo
@@ -200,8 +201,12 @@ private fun SettingsDetailPane(
             )
         }
         composable<SettingsMyAnimeList> {
-            MalAccountSettingsScreen(onBackClick = popOrClose)
+            MalAccountSettingsScreen(
+                onBackClick = popOrClose,
+                onOpenTrackingCenter = { paneNav.navigate(SettingsTrackingCenter) },
+            )
         }
+        composable<SettingsTrackingCenter> { TrackingCenterScreen(onBackClick = popOrClose) }
         composable<SettingsNotifications> { NotificationsScreen(onBackClick = popOrClose) }
         composable<SettingsStorage> { StorageScreen(onBackClick = popOrClose) }
         composable<SettingsMediaUpload> { MediaUploadSettingsScreen(onBackClick = popOrClose) }

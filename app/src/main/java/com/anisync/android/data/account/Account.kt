@@ -26,8 +26,11 @@ data class Account(
     val isProvisional: Boolean
         get() = id == PROVISIONAL_ID
 
+    override fun toString(): String =
+        "Account(id=$id, name=$name, avatarUrl=$avatarUrl, expiresAt=$expiresAt, token=<redacted>)"
+
     companion object {
-        /** Placeholder id for a migrated legacy token before its real Viewer id is known. */
+        /** Placeholder id for a migrated legacy token before its real Viewer id/name/avatar exists. */
         const val PROVISIONAL_ID = 0
     }
 }

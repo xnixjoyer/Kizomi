@@ -9,6 +9,7 @@ import com.anisync.android.data.local.dao.LibraryDao
 import com.anisync.android.widget.UpNextWidget
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CancellationException
 
 @HiltWorker
 class EpisodeUpdateWorker @AssistedInject constructor(
@@ -30,9 +31,10 @@ class EpisodeUpdateWorker @AssistedInject constructor(
             // Update progress
             val newProgress = (entry.progress + amount).coerceAtLeast(0)
             
-            // 1. Update LOCAL only (Optimistic)
-            val localResult = libraryRepository.updateProgressLocal(mediaId, newProgress)
-            if (localResult is com.anisync.android.domain.Result.Error) {
+            // One call performs the optimistic local update and durably enqueues the absolute
+            // provider target. There is no separately callable local-only tracking bypass.
+            val updateResult = libraryRepository.updateProgress(mediaId, newProgress)
+            if (updateResult is com.anisync.android.domain.Result.Error) {
                  return Result.failure()
             }
 
@@ -44,13 +46,10 @@ class EpisodeUpdateWorker @AssistedInject constructor(
                 UpNextWidget().update(appContext, glanceId)
             }
 
-            // 3. Sync to Network (Background)
-            // We call updateProgress, which will re-do local update (harmless) and then sync
-            libraryRepository.updateProgress(mediaId, newProgress)
-
             return Result.success()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
             return Result.failure()
         }
     }

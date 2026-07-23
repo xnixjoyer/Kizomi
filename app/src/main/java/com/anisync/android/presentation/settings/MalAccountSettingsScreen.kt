@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material3.Button
@@ -25,11 +26,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.anisync.android.R
+import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.domain.tracking.TrackingMode
 import com.anisync.android.util.AppLinksUtil
 
 @Composable
 fun MalAccountSettingsScreen(
     onBackClick: () -> Unit,
+    onBrowseMal: () -> Unit = {},
+    onOpenTrackingCenter: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MalAccountSettingsViewModel = hiltViewModel(),
 ) {
@@ -51,6 +56,45 @@ fun MalAccountSettingsScreen(
         onBackClick = onBackClick,
         modifier = modifier,
     ) {
+        SettingsSectionLabel(stringResource(R.string.tracking_provider_policy_section))
+        Text(
+            text = stringResource(R.string.tracking_provider_policy_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TrackingModeGroup(
+            title = stringResource(R.string.tracking_provider_anime),
+            selected = state.animeTrackingMode,
+            onSelected = { mode ->
+                viewModel.setTrackingMode(TrackingMediaType.ANIME, mode)
+            },
+        )
+        TrackingModeGroup(
+            title = stringResource(R.string.tracking_provider_manga),
+            selected = state.mangaTrackingMode,
+            onSelected = { mode ->
+                viewModel.setTrackingMode(TrackingMediaType.MANGA, mode)
+            },
+        )
+        if (!state.configured &&
+            (state.animeTrackingMode != TrackingMode.ANILIST_ONLY ||
+                state.mangaTrackingMode != TrackingMode.ANILIST_ONLY)
+        ) {
+            Text(
+                text = stringResource(R.string.tracking_provider_mal_blocked),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        SettingsGroup {
+            SettingsItem(
+                title = stringResource(R.string.tracking_center_open),
+                subtitle = stringResource(R.string.tracking_center_open_desc),
+                icon = Icons.Outlined.Link,
+                onClick = onOpenTrackingCenter,
+            )
+        }
+
         SettingsSectionLabel(stringResource(R.string.mal_account_status_section))
         SettingsItem(
             title = statusTitle(state.connectionState),
@@ -83,6 +127,16 @@ fun MalAccountSettingsScreen(
                     )
                 }
                 MalAccountConnectionState.CONNECTED -> {
+                    Button(
+                        onClick = onBrowseMal,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Outlined.Explore, contentDescription = null)
+                        Text(
+                            text = stringResource(R.string.mal_browse_catalog),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                     OutlinedButton(
                         onClick = viewModel::logout,
                         modifier = Modifier.fillMaxWidth(),
@@ -133,6 +187,39 @@ fun MalAccountSettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+private fun TrackingModeGroup(
+    title: String,
+    selected: TrackingMode,
+    onSelected: (TrackingMode) -> Unit,
+) {
+    SettingsSectionLabel(title)
+    SettingsGroup {
+        TrackingMode.entries.forEach { mode ->
+            RadioSettingsItem(
+                title = trackingModeTitle(mode),
+                subtitle = trackingModeDescription(mode),
+                selected = selected == mode,
+                onClick = { onSelected(mode) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun trackingModeTitle(mode: TrackingMode): String = when (mode) {
+    TrackingMode.ANILIST_ONLY -> stringResource(R.string.tracking_mode_anilist)
+    TrackingMode.MYANIMELIST_ONLY -> stringResource(R.string.tracking_mode_mal)
+    TrackingMode.DUAL -> stringResource(R.string.tracking_mode_dual)
+}
+
+@Composable
+private fun trackingModeDescription(mode: TrackingMode): String = when (mode) {
+    TrackingMode.ANILIST_ONLY -> stringResource(R.string.tracking_mode_anilist_desc)
+    TrackingMode.MYANIMELIST_ONLY -> stringResource(R.string.tracking_mode_mal_desc)
+    TrackingMode.DUAL -> stringResource(R.string.tracking_mode_dual_desc)
 }
 
 @Composable

@@ -2,10 +2,13 @@ package com.anisync.android.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.anisync.android.data.AppSettings
 import com.anisync.android.data.mal.oauth.MalAuthFailureReason
 import com.anisync.android.data.mal.oauth.MalAuthRepository
 import com.anisync.android.data.mal.oauth.MalAuthState
 import com.anisync.android.data.mal.oauth.MalLoginStartResult
+import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.domain.tracking.TrackingMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,11 +39,20 @@ data class MalAccountSettingsUiState(
     val displayName: String? = null,
     val failureReason: MalAuthFailureReason? = null,
     val retryAfterSeconds: Long? = null,
+    val animeTrackingMode: TrackingMode = TrackingMode.ANILIST_ONLY,
+    val mangaTrackingMode: TrackingMode = TrackingMode.ANILIST_ONLY,
 ) {
     val isBusy: Boolean
         get() = connectionState == MalAccountConnectionState.OPENING_BROWSER ||
             connectionState == MalAccountConnectionState.AWAITING_CALLBACK ||
             connectionState == MalAccountConnectionState.PROCESSING
+
+    override fun toString(): String =
+        "MalAccountSettingsUiState(connectionState=${connectionState.name}, configured=$configured, " +
+            "localAccountId=<redacted>, displayName=<redacted>, " +
+            "failureReason=${failureReason?.name ?: "none"}, " +
+            "retryAfterSeconds=${retryAfterSeconds ?: "none"}, " +
+            "animeTrackingMode=${animeTrackingMode.name}, mangaTrackingMode=${mangaTrackingMode.name})"
 }
 
 sealed interface MalAccountSettingsEffect {
@@ -53,6 +65,7 @@ sealed interface MalAccountSettingsEffect {
 @HiltViewModel
 class MalAccountSettingsViewModel @Inject constructor(
     private val authRepository: MalAuthRepository,
+    private val appSettings: AppSettings,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(MalAccountSettingsUiState())
     val uiState: StateFlow<MalAccountSettingsUiState> = _uiState.asStateFlow()
@@ -68,6 +81,16 @@ class MalAccountSettingsViewModel @Inject constructor(
         }
         viewModelScope.launch {
             authRepository.refreshState()
+        }
+        viewModelScope.launch {
+            appSettings.animeTrackingMode.collectLatest { mode ->
+                _uiState.update { it.copy(animeTrackingMode = mode) }
+            }
+        }
+        viewModelScope.launch {
+            appSettings.mangaTrackingMode.collectLatest { mode ->
+                _uiState.update { it.copy(mangaTrackingMode = mode) }
+            }
         }
     }
 
@@ -119,18 +142,26 @@ class MalAccountSettingsViewModel @Inject constructor(
             authRepository.cancelPendingLogin()
         }
     }
+
+    fun setTrackingMode(mediaType: TrackingMediaType, mode: TrackingMode) {
+        appSettings.setTrackingMode(mediaType, mode)
+    }
 }
 
 internal fun MalAuthState.toMalAccountSettingsUiState(
     previous: MalAccountSettingsUiState = MalAccountSettingsUiState(),
 ): MalAccountSettingsUiState = when (this) {
-    is MalAuthState.Disconnected -> MalAccountSettingsUiState(
+    is MalAuthState.Disconnected -> previous.copy(
         connectionState = if (configured) {
             MalAccountConnectionState.DISCONNECTED
         } else {
             MalAccountConnectionState.NOT_CONFIGURED
         },
         configured = configured,
+        localAccountId = null,
+        displayName = null,
+        failureReason = null,
+        retryAfterSeconds = null,
     )
     is MalAuthState.AwaitingCallback -> previous.copy(
         connectionState = MalAccountConnectionState.AWAITING_CALLBACK,
@@ -140,16 +171,21 @@ internal fun MalAuthState.toMalAccountSettingsUiState(
         connectionState = MalAccountConnectionState.PROCESSING,
         failureReason = null,
     )
-    is MalAuthState.Connected -> MalAccountSettingsUiState(
+    is MalAuthState.Connected -> previous.copy(
         connectionState = MalAccountConnectionState.CONNECTED,
         configured = true,
         localAccountId = account.localAccountId,
         displayName = account.profile.displayName ?: account.profile.username,
+        failureReason = null,
+        retryAfterSeconds = null,
     )
-    is MalAuthState.ReLoginRequired -> MalAccountSettingsUiState(
+    is MalAuthState.ReLoginRequired -> previous.copy(
         connectionState = MalAccountConnectionState.RELOGIN_REQUIRED,
         configured = true,
         localAccountId = localAccountId,
+        displayName = null,
+        failureReason = null,
+        retryAfterSeconds = null,
     )
     is MalAuthState.Error -> previous.copy(
         connectionState = if (reason == MalAuthFailureReason.CONFIGURATION_UNAVAILABLE) {

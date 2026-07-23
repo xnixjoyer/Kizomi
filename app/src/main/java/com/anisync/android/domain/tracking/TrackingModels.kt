@@ -1,0 +1,286 @@
+package com.anisync.android.domain.tracking
+
+import kotlinx.serialization.Serializable
+import kotlin.math.roundToInt
+
+@Serializable
+enum class TrackingMode {
+    ANILIST_ONLY,
+    MYANIMELIST_ONLY,
+    DUAL,
+}
+
+@Serializable
+enum class TrackingProvider {
+    ANILIST,
+    MYANIMELIST,
+}
+
+@Serializable
+enum class TrackingMediaType {
+    ANIME,
+    MANGA,
+}
+
+@Serializable
+enum class TrackingStatus {
+    CURRENT,
+    PLANNING,
+    COMPLETED,
+    DROPPED,
+    PAUSED,
+    REPEATING,
+}
+
+@Serializable
+enum class TrackingField {
+    STATUS,
+    PROGRESS,
+    PROGRESS_SECONDARY,
+    SCORE,
+    REPEAT_COUNT,
+    NOTES,
+    STARTED_AT,
+    COMPLETED_AT,
+    CUSTOM_LISTS,
+    PRIVATE,
+    HIDDEN_FROM_STATUS_LISTS,
+    DELETE,
+}
+
+enum class TrackingOperationState {
+    PENDING,
+    RUNNING,
+    PARTIAL,
+    PARTIAL_FAILURE,
+    SUCCEEDED,
+    BLOCKED,
+    FAILED,
+    SUPERSEDED,
+}
+
+enum class TrackingTargetState {
+    PENDING,
+    RUNNING,
+    RETRYING,
+    SUCCEEDED,
+    BLOCKED,
+    FAILED,
+    SUPERSEDED,
+}
+
+@Serializable
+enum class TrackingFailureKind {
+    STORAGE,
+    MISSING_ACCOUNT,
+    MISSING_IDENTITY,
+    NETWORK_BLOCKED,
+    NOT_AUTHENTICATED,
+    UNAUTHORIZED,
+    RATE_LIMITED,
+    OFFLINE,
+    TIMEOUT,
+    TRANSPORT,
+    TRANSIENT_SERVER,
+    INVALID_RESPONSE,
+    UNSUPPORTED_FIELD,
+    VALIDATION,
+    PROVIDER_NOT_CONFIGURED,
+    RETRY_BUDGET_EXHAUSTED,
+    LEASE_EXPIRED,
+    PERMANENT,
+}
+
+/** Provider-neutral, absolute desired list state. Null means absent, never "leave unchanged". */
+@Serializable
+data class TrackingDesiredState(
+    val status: TrackingStatus?,
+    val progress: Int,
+    val progressSecondary: Int? = null,
+    /** Canonical 0–100 projection. Provider-native raw values remain in provider snapshots. */
+    val score100: Double? = null,
+    val repeatCount: Int = 0,
+    val notes: String? = null,
+    /** ISO-8601 yyyy-MM-dd. */
+    val startedAt: String? = null,
+    /** ISO-8601 yyyy-MM-dd. */
+    val completedAt: String? = null,
+    /** Provider capability-gated list memberships; currently supported by AniList only. */
+    val customLists: List<String> = emptyList(),
+    val isPrivate: Boolean = false,
+    val hiddenFromStatusLists: Boolean = false,
+) {
+    init {
+        require(progress >= 0) { "progress must be non-negative" }
+        require(progressSecondary == null || progressSecondary >= 0) {
+            "secondary progress must be non-negative"
+        }
+        require(score100 == null || score100 in 0.0..100.0) { "score100 must be in 0..100" }
+        require(repeatCount >= 0) { "repeat count must be non-negative" }
+        require(startedAt == null || ISO_DATE.matches(startedAt)) { "startedAt must be yyyy-MM-dd" }
+        require(completedAt == null || ISO_DATE.matches(completedAt)) {
+            "completedAt must be yyyy-MM-dd"
+        }
+        require(customLists.none(String::isBlank)) { "custom list names must not be blank" }
+    }
+
+    override fun toString(): String =
+        "TrackingDesiredState(status=${status?.name ?: "none"}, progress=$progress, " +
+            "progressSecondary=${progressSecondary ?: "none"}, score100=${score100 ?: "none"}, " +
+            "repeatCount=$repeatCount, notes=<redacted>, startedAt=${startedAt ?: "none"}, " +
+            "completedAt=${completedAt ?: "none"}, customLists=<redacted>, " +
+            "isPrivate=$isPrivate, hiddenFromStatusLists=$hiddenFromStatusLists)"
+
+    companion object {
+        private val ISO_DATE = Regex("\\d{4}-\\d{2}-\\d{2}")
+    }
+}
+
+/** Intent accepted by the one mutation entry point before an operation id is allocated. */
+@Serializable
+data class TrackingCommandDraft(
+    val localMediaId: String,
+    val mediaType: TrackingMediaType,
+    val desired: TrackingDesiredState,
+    val fields: Set<TrackingField>,
+    val deleteIntent: Boolean = false,
+    /** Provider-native list-entry handles needed for delete without a second lookup. */
+    val providerListEntryIds: Map<TrackingProvider, Long> = emptyMap(),
+) {
+    init {
+        require(localMediaId.isNotBlank()) { "localMediaId must not be blank" }
+        require(fields.isNotEmpty()) { "field mask must not be empty" }
+        require(deleteIntent == (TrackingField.DELETE in fields)) {
+            "delete intent and DELETE field must agree"
+        }
+        require(deleteIntent || desired.status != null) { "non-delete state requires a status" }
+        require(providerListEntryIds.values.all { it > 0L }) {
+            "provider list-entry ids must be positive"
+        }
+    }
+
+    override fun toString(): String =
+        "TrackingCommandDraft(localMediaId=<redacted>, mediaType=${mediaType.name}, desired=$desired, " +
+            "fields=${fields.map { it.name }.sorted()}, deleteIntent=$deleteIntent, " +
+            "providerListEntryIds=<redacted>)"
+}
+
+/** Immutable payload stored before any remote call. */
+@Serializable
+data class TrackingCommand(
+    val operationId: String,
+    val generation: Long,
+    val draft: TrackingCommandDraft,
+) {
+    init {
+        require(operationId.isNotBlank()) { "operationId must not be blank" }
+        require(generation > 0) { "generation must be positive" }
+    }
+
+    override fun toString(): String =
+        "TrackingCommand(operationId=<redacted>, generation=$generation, draft=$draft)"
+}
+
+/** One configured saga target; blockers are persisted rather than silently dropping the target. */
+@Serializable
+data class TrackingCommandTarget(
+    val provider: TrackingProvider,
+    val providerAccountId: String?,
+    val providerMediaId: Long?,
+    val blocker: TrackingFailureKind? = null,
+) {
+    init {
+        require(providerAccountId == null || providerAccountId.isNotBlank())
+        require(providerMediaId == null || providerMediaId > 0L)
+    }
+
+    override fun toString(): String =
+        "TrackingCommandTarget(provider=${provider.name}, providerAccountId=<redacted>, " +
+            "providerMediaId=<redacted>, blocker=${blocker?.name ?: "none"})"
+}
+
+data class TrackingEnqueueReceipt(
+    val operationId: String,
+    val generation: Long,
+    val deduplicated: Boolean,
+    val targetStates: Map<TrackingProvider, TrackingTargetState>,
+) {
+    override fun toString(): String =
+        "TrackingEnqueueReceipt(operationId=<redacted>, generation=$generation, " +
+            "deduplicated=$deduplicated, targetStates=$targetStates)"
+}
+
+sealed interface TrackingEnqueueResult {
+    data class Accepted(val receipt: TrackingEnqueueReceipt) : TrackingEnqueueResult
+    data class Rejected(val reason: TrackingFailureKind) : TrackingEnqueueResult
+}
+
+data class TrackingProviderRequest(
+    val command: TrackingCommand,
+    val provider: TrackingProvider,
+    val providerAccountId: String,
+    val providerMediaId: Long,
+    val deliveryAttempt: Int,
+) {
+    override fun toString(): String =
+        "TrackingProviderRequest(command=$command, provider=${provider.name}, " +
+            "providerAccountId=<redacted>, providerMediaId=<redacted>, " +
+            "deliveryAttempt=$deliveryAttempt)"
+}
+
+data class TrackingConfirmedSnapshot(
+    val providerListEntryId: Long? = null,
+    val title: String = "",
+    val coverUrl: String? = null,
+    val state: TrackingDesiredState,
+    val providerUpdatedAtEpochMillis: Long? = null,
+    val rawProviderFieldsJson: String = "{}",
+    val remoteRevision: String? = null,
+    val deleted: Boolean = false,
+) {
+    override fun toString(): String =
+        "TrackingConfirmedSnapshot(providerListEntryId=<redacted>, title=$title, " +
+            "coverUrl=${if (coverUrl == null) "absent" else "present"}, state=$state, " +
+            "providerUpdatedAtEpochMillis=${providerUpdatedAtEpochMillis ?: "none"}, " +
+            "rawProviderFieldsJson=<redacted>, remoteRevision=<redacted>, deleted=$deleted)"
+}
+
+sealed interface TrackingDeliveryResult {
+    data class Success(val snapshot: TrackingConfirmedSnapshot) : TrackingDeliveryResult
+
+    data class RetryableFailure(
+        val kind: TrackingFailureKind,
+        val httpStatus: Int? = null,
+        val retryAfterMillis: Long? = null,
+    ) : TrackingDeliveryResult
+
+    data class TerminalFailure(
+        val kind: TrackingFailureKind,
+        val httpStatus: Int? = null,
+    ) : TrackingDeliveryResult
+}
+
+interface TrackingProviderAdapter {
+    val provider: TrackingProvider
+    suspend fun apply(request: TrackingProviderRequest): TrackingDeliveryResult
+}
+
+fun TrackingStatus.toMalStatus(mediaType: TrackingMediaType): String = when (mediaType) {
+    TrackingMediaType.ANIME -> when (this) {
+        TrackingStatus.CURRENT, TrackingStatus.REPEATING -> "watching"
+        TrackingStatus.PLANNING -> "plan_to_watch"
+        TrackingStatus.COMPLETED -> "completed"
+        TrackingStatus.DROPPED -> "dropped"
+        TrackingStatus.PAUSED -> "on_hold"
+    }
+    TrackingMediaType.MANGA -> when (this) {
+        TrackingStatus.CURRENT, TrackingStatus.REPEATING -> "reading"
+        TrackingStatus.PLANNING -> "plan_to_read"
+        TrackingStatus.COMPLETED -> "completed"
+        TrackingStatus.DROPPED -> "dropped"
+        TrackingStatus.PAUSED -> "on_hold"
+    }
+}
+
+/** MAL deliberately stores only integer 0–10 scores; this conversion is visible and tested. */
+fun Double.toMalIntegerScore(): Int = div(10.0).roundToInt().coerceIn(0, 10)

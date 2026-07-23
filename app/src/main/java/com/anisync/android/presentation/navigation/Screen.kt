@@ -17,6 +17,16 @@ object Library
 @Serializable
 object Discover
 
+/** Provider-native MAL catalog; route identity deliberately does not reuse AniList MediaDetails. */
+@Serializable
+object MalCatalog
+
+@Serializable
+data class MalNativeDetails(
+    val mediaType: String,
+    val malId: Long,
+)
+
 /**
  * Airing calendar — weekly anime airing schedule. Reached from the Library top bar.
  */
@@ -392,6 +402,9 @@ object SettingsAniSyncPlusAppearance
 
 @Serializable
 object SettingsCommunityScores
+
+@Serializable
+object SettingsTrackingCenter
 
 @Serializable
 object SettingsAniSyncPlusDiagnostics

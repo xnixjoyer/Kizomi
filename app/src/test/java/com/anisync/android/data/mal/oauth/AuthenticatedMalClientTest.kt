@@ -4,12 +4,14 @@ import com.anisync.android.data.mal.account.MalTokenSet
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.RecordedRequest
 import okhttp3.mockwebserver.MockWebServer
+import java.net.UnknownHostException
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -110,9 +112,31 @@ class AuthenticatedMalClientTest {
         assertEquals("Bearer refreshed-access", server.takeRequest().getHeader("Authorization"))
     }
 
+    @Test
+    fun `unknown host is classified as offline without leaking transport details`() = runTest {
+        val offlineHttpClient = OkHttpClient.Builder()
+            .dns(object : Dns {
+                override fun lookup(hostname: String): List<java.net.InetAddress> {
+                    throw UnknownHostException("private-dns-sentinel")
+                }
+            })
+            .build()
+        val fixture = fixture(this, httpClient = offlineHttpClient)
+
+        val result = fixture.client.execute("local-1") {
+            Request.Builder().url("https://offline.invalid/resource").build()
+        }
+
+        result as MalAuthenticatedResult.Failure
+        assertEquals(MalAuthenticatedFailureReason.OFFLINE, result.reason)
+        assertTrue(!result.toString().contains("private-dns-sentinel"))
+        assertTrue(!result.toString().contains("local-1"))
+    }
+
     private fun fixture(
         scope: kotlinx.coroutines.CoroutineScope,
         expiresAt: Long = 1_000_000L,
+        httpClient: OkHttpClient = OkHttpClient(),
     ): Fixture {
         val accounts = FakeMalAccountCredentialStore()
         accounts.seed(
@@ -134,7 +158,7 @@ class AuthenticatedMalClientTest {
             accounts = accounts,
             service = service,
             client = AuthenticatedMalClient(
-                client = OkHttpClient(),
+                client = httpClient,
                 accountStore = accounts,
                 refreshCoordinator = coordinator,
                 clock = clock,

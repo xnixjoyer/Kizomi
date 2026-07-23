@@ -3,12 +3,6 @@ name: Pull request and push CI
 on:
   workflow_dispatch:
   pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - 'tools/verification/**'
-      - '.github/workflows/verify-phase1-completion.yml'
-      - '.github/workflows/export-phase1-workspace.yml'
   push:
     branches:
       - main
@@ -29,9 +23,13 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    env:
+      EXACT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
-      - name: Checkout
+      - name: Checkout exact published head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXACT_SHA }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -47,12 +45,31 @@ jobs:
 
       - name: Commit metadata
         run: |
+          test "$(git rev-parse HEAD)" = "$EXACT_SHA"
           git rev-parse HEAD
           git log -1 --format='%h %cI %s'
 
       - name: Verify public provider boundary
         if: github.repository == 'xnixjoyer/Kizomi'
         run: bash tools/verification/verify-public-source-boundary.sh
+
+      - name: Verify provider-native boundaries
+        run: python3 tools/verification/verify-provider-native-boundary.py
+
+      - name: Verify tracking write boundary
+        run: python3 tools/verification/verify-tracking-write-boundary.py
+
+      - name: Verify Room migration contract
+        run: python3 tools/verification/verify-room-migration-contract.py
+
+      - name: Verify repository contains no secrets
+        run: python3 tools/verification/verify-repository-secrets.py
+
+      - name: Verify redaction and backup contracts
+        run: python3 tools/verification/verify-redaction-and-backup.py
+
+      - name: Verify product readiness contracts
+        run: python3 tools/verification/verify-product-readiness-contract.py
 
       - name: Verify signing workflow contracts
         run: bash tools/verification/verify-signing-workflows.sh
@@ -61,11 +78,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          mkdir -p app/build
           ./gradlew --build-cache --parallel --continue \
             testStableDebugUnitTest \
             lintStableDebug \
             assembleStableDebug \
-            assembleStableDebugAndroidTest
+            assembleStableDebugAndroidTest \
+            2>&1 | tee app/build/ci-gradle.log
 
       - name: Verify exported Room schema is committed
         shell: bash
@@ -85,8 +104,9 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Kizomi-${{ github.sha }}-run${{ github.run_number }}-failure-reports
+          name: Kizomi-${{ env.EXACT_SHA }}-run${{ github.run_number }}-failure-reports
           path: |
+            app/build/ci-gradle.log
             app/build/test-results/testStableDebugUnitTest/**
             app/build/reports/tests/testStableDebugUnitTest/**
             app/build/reports/lint-results-stableDebug.*
@@ -94,22 +114,57 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Select exact universal APK
-        id: apk
+      - name: Prepare exact diagnostic evidence
+        id: evidence
         shell: bash
         run: |
           set -euo pipefail
           mapfile -t apks < <(find app/build/outputs/apk/stable/debug -maxdepth 1 -type f -name 'Kizomi-*-universal-debug.apk' -print)
           [[ ${#apks[@]} -eq 1 ]] || { printf 'Expected one universal APK, found %s\n' "${#apks[@]}"; exit 1; }
-          short_sha="${GITHUB_SHA::8}"
-          target="$RUNNER_TEMP/Kizomi-${short_sha}-run${GITHUB_RUN_NUMBER}-diagnostic.apk"
-          cp "${apks[0]}" "$target"
-          echo "path=$target" >> "$GITHUB_OUTPUT"
+          short_sha="${EXACT_SHA::8}"
+          evidence_dir="$RUNNER_TEMP/diagnostic-evidence"
+          mkdir -p "$evidence_dir"
+          apk="$evidence_dir/Kizomi-${short_sha}-run${GITHUB_RUN_NUMBER}-diagnostic.apk"
+          cp "${apks[0]}" "$apk"
+          test_count="$(python3 - <<'PY'
+          import glob
+          import xml.etree.ElementTree as ET
+          total = 0
+          for path in glob.glob('app/build/test-results/testStableDebugUnitTest/TEST-*.xml'):
+              total += int(ET.parse(path).getroot().attrib.get('tests', '0'))
+          if total <= 0:
+              raise SystemExit('No unit-test count found')
+          print(total)
+          PY
+          )"
+          apk_size="$(stat -c '%s' "$apk")"
+          apk_sha="$(sha256sum "$apk" | awk '{print $1}')"
+          printf '%s\n' "$test_count" > "$evidence_dir/unit-test-count.txt"
+          EXACT_SHA="$EXACT_SHA" GITHUB_RUN_ID="$GITHUB_RUN_ID" GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" \
+            TEST_COUNT="$test_count" APK_NAME="$(basename "$apk")" APK_SIZE="$apk_size" APK_SHA="$apk_sha" \
+            python3 - <<'PY' > "$evidence_dir/evidence.json"
+          import json
+          import os
+          print(json.dumps({
+              'exactHead': os.environ['EXACT_SHA'],
+              'runId': int(os.environ['GITHUB_RUN_ID']),
+              'runNumber': int(os.environ['GITHUB_RUN_NUMBER']),
+              'unitTestCount': int(os.environ['TEST_COUNT']),
+              'apkName': os.environ['APK_NAME'],
+              'apkSizeBytes': int(os.environ['APK_SIZE']),
+              'apkSha256': os.environ['APK_SHA'],
+          }, indent=2, sort_keys=True))
+          PY
+          [[ $(find "$evidence_dir" -maxdepth 1 -type f -name '*.apk' | wc -l) -eq 1 ]]
+          echo "directory=$evidence_dir" >> "$GITHUB_OUTPUT"
+          echo "test_count=$test_count" >> "$GITHUB_OUTPUT"
+          echo "apk_sha=$apk_sha" >> "$GITHUB_OUTPUT"
+          echo "apk_size=$apk_size" >> "$GITHUB_OUTPUT"
 
-      - name: Upload diagnostic APK
+      - name: Upload diagnostic APK and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: Kizomi-${{ github.sha }}-run${{ github.run_number }}-diagnostic-apk
-          path: ${{ steps.apk.outputs.path }}
+          name: Kizomi-${{ env.EXACT_SHA }}-run${{ github.run_number }}-diagnostic-apk
+          path: ${{ steps.evidence.outputs.directory }}
           if-no-files-found: error
           retention-days: 14

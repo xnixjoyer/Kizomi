@@ -1284,6 +1284,33 @@
     <string name="nav_calendar_short">Calendar</string>
     <string ns0:ignore="MissingTranslation" name="settings_myanimelist_account">MyAnimeList account</string>
     <string ns0:ignore="MissingTranslation" name="settings_myanimelist_account_desc">Connect securely through your browser and manage the local MAL session.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_policy_section">Tracking providers</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_policy_description">Choose independently where future anime and manga edits are sent. Changing this never deletes existing provider data.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_anime">Anime tracking</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_manga">Manga tracking</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_anilist">AniList only</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_anilist_desc">Send future edits only to the selected AniList account.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_mal">MyAnimeList only</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_mal_desc">Send future edits only to the selected MyAnimeList account.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_dual">AniList and MyAnimeList</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_mode_dual_desc">Create an explicit target for both providers; one provider never silently replaces the other.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_provider_mal_blocked">MyAnimeList writes are explicitly blocked until a public client ID is configured and an account is connected. Your selected mode remains saved.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_open">Open sync and conflict center</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_open_desc">Inspect each provider result, retry only a failed target, and review divergent snapshots or identity issues.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_title">Sync and conflict center</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_identity_section">Identity review</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_identity_issues">Provider identity issues</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_identity_counts">%1$d unresolved · %2$d conflicting. Activate to refresh.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_operations_section">Provider operations</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_operations_empty">No provider operations have been recorded yet.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_conflicts_section">Snapshot divergences</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_conflicts_empty">AniList and MyAnimeList confirmed snapshots currently have no visible divergence.</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_operation_summary">%1$s · %2$s</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_provider_result">%1$s: %2$s</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_failure_detail">%1$s · %2$d attempts</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_retry_provider">Retry %1$s only</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_conflict_fields">Different fields: %1$s</string>
+    <string ns0:ignore="MissingTranslation" name="tracking_center_no_auto_resolution">No provider is overwritten automatically. Review and resolve explicitly.</string>
     <string ns0:ignore="MissingTranslation" name="mal_account_status_section">Connection</string>
     <string ns0:ignore="MissingTranslation" name="mal_login_not_configured">MAL login is not configured</string>
     <string ns0:ignore="MissingTranslation" name="mal_login_not_configured_detail">A public MAL client ID and registered redirect URI are required. No client secret belongs in the app.</string>
@@ -1302,4 +1329,33 @@
     <string ns0:ignore="MissingTranslation" name="mal_browser_security_notice">Sign-in always opens in your system browser. Kizomi never asks for your MyAnimeList password and stores no client secret.</string>
     <string ns0:ignore="MissingTranslation" name="mal_retry_after_seconds">Try again in about %1$d seconds.</string>
     <string ns0:ignore="MissingTranslation" name="mal_error_sanitized">Technical category: %1$s. No credentials were included.</string>
+    <string ns0:ignore="MissingTranslation" name="mal_browse_catalog">Browse MyAnimeList</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_title">MyAnimeList catalog</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_search_hint">Search anime or manga</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_search_action">Search MyAnimeList</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_anime">Anime</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_manga">Manga</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_ranking_chip">Ranking</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_seasonal_chip">This season</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_ranking">Popular on MyAnimeList</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_seasonal">This season on MyAnimeList</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_empty">No MyAnimeList titles found.</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_cached_notice">Showing saved MyAnimeList results while refresh is unavailable.</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_error">MyAnimeList data is unavailable (%1$s).</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_retry">Retry</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_open_details">Open MyAnimeList details for %1$s</string>
+    <string ns0:ignore="MissingTranslation" name="mal_catalog_poster">Poster for %1$s</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_title">MyAnimeList details</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_score">MAL score: %1$s</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_rank">Rank: #%1$d</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_progress">Progress: %1$d</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_episodes">%1$d episodes</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_chapters">%1$d chapters</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_volumes">%1$d volumes</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_background">Background</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_pictures">Pictures</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_related">Related titles</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_recommendations">Recommendations</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_synopsis_unavailable">No synopsis is available from MyAnimeList.</string>
+    <string ns0:ignore="MissingTranslation" name="mal_details_anilist_unavailable">AniList-only social and community features are unavailable for this MAL-native title.</string>
 </resources>

@@ -3,12 +3,14 @@
     <cloud-backup>
         <include domain="root" path="." />
         <include domain="sharedpref" path="." />
+        <exclude domain="sharedpref" path="auth_prefs.xml" />
         <exclude domain="sharedpref" path="mal_token_vault.xml" />
         <exclude domain="sharedpref" path="mal_oauth_session.xml" />
     </cloud-backup>
     <device-transfer>
         <include domain="root" path="." />
         <include domain="sharedpref" path="." />
+        <exclude domain="sharedpref" path="auth_prefs.xml" />
         <exclude domain="sharedpref" path="mal_token_vault.xml" />
         <exclude domain="sharedpref" path="mal_oauth_session.xml" />
     </device-transfer>

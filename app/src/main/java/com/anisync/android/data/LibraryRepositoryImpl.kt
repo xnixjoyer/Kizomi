@@ -6,18 +6,22 @@ import com.anisync.android.data.local.dao.LibraryDao
 import com.anisync.android.data.local.toDomain
 import com.anisync.android.data.local.toEntity
 import com.anisync.android.data.mapper.mapFuzzyDateToLong
-import com.anisync.android.data.mapper.toApiStatus
 import com.anisync.android.data.mapper.toDomainStatus
-import com.anisync.android.data.mapper.toFuzzyDateInput
 import com.anisync.android.data.mapper.todayUtcMillis
+import com.anisync.android.data.tracking.AniListTrackingCommandInput
+import com.anisync.android.data.tracking.TrackingCommandService
 import com.anisync.android.data.util.safeApiCall
 import com.anisync.android.domain.LibraryEntry
 import com.anisync.android.domain.LibraryRepository
 import com.anisync.android.domain.LibraryStatus
 import com.anisync.android.domain.Result
 import com.anisync.android.data.account.AccountStore
-import com.anisync.android.util.AniListTextEncoder.encodeForAniList
-import com.anisync.android.type.MediaListStatus
+import com.anisync.android.domain.tracking.TrackingDesiredState
+import com.anisync.android.domain.tracking.TrackingEnqueueResult
+import com.anisync.android.domain.tracking.TrackingField
+import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.domain.tracking.TrackingStatus
+import com.anisync.android.domain.tracking.TrackingTargetState
 import com.anisync.android.type.MediaType
 import com.apollographql.apollo.ApolloClient
 import com.apollographql.apollo.api.Optional
@@ -27,6 +31,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import java.time.Instant
+import java.time.ZoneOffset
 import javax.inject.Inject
 
 /** Owner id that matches no rows — used when there is no active account. */
@@ -47,7 +53,8 @@ class LibraryRepositoryImpl @Inject constructor(
     private val apolloClient: ApolloClient,
     private val libraryDao: LibraryDao,
     private val appSettings: AppSettings,
-    private val accountStore: AccountStore
+    private val accountStore: AccountStore,
+    private val trackingCommands: TrackingCommandService,
 ) : LibraryRepository {
 
     private fun currentOwnerId(): Int = accountStore.activeAccount.value?.id ?: NO_OWNER
@@ -223,27 +230,22 @@ class LibraryRepositoryImpl @Inject constructor(
         // (Refetching entry or duplicating logic - refetching is safer)
         val entry = libraryDao.getEntry(currentOwnerId(), mediaId) ?: return Result.Error("Entry not found")
         val isCompleted = entry.status == LibraryStatus.COMPLETED
-        val now = todayUtcMillis()
 
-        // 3. Try sync to network
-        return safeApiCall {
-            val response = apolloClient.mutation(
-                com.anisync.android.SaveMediaListEntryMutation(
-                    mediaId = Optional.present(mediaId),
-                    progress = Optional.present(progress),
-                    status = if (isCompleted) Optional.present(MediaListStatus.COMPLETED) else Optional.absent(),
-                    completedAt = if (isCompleted) Optional.present(now.toFuzzyDateInput()) else Optional.absent()
-                )
-            ).execute()
-
-            if (response.data?.SaveMediaListEntry == null || response.hasErrors()) {
-                val errorMessage = response.errors?.firstOrNull()?.message ?: "Sync failed"
-                throw Exception(errorMessage)
-            }
-        }
+        // 3. Persist one absolute command. Provider delivery happens only through the outbox.
+        val domainEntry = entry.toDomain()
+        return enqueueAniListTracking(
+            entry = domainEntry,
+            fields = buildSet {
+                add(TrackingField.PROGRESS)
+                if (isCompleted) {
+                    add(TrackingField.STATUS)
+                    add(TrackingField.COMPLETED_AT)
+                }
+            },
+        )
     }
 
-    override suspend fun updateProgressLocal(mediaId: Int, progress: Int): Result<Unit> {
+    private suspend fun updateProgressLocal(mediaId: Int, progress: Int): Result<Unit> {
         val owner = currentOwnerId()
         val entry = libraryDao.getEntry(owner, mediaId) ?: return Result.Error("Entry not found")
 
@@ -296,54 +298,60 @@ class LibraryRepositoryImpl @Inject constructor(
         // We assume media type is present or default to ANIME logic for entity mapping
         libraryDao.updateEntry(updatedEntry.toEntity(updatedEntry.type ?: MediaType.ANIME).copy(ownerId = owner))
 
-        // 2. Sync to network
-        return safeApiCall {
-            val apiStatus = updatedEntry.status.toApiStatus()
-
-            val response = apolloClient.mutation(
-                com.anisync.android.SaveMediaListEntryMutation(
-                    mediaId = Optional.present(updatedEntry.mediaId),
-                    status = Optional.present(apiStatus),
-                    progress = Optional.present(updatedEntry.progress),
-                    score = Optional.presentIfNotNull(updatedEntry.score),
-                    repeat = Optional.present(updatedEntry.rewatches),
-                    notes = Optional.presentIfNotNull(updatedEntry.notes?.let(::encodeForAniList)),
-                    startedAt = updatedEntry.startedAt?.let { Optional.present(it.toFuzzyDateInput()) } ?: Optional.absent(),
-                    completedAt = updatedEntry.completedAt?.let { Optional.present(it.toFuzzyDateInput()) } ?: Optional.absent(),
-                    customLists = Optional.present(updatedEntry.customLists),
-                    `private` = Optional.present(updatedEntry.isPrivate),
-                    hiddenFromStatusLists = Optional.present(updatedEntry.hiddenFromStatusLists)
-                )
-            ).execute()
-
-            if (response.data?.SaveMediaListEntry != null && !response.hasErrors()) {
-                // Success
-            } else {
-                val errorMessage = response.errors?.firstOrNull()?.message ?: "Sync failed"
-                throw Exception(errorMessage)
-            }
-        }
+        // 2. Persist the complete absolute state through the single mutation boundary.
+        return enqueueAniListTracking(
+            entry = updatedEntry,
+            fields = setOf(
+                TrackingField.STATUS,
+                TrackingField.PROGRESS,
+                TrackingField.SCORE,
+                TrackingField.REPEAT_COUNT,
+                TrackingField.NOTES,
+                TrackingField.STARTED_AT,
+                TrackingField.COMPLETED_AT,
+                TrackingField.CUSTOM_LISTS,
+                TrackingField.PRIVATE,
+                TrackingField.HIDDEN_FROM_STATUS_LISTS,
+            ),
+        )
     }
 
     override suspend fun deleteEntry(entryId: Int, mediaId: Int): Result<Unit> {
+        val entry = libraryDao.getEntry(currentOwnerId(), mediaId)?.toDomain()
+            ?: return Result.Error("Entry not found")
         // 1. Delete from local DB immediately (optimistic)
         libraryDao.deleteByMediaId(currentOwnerId(), mediaId)
 
-        // 2. Delete from network
-        return safeApiCall {
-            val response = apolloClient.mutation(
-                com.anisync.android.DeleteMediaListEntryMutation(
-                    id = Optional.present(entryId)
-                )
-            ).execute()
+        // 2. Persist a tombstone; no repository is allowed to call the provider directly.
+        val mediaType = entry.type.toTrackingMediaType()
+            ?: return Result.Error("Tracking media type unavailable")
+        return trackingCommands.enqueueAniList(
+            AniListTrackingCommandInput(
+                aniListMediaId = mediaId,
+                aniListListEntryId = entryId.takeIf { it > 0 },
+                mediaType = mediaType,
+                desired = TrackingDesiredState(status = null, progress = 0),
+                fields = setOf(TrackingField.DELETE),
+                deleteIntent = true,
+            )
+        ).toDomainResult()
+    }
 
-            if (response.data?.DeleteMediaListEntry?.deleted == true && !response.hasErrors()) {
-                // Success
-            } else {
-                val errorMessage = response.errors?.firstOrNull()?.message ?: "Delete failed"
-                throw Exception(errorMessage)
-            }
-        }
+    private suspend fun enqueueAniListTracking(
+        entry: LibraryEntry,
+        fields: Set<TrackingField>,
+    ): Result<Unit> {
+        val mediaType = entry.type.toTrackingMediaType()
+            ?: return Result.Error("Tracking media type unavailable")
+        return trackingCommands.enqueueAniList(
+            AniListTrackingCommandInput(
+                aniListMediaId = entry.mediaId,
+                aniListListEntryId = entry.id.takeIf { it > 0 },
+                mediaType = mediaType,
+                desired = entry.toTrackingDesiredState(),
+                fields = fields,
+            )
+        ).toDomainResult()
     }
 
     override suspend fun deleteCustomList(customList: String, type: com.anisync.android.type.MediaType): com.anisync.android.domain.Result<Unit> {
@@ -407,4 +415,51 @@ class LibraryRepositoryImpl @Inject constructor(
         }
     }
 
+}
+
+private fun MediaType?.toTrackingMediaType(): TrackingMediaType? = when (this) {
+    MediaType.ANIME -> TrackingMediaType.ANIME
+    MediaType.MANGA -> TrackingMediaType.MANGA
+    null,
+    MediaType.UNKNOWN__ -> null
+}
+
+private fun LibraryStatus.toTrackingStatus(): TrackingStatus = when (this) {
+    LibraryStatus.CURRENT -> TrackingStatus.CURRENT
+    LibraryStatus.PLANNING -> TrackingStatus.PLANNING
+    LibraryStatus.COMPLETED -> TrackingStatus.COMPLETED
+    LibraryStatus.DROPPED -> TrackingStatus.DROPPED
+    LibraryStatus.PAUSED -> TrackingStatus.PAUSED
+    LibraryStatus.REPEATING -> TrackingStatus.REPEATING
+    LibraryStatus.UNKNOWN -> TrackingStatus.CURRENT
+}
+
+private fun LibraryEntry.toTrackingDesiredState(): TrackingDesiredState = TrackingDesiredState(
+    status = status.toTrackingStatus(),
+    progress = progress.coerceAtLeast(0),
+    score100 = score?.coerceIn(0.0, 100.0),
+    repeatCount = rewatches.coerceAtLeast(0),
+    notes = notes,
+    startedAt = startedAt.toIsoDate(),
+    completedAt = completedAt.toIsoDate(),
+    customLists = customLists.filter(String::isNotBlank).distinct(),
+    isPrivate = isPrivate,
+    hiddenFromStatusLists = hiddenFromStatusLists,
+)
+
+private fun Long?.toIsoDate(): String? = this?.let { epochMillis ->
+    Instant.ofEpochMilli(epochMillis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+}
+
+private fun TrackingEnqueueResult.toDomainResult(): Result<Unit> = when (this) {
+    is TrackingEnqueueResult.Rejected -> Result.Error("Tracking command rejected: ${reason.name}")
+    is TrackingEnqueueResult.Accepted -> when (
+        receipt.targetStates[com.anisync.android.domain.tracking.TrackingProvider.ANILIST]
+    ) {
+        TrackingTargetState.BLOCKED,
+        TrackingTargetState.FAILED,
+        TrackingTargetState.SUPERSEDED,
+        null -> Result.Error("Tracking command blocked")
+        else -> Result.Success(Unit)
+    }
 }
