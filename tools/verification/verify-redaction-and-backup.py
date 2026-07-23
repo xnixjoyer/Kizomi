@@ -20,6 +20,21 @@ SENSITIVE_WORDS = re.compile(
 LOG_CALL = re.compile(r"\bLog\.(?:v|d|i|w|e|wtf)\s*\(")
 
 
+def require_markers(
+    violations: list[str],
+    relative: str,
+    markers: tuple[str, ...],
+) -> None:
+    path = ROOT / relative
+    if not path.is_file():
+        violations.append(f"{relative}: required redaction file missing")
+        return
+    text = path.read_text(encoding="utf-8")
+    for marker in markers:
+        if marker not in text:
+            violations.append(f"{relative}: missing redaction marker {marker}")
+
+
 def main() -> int:
     violations: list[str] = []
     for relative in (
@@ -45,40 +60,53 @@ def main() -> int:
                     f"{path.relative_to(ROOT)}:{index}: sensitive exception may be printed"
                 )
 
-    account = (ROOT / "app/src/main/java/com/anisync/android/data/account/Account.kt").read_text(
-        encoding="utf-8"
+    require_markers(
+        violations,
+        "app/src/main/java/com/anisync/android/data/account/Account.kt",
+        ("token=<redacted>", "override fun toString"),
     )
-    if "token=<redacted>" not in account or "override fun toString" not in account:
-        violations.append("Account.kt: OAuth token toString redaction is missing")
-
-    mal_models = (
-        ROOT / "app/src/main/java/com/anisync/android/data/mal/account/MalAccountModels.kt"
-    ).read_text(encoding="utf-8")
-    for marker in ("accessToken=<redacted>", "MalAccountResult.Success(value=<redacted>)"):
-        if marker not in mal_models:
-            violations.append(f"MalAccountModels.kt: missing redaction marker {marker}")
-
-    tracking_models = (
-        ROOT / "app/src/main/java/com/anisync/android/domain/tracking/TrackingModels.kt"
-    ).read_text(encoding="utf-8")
-    tracking_markers = (
-        "localMediaId=<redacted>",
-        "operationId=<redacted>",
-        "providerAccountId=<redacted>",
-        "providerMediaId=<redacted>",
-        "providerListEntryIds=<redacted>",
-        "rawProviderFieldsJson=<redacted>",
-        "remoteRevision=<redacted>",
+    require_markers(
+        violations,
+        "app/src/main/java/com/anisync/android/data/mal/account/MalAccountModels.kt",
+        ("accessToken=<redacted>", "MalAccountResult.Success(value=<redacted>)"),
     )
-    for marker in tracking_markers:
-        if marker not in tracking_models:
-            violations.append(f"TrackingModels.kt: missing redaction marker {marker}")
-
-    tracking_test = (
-        ROOT / "app/src/test/java/com/anisync/android/domain/tracking/TrackingModelRedactionTest.kt"
-    ).read_text(encoding="utf-8")
-    if "tracking transport models never render account media operation or private fields" not in tracking_test:
-        violations.append("Tracking model redaction regression test is missing")
+    require_markers(
+        violations,
+        "app/src/main/java/com/anisync/android/domain/tracking/TrackingModels.kt",
+        (
+            "localMediaId=<redacted>",
+            "operationId=<redacted>",
+            "providerAccountId=<redacted>",
+            "providerMediaId=<redacted>",
+            "providerListEntryIds=<redacted>",
+            "rawProviderFieldsJson=<redacted>",
+            "remoteRevision=<redacted>",
+        ),
+    )
+    require_markers(
+        violations,
+        "app/src/main/java/com/anisync/android/domain/Result.kt",
+        ("exception=<redacted>", "override fun toString"),
+    )
+    require_markers(
+        violations,
+        "app/src/main/java/com/anisync/android/data/util/NetworkUtil.kt",
+        (
+            "The provider rejected the request.",
+            "An unexpected error occurred.",
+            "HTTP request failed",
+        ),
+    )
+    require_markers(
+        violations,
+        "app/src/test/java/com/anisync/android/domain/tracking/TrackingModelRedactionTest.kt",
+        ("tracking transport models never render account media operation or private fields",),
+    )
+    require_markers(
+        violations,
+        "app/src/test/java/com/anisync/android/data/util/NetworkUtilRedactionTest.kt",
+        ("unknown exception message and object are not exposed", "GraphQL body text"),
+    )
 
     if violations:
         print("::error::Redaction or backup contract failed")
