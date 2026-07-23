@@ -34,18 +34,9 @@ object DatabaseModule {
             "anisync.db"
         )
             .addMigrations(*Migrations.ALL_MIGRATIONS)
-            // ┌─────────────────────────────────────────────────────────────────┐
-            // │  ⚠️  DEVELOPMENT ONLY - REMOVE BEFORE PRODUCTION RELEASE  ⚠️   │
-            // ├─────────────────────────────────────────────────────────────────┤
-            // │  This allows destructive recreation when migrations are missing │
-            // │                                                                 │
-            // │  Before publishing to Play Store:                               │
-            // │  1. Remove the .fallbackToDestructiveMigration() call below     │
-            // │  2. Ensure all migrations are defined in Migrations.kt          │
-            // │  3. Test upgrade paths from version 1 to current                │
-            // │  4. Run MigrationTest.kt to verify all migrations               │
-            // └─────────────────────────────────────────────────────────────────┘
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // Missing migration paths must fail closed. Production data is never dropped to make an
+            // upgrade appear successful; supported upgrades are covered by committed Room schemas
+            // and instrumentation migration tests.
             .build()
     }
 
