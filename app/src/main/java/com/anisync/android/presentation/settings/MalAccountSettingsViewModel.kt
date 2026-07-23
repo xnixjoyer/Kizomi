@@ -46,6 +46,13 @@ data class MalAccountSettingsUiState(
         get() = connectionState == MalAccountConnectionState.OPENING_BROWSER ||
             connectionState == MalAccountConnectionState.AWAITING_CALLBACK ||
             connectionState == MalAccountConnectionState.PROCESSING
+
+    override fun toString(): String =
+        "MalAccountSettingsUiState(connectionState=${connectionState.name}, configured=$configured, " +
+            "localAccountId=<redacted>, displayName=<redacted>, " +
+            "failureReason=${failureReason?.name ?: "none"}, " +
+            "retryAfterSeconds=${retryAfterSeconds ?: "none"}, " +
+            "animeTrackingMode=${animeTrackingMode.name}, mangaTrackingMode=${mangaTrackingMode.name})"
 }
 
 sealed interface MalAccountSettingsEffect {
