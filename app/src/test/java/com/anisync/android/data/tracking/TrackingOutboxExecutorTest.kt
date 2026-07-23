@@ -96,6 +96,59 @@ class TrackingOutboxExecutorTest {
     }
 
     @Test
+    fun `worker kill switch blocks every provider with zero adapter calls`() = runTest {
+        seedLocal()
+        val receipt = enqueue(
+            listOf(
+                target(TrackingProvider.ANILIST, "ani-account", 10),
+                target(TrackingProvider.MYANIMELIST, "mal-account", 20),
+            )
+        )
+        val aniList = RecordingAdapter(TrackingProvider.ANILIST) {
+            error("AniList adapter must not run while blocked")
+        }
+        val mal = RecordingAdapter(TrackingProvider.MYANIMELIST) {
+            error("MAL adapter must not run while blocked")
+        }
+        val executor = TrackingOutboxExecutor(
+            database.trackingDao(),
+            codec,
+            setOf(aniList, mal),
+        ) { _, _ -> TrackingFailureKind.NETWORK_BLOCKED }
+
+        val drained = executor.drain(maxDeliveries = 2)
+        val targets = database.trackingDao().getTargets(receipt.operationId)
+
+        assertEquals(0, aniList.calls)
+        assertEquals(0, mal.calls)
+        assertTrue(targets.all { it.state == "BLOCKED" })
+        assertTrue(targets.all { it.lastErrorKind == TrackingFailureKind.NETWORK_BLOCKED.name })
+        assertEquals("BLOCKED", database.trackingDao().getOperation(receipt.operationId)?.state)
+        assertFalse(drained.hasUnsettledDeliveries)
+    }
+
+    @Test
+    fun `delivery-time account switch blocks queued target with zero network calls`() = runTest {
+        seedLocal()
+        val receipt = enqueue(listOf(target(TrackingProvider.ANILIST, "old-account", 10)))
+        val adapter = RecordingAdapter(TrackingProvider.ANILIST) {
+            error("Adapter must not run for a stale account binding")
+        }
+        TrackingOutboxExecutor(
+            database.trackingDao(),
+            codec,
+            setOf(adapter),
+        ) { _, expected ->
+            if (expected == "new-account") null else TrackingFailureKind.MISSING_ACCOUNT
+        }.drain()
+
+        val target = database.trackingDao().getTargets(receipt.operationId).single()
+        assertEquals(0, adapter.calls)
+        assertEquals("BLOCKED", target.state)
+        assertEquals(TrackingFailureKind.MISSING_ACCOUNT.name, target.lastErrorKind)
+    }
+
+    @Test
     fun `successful absolute delivery is idempotent across executor recreation`() = runTest {
         seedLocal()
         val receipt = enqueue(listOf(target(TrackingProvider.MYANIMELIST, "mal", 20)))
@@ -112,16 +165,16 @@ class TrackingOutboxExecutorTest {
     }
 
     @Test
-    fun `missing provider adapter is terminal and never reported as success`() = runTest {
+    fun `missing provider adapter is blocked and never reported as success`() = runTest {
         seedLocal()
         val receipt = enqueue(listOf(target(TrackingProvider.MYANIMELIST, "mal", 20)))
 
         val drained = TrackingOutboxExecutor(database.trackingDao(), codec, emptySet()).drain()
         val target = database.trackingDao().getTargets(receipt.operationId).single()
 
-        assertEquals("FAILED", target.state)
+        assertEquals("BLOCKED", target.state)
         assertEquals(TrackingFailureKind.PROVIDER_NOT_CONFIGURED.name, target.lastErrorKind)
-        assertEquals("FAILED", database.trackingDao().getOperation(receipt.operationId)?.state)
+        assertEquals("BLOCKED", database.trackingDao().getOperation(receipt.operationId)?.state)
         assertFalse(drained.hasUnsettledDeliveries)
     }
 
