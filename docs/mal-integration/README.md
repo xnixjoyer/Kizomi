@@ -1,66 +1,54 @@
 # MyAnimeList integration context
 
-This directory contains the focused design, migration and verification contracts for the stacked MAL implementation.
+This directory contains the public architecture, migration, security and verification contracts for MyAnimeList as an optional provider in Kizomi.
 
-## Current phase index
+## Active implementation
 
-| Phase | Issue / PR | Branch | Technical status |
-|---|---|---|---|
-| 1 — OAuth environment contract | #43 / PR #44 | `feature/mal-oauth-environment-contract` | Green; real MAL registration/device evidence pending |
-| 2 — account/token persistence | #45 / PR #46 | `feature/mal-account-token-persistence` | Completed, exactly verified, Ready, unmerged |
-| 3 — browser login/refresh | #47 / PR #48 | `feature/mal-oauth-login-refresh` | Technically complete and green; real provider evidence pending; Draft |
-| 4 — provider-neutral identity | #49 / PR #50 | `feature/provider-neutral-media-identity` | Implemented on Room 25; exact final-head evidence recorded after the final documentation gate |
-| 5–14 — consolidated production completion | Draft PR #2 | `test/mal-production-completion` | Active; see `EXECUTION_STATE.md` |
+- Repository: `xnixjoyer/Kizomi`
+- Branch: `test/mal-production-completion`
+- Draft PR: `#2`, leave open and unmerged until owner review
+- Canonical resumable checkpoint: `EXECUTION_STATE.md`
+- Architecture and next-agent briefing: `AI_AGENT_BRIEFING_AND_ROADMAP.md`
 
-The Phase 1–4 rows above preserve historical stacked evidence. Their implementation is consolidated
-in public root `7dcfdefda10b6eaccfef14917b145ad2d286e62e`; new work must not reopen or merge the historical
-branches.
+The PR description is authoritative for the latest exact head, workflow run/job, test count and artifact/APK hashes.
 
-## Phase-4 documents
+## Phase documents
 
-- `phase-4-media-identity-audit.md` — complete focused inventory of current AniList-ID uses and treatment.
-- `phase-4-identity-contract.md` — local/provider/review identity rules, repository boundary and failure contract.
-- `phase-4-migration-matrix.md` — migration behavior for safe, missing, duplicate, conflicting, invalid and orphaned identities.
-- `OWNER_ACTIONS_PHASE_3_AND_4.md` — nontechnical owner actions for MAL registration, real-device OAuth and Phase-4 update verification.
-- `AI_AGENT_BRIEFING_AND_ROADMAP.md` — current stacked baseline and strict next-agent boundary.
-- `EXECUTION_STATE.md` — exact active head, CI, phase status, and machine-resumable next actions.
+- `phase-4-identity-contract.md` — provider-neutral local/provider identity invariants.
+- `phase-4-media-identity-audit.md` — inventory and migration treatment of legacy identities.
+- `phase-4-migration-matrix.md` — safe, missing, duplicate, conflicting and rejected identity migration behavior.
 - `phase-5-outbox-contract.md` — durable command, target, lease, retry and partial-success rules.
+- `phase-9-routing-contract.md` — independent Anime/Manga and provider routing.
+- `phase-10-write-contract.md` — MyAnimeList write/delete, capability and controlled read-back rules.
+- `phase-11-saga-contract.md` — independent dual-target delivery and conflict binding.
+- `phase-12-compare-missing-only-contract.md` — durable compare plan and non-destructive missing-only execution.
+- `phase-13-network-gate-contract.md` — fail-closed provider/account write boundary and pure-provider proof matrix.
+- `phase-14-product-readiness-contract.md` — migrations, security, accessibility, failure handling and release evidence.
+- `OWNER_ACTIONS_PHASE_3_AND_4.md` — owner-only provider registration and physical-device acceptance context.
 
-## Room schema 25
+## Current schema and persistence
 
-Phase 4 adds these tables without rebuilding existing production tables:
+The public app uses additive Room migrations through schema 27:
 
-- `local_media_identities`
-- `provider_media_identities`
-- `provider_media_identity_issues`
+- 1→2: data-preserving rebuild of the early media-details table;
+- 2→25: Room auto-migration chain from committed schemas;
+- 25→26: durable provider snapshots and command outbox;
+- 26→27: conflict and reconciliation persistence.
 
-Schema identity hash: `ffa0ae99241a6fdf190b7128772075f3`.
+Destructive migration fallback is forbidden. CI verifies every committed schema can reach the current version and that Room does not generate uncommitted schema changes.
 
-Key constraints:
+## Security and provider boundaries
 
-- unique active provider identity by provider, provider media ID and media type;
-- unique active local/provider/media-type slot;
-- provider rows reference local identities with non-cascading foreign keys;
-- no positive provider mapping may be silently overwritten;
-- unresolved, conflicting and rejected candidates are review evidence rather than active mappings;
-- no credential or OAuth continuation data exists in the identity schema.
+- The public tree contains only documented public provider integrations.
+- Private provider terms, domains, parsers, fixtures and implementation notes are forbidden by a full-tree scan.
+- Provider-native catalog/detail paths do not silently fall back across providers.
+- All tracking writes pass through `TrackingCommandService`, the durable outbox, `TrackingWriteGate` and one provider adapter.
+- Provider/account switching fails closed with an explicit blocked target and zero writes.
+- Credential stores and OAuth continuation stores are encrypted and excluded from backup/transfer.
+- Tokens, account/media IDs, notes, raw bodies and revisions are redacted from diagnostics and model strings.
 
-## Compatibility boundary
+## Final verification
 
-Existing production remains AniList-addressed during Phase 4. Navigation routes, SavedState, WorkManager names, mutation keys, paging/cache/Compose/image keys, library/details APIs and AniList network writes retain their current integer AniList IDs.
+A reviewable exact head must pass public/provider/tracking source boundaries, migration graph, schema cleanliness, secret/redaction/backup/signing scans, product-readiness contracts, all Stable Debug unit tests and lint, Stable Debug and AndroidTest builds, and one universal diagnostic APK with machine-readable test count and hashes.
 
-The new `MediaIdentityStore` and `AniListMediaIdentityAdapter` provide an incremental boundary. A future MAL-only local medium can exist without an AniList ID, but Phase 4 does not expose a MAL library or routing UI.
-
-## Explicitly outside Phase 4
-
-- MAL list import or library UI;
-- MAL search, details or discovery;
-- routing settings;
-- production MAL list writes;
-- dual sync or Compare and sync;
-- conflict center;
-- hard AniList network gate;
-- broad navigation/domain-model ID rewrite;
-- Phase-5 implementation.
-
-No implementation PR in this stack is merged automatically.
+No implementation agent merges, approves or enables auto-merge. The repository owner performs final review and uses **Create a merge commit** after external acceptance.
