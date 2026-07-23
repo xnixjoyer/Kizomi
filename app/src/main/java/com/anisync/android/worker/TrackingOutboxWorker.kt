@@ -10,14 +10,39 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.anisync.android.data.tracking.TrackingDrainResult
 import com.anisync.android.data.tracking.TrackingOutboxExecutor
 import com.anisync.android.data.tracking.TrackingOutboxScheduler
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
+
+internal enum class TrackingOutboxWorkerDecision {
+    SUCCESS,
+    RETRY,
+}
+
+/**
+ * Pure worker boundary used by tests and by [TrackingOutboxWorker]. Cancellation remains structured
+ * control flow; an unexpected storage/runtime failure is retried rather than acknowledged as success.
+ */
+internal suspend fun decideTrackingOutboxWork(
+    drain: suspend () -> TrackingDrainResult,
+): TrackingOutboxWorkerDecision = try {
+    if (drain().hasUnsettledDeliveries) {
+        TrackingOutboxWorkerDecision.RETRY
+    } else {
+        TrackingOutboxWorkerDecision.SUCCESS
+    }
+} catch (cancelled: CancellationException) {
+    throw cancelled
+} catch (_: Throwable) {
+    TrackingOutboxWorkerDecision.RETRY
+}
 
 @HiltWorker
 class TrackingOutboxWorker @AssistedInject constructor(
@@ -25,9 +50,11 @@ class TrackingOutboxWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val executor: TrackingOutboxExecutor,
 ) : CoroutineWorker(appContext, params) {
-    override suspend fun doWork(): Result {
-        val drained = executor.drain(MAX_DELIVERIES_PER_RUN)
-        return if (drained.hasUnsettledDeliveries) Result.retry() else Result.success()
+    override suspend fun doWork(): Result = when (
+        decideTrackingOutboxWork { executor.drain(MAX_DELIVERIES_PER_RUN) }
+    ) {
+        TrackingOutboxWorkerDecision.SUCCESS -> Result.success()
+        TrackingOutboxWorkerDecision.RETRY -> Result.retry()
     }
 
     companion object {
