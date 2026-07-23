@@ -13,9 +13,9 @@ sealed interface Result<out T> {
         val countdownSeconds: Long? = null,
         val exception: Throwable? = null,
     ) : Result<Nothing> {
-        /** Exceptions can contain URLs, headers or response fragments and are never diagnostic text. */
+        /** Messages and exceptions can contain provider text and are never diagnostic output. */
         override fun toString(): String =
-            "Result.Error(message=$message, code=${code ?: "none"}, " +
+            "Result.Error(message=<redacted>, code=${code ?: "none"}, " +
                 "countdownSeconds=${countdownSeconds ?: "none"}, exception=<redacted>)"
     }
 }
