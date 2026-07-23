@@ -48,6 +48,12 @@ REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
         "unexpected executor failure retries",
         "worker cancellation remains structured control flow",
     ),
+    "app/src/test/java/com/anisync/android/data/util/NetworkUtilRedactionTest.kt": (
+        "unknown exception message and object are not exposed",
+        "GraphQL body text is retained only in internal exception",
+        "forbidden is distinct from unauthenticated",
+        "cancellation is never converted to an error result",
+    ),
     "app/src/androidTest/java/com/anisync/android/data/local/LegacyMigrationTest.kt": (
         "preservesMediaDetailsAndAddsNeutralDefaults",
         "handlesEmptyDatabase",
