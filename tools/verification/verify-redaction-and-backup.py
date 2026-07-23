@@ -78,6 +78,18 @@ def main() -> int:
     )
     require_markers(
         violations,
+        "app/src/main/java/com/anisync/android/data/mal/oauth/MalAuthRepository.kt",
+        (
+            "MalAuthState.AwaitingCallback(sessionId=<redacted>)",
+            "MalAuthState.Processing(sessionId=<redacted>)",
+            "MalAuthState.Connected(account=<redacted>)",
+            "MalAuthState.ReLoginRequired(localAccountId=<redacted>)",
+            "authorizationUrl=<redacted>, sessionId=<redacted>",
+            "MalCallbackResult.Success(account=<redacted>)",
+        ),
+    )
+    require_markers(
+        violations,
         "app/src/main/java/com/anisync/android/presentation/settings/MalAccountSettingsViewModel.kt",
         ("localAccountId=<redacted>", "displayName=<redacted>", "authorizationUrl=<redacted>"),
     )
@@ -112,6 +124,11 @@ def main() -> int:
         violations,
         "app/src/test/java/com/anisync/android/data/mal/account/MalAccountModelRedactionTest.kt",
         ("account profile and failures never render account identity",),
+    )
+    require_markers(
+        violations,
+        "app/src/test/java/com/anisync/android/data/mal/oauth/MalAuthStateRedactionTest.kt",
+        ("OAuth state and public results never render session URL or account identity",),
     )
     require_markers(
         violations,
