@@ -17,7 +17,11 @@ data class MalAccountProfile(
     val username: String? = null,
     val displayName: String? = null,
     val avatarUrl: String? = null,
-)
+) {
+    override fun toString(): String =
+        "MalAccountProfile(malUserId=<redacted>, username=<redacted>, " +
+            "displayName=<redacted>, avatarUrl=<redacted>)"
+}
 
 data class MalTokenSet(
     val accessToken: String,
@@ -39,7 +43,9 @@ data class MalTokenSet(
             .toSortedSet()
 
     override fun toString(): String =
-        "MalTokenSet(accessToken=<redacted>, refreshToken=${if (refreshToken == null) "absent" else "<redacted>"}, expiresAtEpochMillis=$expiresAtEpochMillis, scopeCount=${normalizedScopes().size})"
+        "MalTokenSet(accessToken=<redacted>, " +
+            "refreshToken=${if (refreshToken == null) "absent" else "<redacted>"}, " +
+            "expiresAtEpochMillis=$expiresAtEpochMillis, scopeCount=${normalizedScopes().size})"
 }
 
 data class MalAccount(
@@ -55,7 +61,10 @@ data class MalAccount(
     val updatedAtEpochMillis: Long,
 ) {
     override fun toString(): String =
-        "MalAccount(localAccountId=$localAccountId, provider=${provider.name}, malUserId=${profile.malUserId}, username=${profile.username}, displayName=${profile.displayName}, tokenGeneration=$tokenGeneration, tokenExpiresAtEpochMillis=$tokenExpiresAtEpochMillis, scopeCount=${scopes.size}, tokenStatus=${tokenStatus.name}, isActive=$isActive, createdAtEpochMillis=$createdAtEpochMillis, updatedAtEpochMillis=$updatedAtEpochMillis)"
+        "MalAccount(localAccountId=<redacted>, provider=${provider.name}, profile=<redacted>, " +
+            "tokenGeneration=$tokenGeneration, tokenExpiresAtEpochMillis=$tokenExpiresAtEpochMillis, " +
+            "scopeCount=${scopes.size}, tokenStatus=${tokenStatus.name}, isActive=$isActive, " +
+            "createdAtEpochMillis=$createdAtEpochMillis, updatedAtEpochMillis=$updatedAtEpochMillis)"
 }
 
 enum class MalAccountFailureReason {
@@ -82,6 +91,7 @@ sealed interface MalAccountResult<out T> {
         val generation: Long? = null,
     ) : MalAccountResult<Nothing> {
         override fun toString(): String =
-            "MalAccountResult.Failure(reason=${reason.name}, localAccountId=${localAccountId ?: "none"}, generation=${generation ?: "none"})"
+            "MalAccountResult.Failure(reason=${reason.name}, localAccountId=<redacted>, " +
+                "generation=${generation ?: "none"})"
     }
 }
