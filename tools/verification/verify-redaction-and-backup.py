@@ -68,7 +68,18 @@ def main() -> int:
     require_markers(
         violations,
         "app/src/main/java/com/anisync/android/data/mal/account/MalAccountModels.kt",
-        ("accessToken=<redacted>", "MalAccountResult.Success(value=<redacted>)"),
+        (
+            "accessToken=<redacted>",
+            "localAccountId=<redacted>",
+            "profile=<redacted>",
+            "malUserId=<redacted>",
+            "MalAccountResult.Success(value=<redacted>)",
+        ),
+    )
+    require_markers(
+        violations,
+        "app/src/main/java/com/anisync/android/presentation/settings/MalAccountSettingsViewModel.kt",
+        ("localAccountId=<redacted>", "displayName=<redacted>", "authorizationUrl=<redacted>"),
     )
     require_markers(
         violations,
@@ -86,7 +97,7 @@ def main() -> int:
     require_markers(
         violations,
         "app/src/main/java/com/anisync/android/domain/Result.kt",
-        ("exception=<redacted>", "override fun toString"),
+        ("message=<redacted>", "exception=<redacted>", "override fun toString"),
     )
     require_markers(
         violations,
@@ -96,6 +107,16 @@ def main() -> int:
             "An unexpected error occurred.",
             "HTTP request failed",
         ),
+    )
+    require_markers(
+        violations,
+        "app/src/test/java/com/anisync/android/data/mal/account/MalAccountModelRedactionTest.kt",
+        ("account profile and failures never render account identity",),
+    )
+    require_markers(
+        violations,
+        "app/src/test/java/com/anisync/android/presentation/settings/MalAccountSettingsUiStateTest.kt",
+        ("without rendering account data", "displayName=<redacted>"),
     )
     require_markers(
         violations,
