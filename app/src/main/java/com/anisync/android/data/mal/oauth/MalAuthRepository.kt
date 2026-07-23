@@ -43,15 +43,36 @@ enum class MalAuthFailureReason {
 
 sealed interface MalAuthState {
     data class Disconnected(val configured: Boolean) : MalAuthState
-    data class AwaitingCallback(val sessionId: String) : MalAuthState
-    data class Processing(val sessionId: String) : MalAuthState
-    data class Connected(val account: MalAccount) : MalAuthState
-    data class ReLoginRequired(val localAccountId: String) : MalAuthState
+
+    data class AwaitingCallback(val sessionId: String) : MalAuthState {
+        override fun toString(): String =
+            "MalAuthState.AwaitingCallback(sessionId=<redacted>)"
+    }
+
+    data class Processing(val sessionId: String) : MalAuthState {
+        override fun toString(): String =
+            "MalAuthState.Processing(sessionId=<redacted>)"
+    }
+
+    data class Connected(val account: MalAccount) : MalAuthState {
+        override fun toString(): String =
+            "MalAuthState.Connected(account=<redacted>)"
+    }
+
+    data class ReLoginRequired(val localAccountId: String) : MalAuthState {
+        override fun toString(): String =
+            "MalAuthState.ReLoginRequired(localAccountId=<redacted>)"
+    }
+
     data class Error(
         val reason: MalAuthFailureReason,
         val localAccountId: String? = null,
         val retryAfterSeconds: Long? = null,
-    ) : MalAuthState
+    ) : MalAuthState {
+        override fun toString(): String =
+            "MalAuthState.Error(reason=${reason.name}, localAccountId=<redacted>, " +
+                "retryAfterSeconds=${retryAfterSeconds ?: "none"})"
+    }
 }
 
 sealed interface MalLoginStartResult {
@@ -60,7 +81,7 @@ sealed interface MalLoginStartResult {
         val sessionId: String,
     ) : MalLoginStartResult {
         override fun toString(): String =
-            "MalLoginStartResult.Success(authorizationUrl=<redacted>, sessionId=$sessionId)"
+            "MalLoginStartResult.Success(authorizationUrl=<redacted>, sessionId=<redacted>)"
     }
 
     data class Failure(val reason: MalAuthFailureReason) : MalLoginStartResult
@@ -69,7 +90,7 @@ sealed interface MalLoginStartResult {
 sealed interface MalCallbackResult {
     data class Success(val account: MalAccount) : MalCallbackResult {
         override fun toString(): String =
-            "MalCallbackResult.Success(localAccountId=${account.localAccountId})"
+            "MalCallbackResult.Success(account=<redacted>)"
     }
 
     data class Failure(
