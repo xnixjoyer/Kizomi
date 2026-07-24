@@ -17,7 +17,7 @@ import java.time.ZoneId
 
 class ProviderCalendarPresentationTest {
     @Test
-    fun `MAL recurring slot keeps typed MAL identity and explicit capability notices`() {
+    fun `MAL recurring slot keeps typed identity timezone precision and capability notices`() {
         val result = ProviderCalendarLoadResult.Content(
             entries = listOf(
                 ProviderCalendarEntry(
@@ -30,6 +30,7 @@ class ProviderCalendarPresentationTest {
                     episodeNumber = null,
                     isOnList = true,
                     precision = ProviderCalendarPrecision.RECURRING_BROADCAST_SLOT,
+                    sourceTimeZoneId = "Asia/Tokyo",
                 )
             ),
             capabilities = setOf(ProviderCalendarCapability.RECURRING_BROADCAST_SLOTS),
@@ -48,6 +49,7 @@ class ProviderCalendarPresentationTest {
         assertEquals("MYANIMELIST:ANIME:42", item.identity.stableKey)
         assertNull(item.episodeNumber)
         assertEquals(ProviderCalendarPrecision.RECURRING_BROADCAST_SLOT, item.precision)
+        assertEquals("Asia/Tokyo", item.sourceTimeZoneId)
         assertTrue(ProviderCalendarNotice.EXACT_EPISODE_SCHEDULE_UNAVAILABLE in state.notices)
     }
 
