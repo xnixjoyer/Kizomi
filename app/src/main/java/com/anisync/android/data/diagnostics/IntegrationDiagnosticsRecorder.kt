@@ -1,23 +1,22 @@
 package com.anisync.android.data.diagnostics
 
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class IntegrationDiagnosticsRecorder @Inject constructor() {
-    private val activeProviderRequests = AtomicLong()
-    private val blockedInactiveProviderRequests = AtomicLong()
-    private val activeWorkers = AtomicLong()
-    private val providerBoundWidgets = AtomicLong()
-    private val cacheHits = AtomicLong()
-    private val cacheMisses = AtomicLong()
-    private val coalescedRequests = AtomicLong()
-    private val retries = AtomicLong()
-    private val writes = AtomicLong()
-    private val pendingTrackingCommands = AtomicLong()
-    private val networkKillSwitch = AtomicReference(false)
+    private val activeProviderRequests = AtomicReference<Long?>(null)
+    private val blockedInactiveProviderRequests = AtomicReference<Long?>(null)
+    private val activeWorkers = AtomicReference<Long?>(null)
+    private val providerBoundWidgets = AtomicReference<Long?>(null)
+    private val cacheHits = AtomicReference<Long?>(null)
+    private val cacheMisses = AtomicReference<Long?>(null)
+    private val coalescedRequests = AtomicReference<Long?>(null)
+    private val retries = AtomicReference<Long?>(null)
+    private val writes = AtomicReference<Long?>(null)
+    private val pendingTrackingCommands = AtomicReference<Long?>(null)
+    private val networkKillSwitch = AtomicReference<Boolean?>(null)
     private val lastSuccessfulRequest = AtomicReference<DiagnosticEvent?>(null)
     private val lastFailure = AtomicReference<DiagnosticFailureEvent?>(null)
     private val lastWriteReadBack = AtomicReference<Long?>(null)
@@ -29,14 +28,14 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
         category: String,
         nowEpochMillis: Long = System.currentTimeMillis(),
     ) {
-        activeProviderRequests.incrementAndGet()
+        increment(activeProviderRequests)
         lastSuccessfulRequest.set(
-            DiagnosticEvent(DiagnosticCategorySanitizer.sanitize(category), nowEpochMillis),
+            DiagnosticEvent(DiagnosticCategorySanitizer.sanitizeCategory(category), nowEpochMillis),
         )
     }
 
     fun recordBlockedInactiveProviderRequest() {
-        blockedInactiveProviderRequests.incrementAndGet()
+        increment(blockedInactiveProviderRequests)
     }
 
     fun recordRequestFailure(
@@ -46,7 +45,7 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
     ) {
         lastFailure.set(
             DiagnosticFailureEvent(
-                category = DiagnosticCategorySanitizer.sanitize(category),
+                category = DiagnosticCategorySanitizer.sanitizeCategory(category),
                 httpClass = httpStatus?.takeIf { it in 100..599 }?.let { "${it / 100}xx" },
                 epochMillis = nowEpochMillis,
             ),
@@ -54,23 +53,23 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
     }
 
     fun recordCacheHit() {
-        cacheHits.incrementAndGet()
+        increment(cacheHits)
     }
 
     fun recordCacheMiss() {
-        cacheMisses.incrementAndGet()
+        increment(cacheMisses)
     }
 
     fun recordCoalescedRequest() {
-        coalescedRequests.incrementAndGet()
+        increment(coalescedRequests)
     }
 
     fun recordRetry() {
-        retries.incrementAndGet()
+        increment(retries)
     }
 
     fun recordWrite() {
-        writes.incrementAndGet()
+        increment(writes)
     }
 
     fun recordSuccessfulWriteReadBack(nowEpochMillis: Long = System.currentTimeMillis()) {
@@ -86,12 +85,12 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
         nowEpochMillis: Long = System.currentTimeMillis(),
     ) {
         lastRefresh.set(
-            DiagnosticEvent(DiagnosticCategorySanitizer.sanitize(category), nowEpochMillis),
+            DiagnosticEvent(DiagnosticCategorySanitizer.sanitizeCategory(category), nowEpochMillis),
         )
     }
 
     fun recordProviderChangeResult(result: String) {
-        lastProviderChangeResult.set(DiagnosticCategorySanitizer.sanitize(result))
+        lastProviderChangeResult.set(DiagnosticCategorySanitizer.sanitizeCategory(result))
     }
 
     fun setActiveWorkerCount(count: Long) {
@@ -139,6 +138,13 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
 
     fun lastRefreshOutcome(): Pair<String, Long>? = lastRefresh.get()?.let {
         it.category to it.epochMillis
+    }
+
+    private fun increment(counter: AtomicReference<Long?>) {
+        while (true) {
+            val current = counter.get()
+            if (counter.compareAndSet(current, (current ?: 0L) + 1L)) return
+        }
     }
 
     private data class DiagnosticEvent(
