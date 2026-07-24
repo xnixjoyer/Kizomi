@@ -24,21 +24,47 @@ jobs:
           ref: ${{ env.EXACT_SHA }}
           fetch-depth: 0
 
-      - name: Decode and publish final tree
+      - name: Verify payload parts
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXACT_SHA"
-          mapfile -t parts < <(find .compliance-final -maxdepth 1 -type f -name 'part-*' | sort)
-          [[ ${#parts[@]} -eq 6 ]]
-          cat "${parts[@]}" > "$RUNNER_TEMP/final-payload.b64"
+          test "$(find .compliance-final -maxdepth 1 -type f -name 'part-*' | wc -l)" -eq 6
+
+      - name: Decode payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          find .compliance-final -maxdepth 1 -type f -name 'part-*' | sort | xargs cat > "$RUNNER_TEMP/final-payload.b64"
           base64 --decode "$RUNNER_TEMP/final-payload.b64" > "$RUNNER_TEMP/final-payload.tar.xz"
+          xz --test "$RUNNER_TEMP/final-payload.tar.xz"
+
+      - name: Extract final tree
+        shell: bash
+        run: |
+          set -euo pipefail
           tar -xJf "$RUNNER_TEMP/final-payload.tar.xz" -C .
+          test -f PRIVACY.md
+          test -f tools/verification/verify-mal-application-readiness.py
+
+      - name: Remove transport files
+        shell: bash
+        run: |
+          set -euo pipefail
           rm -rf .compliance-final
           rm -f .github/workflows/compliance-final-apply.yml
+          test ! -e .compliance-final
+
+      - name: Create final commit
+        shell: bash
+        run: |
+          set -euo pipefail
           git add -A
           git status --short
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m 'feat(compliance): complete MAL application readiness'
-          git push origin HEAD:compliance/mal-api-agreement-readiness
+
+      - name: Push final commit
+        shell: bash
+        run: git push origin HEAD:compliance/mal-api-agreement-readiness
