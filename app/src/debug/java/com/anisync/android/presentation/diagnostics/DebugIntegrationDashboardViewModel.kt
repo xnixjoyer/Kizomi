@@ -41,6 +41,7 @@ class DebugIntegrationDashboardViewModel @Inject constructor(
                 }
                 .onFailure {
                     _uiState.value = _uiState.value.copy(
+                        snapshot = null,
                         isLoading = false,
                         error = IntegrationDiagnosticsDashboardError.LOCAL_SNAPSHOT_UNAVAILABLE,
                     )
