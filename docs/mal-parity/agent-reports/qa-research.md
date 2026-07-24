@@ -1,4 +1,4 @@
-# QA, API Research and Parity Audit worker report
+# QA, API Research and Parity Audit — Round 04
 
 ## Assignment and evidence boundary
 
@@ -6,253 +6,259 @@
 - Branch: `parallel/mal-qa-research`
 - Draft PR: `#10`
 - Required base: `planning/mal-ui-feature-parity`
-- Audit and official-source access date: `2026-07-24`
-- Owned writes: this exclusive report and the existing additive QA test under `app/src/test/java/com/anisync/android/presentation/parity/qa/`
-- This refresh changed only this report. Production code, existing tests, workflows, Gradle, manifests, Room files and canonical context were not edited.
+- Audit date: `2026-07-24`
+- Mandatory project evidence: `docs/mal-parity/MAL_API_V2_AI_REFERENCE.md`
+- Mandatory-source blob reviewed: `714ee1d2739f9503ed3d467d168ad94eca868959`
+- Integration head observed while reading the mandatory source: `5d56b6fc6ea1ea2902e4e6abc3192d6378a3b3c4`
+- Owned changes: this report, the existing additive architecture test, and the new additive `MalApiV2SourceContractAuditTest`.
+- Production code, existing tests, workflows, Gradle, manifests, Room files, canonical context, PR #5 and `main` were not modified.
 
-This is an engineering audit, not legal advice and not evidence of MyAnimeList approval. The report separates:
+This is an engineering audit, not legal advice and not evidence that the live MyAnimeList website has not changed after the owner-supplied export was captured.
 
-1. repository proof;
-2. current official MyAnimeList proof;
-3. explicit engineering inference;
-4. unverified provider claims.
+## Evidence authority and confidence labels
 
-## Frozen final snapshot
+The owner-supplied official MAL API-v2 PDF export is accepted project evidence when the live official renderer is inaccessible. `MAL_API_V2_AI_REFERENCE.md` is the project extraction of that source.
 
-The following exact heads were re-fetched after the Integrator requested an audit refresh. Any later worker commit requires a new scope, report and exact-head-CI review.
+Confidence labels used in this report:
 
-| PR | Branch | Frozen head | Changed-file scope | Exact-head CI | Report marker | QA verdict |
+- `SOURCE_CONFIRMED`: explicitly present in the accepted owner-supplied official export as recorded in the mandatory reference.
+- `REPOSITORY_CONFIRMED`: proven by current source, tests and exact-head CI, but not necessarily a provider-contract statement.
+- `INFERRED`: an engineering interpretation that is not itself stated as an exact provider guarantee.
+- `UNVERIFIED`: not supported by the mandatory reference or accessible live official documentation.
+
+Current live official documentation wins if it later conflicts with the accepted export. No field, enum, endpoint, limit or semantic guarantee absent from the mandatory reference is silently inferred.
+
+## Frozen worker snapshot
+
+All four worker PRs were re-fetched after their latest Round-04 movement. Any later head invalidates the corresponding row.
+
+| PR | Branch | Frozen head | Files | Exact-head CI | Report marker | QA verdict |
 |---:|---|---|---:|---|---|---|
-| #5 | `planning/mal-ui-feature-parity` | `7492f2cd3d33caf0b2f358154330dc28086ceac9` | integration branch; seven commits after `1ecb0eb...` add only finish-prompt documentation | run `30114572560` / `377`, job `89551996878`, success | canonical | green integration checkpoint; no worker implementation integrated |
-| #6 | `parallel/mal-discover-details` | `e8f3ff92356ab384ecec76d7778b1c6935a7899a` | 16 owned Discover/details production, resource, test and report files | run `30110901503` / `345`, job `89539868144`, success | `READY FOR INTEGRATOR REVIEW` | scope/CI pass; localization and official-claim blockers remain |
-| #7 | `parallel/mal-library-tracking` | `b8f23f33060ac012d730e6c8566065292844a0ff` | 20 owned Library/tracking production, localized resource, test and report files | run `30112019941` / `369`, job `89543590104`, success | `READY FOR INTEGRATOR REVIEW` | blocked by durable delivery/read-back semantics and validation gaps |
-| #8 | `parallel/mal-account-settings-diagnostics` | `54ba501cce94c67caea8bb7ea5f514416914df0e` | 36 owned account/settings/diagnostics production, debug, localized resource, test and report files | run `30112078689` / `370`, job `89543783886`, success | `READY FOR INTEGRATOR REVIEW` | blocked by truthful-metric, redaction-proof and localization violations |
-| #9 | `parallel/mal-calendar-widgets-background` | `aa2e3fc8b8bbbbe62d9ac6c54bf2f5279c246f9c` | 17 owned calendar/widget/background production, resource, test and report files | run `30111804829` / `368`, job `89542906800`, success | `READY FOR INTEGRATOR — DRAFT PR; DO NOT MERGE` | blocked by wrong marker, unverified transport fields and localization bypass |
-| #10 | `parallel/mal-qa-research` | `651d259b9612112243121a7051e97645fc6784ae` before this report refresh | one additive QA test plus this report | run `30111746290` / `367`, job `89542677997`, success | stale audit being replaced | this publication head requires its own exact-head success |
+| #6 | `parallel/mal-discover-details` | `8802660c75549d60e94b7121e3035113ef52030d` | 16 owned files | run `30118075391` / `378`, job `89563583644`, success | `READY FOR INTEGRATOR REVIEW` | typed/scope/CI pass; localization and request-field boundary blocked |
+| #7 | `parallel/mal-library-tracking` | `a22c0bc8e6d0088fcc24e922e2fa20159385756b` | 21 owned files | run `30119418302` / `407`, job `89568058753`, success | `READY FOR INTEGRATOR REVIEW` | durable lifecycle fixed; transport-field, DELETE reconciliation and layering blocked |
+| #8 | `parallel/mal-account-settings-diagnostics` | `de014278a3eca70b9439013a38f81f5d947a0c36` | 45 owned files | run `30119785055` / `408`, job `89569261545`, success | `READY FOR INTEGRATOR REVIEW` | redaction/localization/release-source proof improved; checklist truthfulness still blocked |
+| #9 | `parallel/mal-calendar-widgets-background` | `dd57e42e4de722a4993efa5612f9d68668a60e09` | 17 owned files | run `30118373772` / `389`, job `89564560307`, success | `READY FOR INTEGRATOR REVIEW` | source evidence and lifecycle pass; localization blocked |
 
-All PRs remain open and Draft. No merge, approval, rebase, force-push, auto-merge or push to `main` was performed.
+Every PR remains open and Draft. No merge, approval, rebase, force-push, auto-merge, Ready transition or push to `main` was performed.
 
-## Integration checkpoint verification
+## Ownership and collision audit
 
-The current PR #5 head `7492f2cd3d33caf0b2f358154330dc28086ceac9` is exact-head green. Comparing it with the prior green integration head `1ecb0eb53c9802b4ce6359d34893cc4e1b014082` shows seven documentation-only additions under `docs/mal-parity/finish-prompts/`; no production file changed. Therefore the established integration architecture remains the applicable code checkpoint.
+- #6 changes only Discover/details presentation adapters, neutral presentation, its dedicated resource/test files and exclusive report.
+- #7 changes only MAL Library projection/presentation/lifecycle files, dedicated locale/test files and exclusive report.
+- #8 changes only account/settings/diagnostics main/debug source sets, dedicated locale/test files and exclusive report.
+- #9 changes only provider calendar, MAL calendar data, widget snapshot, MAL worker/lifecycle, dedicated resource/test files and exclusive report.
+- #10 changes only additive QA tests and this exclusive report.
 
-Frozen architecture contracts remain:
+No worker modifies another worker file. No worker modifies central navigation, the app shell, central provider state, central tracking service, purge core, Gradle, manifest, workflow, Room schema/migration or canonical parity context.
 
-- exactly one active provider;
-- no inactive-provider fallback, traffic or account/list transfer;
-- one shared app shell;
-- typed and non-interchangeable provider media identities;
-- provider transport models below shared presentation;
-- central navigation, provider routing, tracking, purge and final wiring remain Integrator-owned;
-- official OAuth/API-v2 only, with no scraping, private endpoints or undocumented assumptions;
-- every published head requires its own exact-head CI.
+Conceptual convergence remains at Integrator-owned routing, tracking, diagnostics hooks, calendar extension registration, scheduling, widgets and final localization/acceptance. These are integration tasks, not direct branch collisions.
 
-## Official MyAnimeList evidence
+## Source-confirmed provider contract comparison
 
-Only these official locations were accepted as potential contractual evidence:
+### Catalogue search
 
-- `https://myanimelist.net/apiconfig/references/api/v2`
-- `https://myanimelist.net/apiconfig/references/authorization`
-- `https://myanimelist.net/static/apiagreement.html`
+- `SOURCE_CONFIRMED`: `GET /anime` and `GET /manga`; `q`, `limit`, `offset`, `fields`; search maximum `limit=100`.
+- `REPOSITORY_CONFIRMED`: `MalCatalogRequestFactory.search()` uses the correct paths and caps requests at 100.
+- Verdict: endpoint and limit match.
 
-Access result on `2026-07-24`:
+### Anime and manga details
 
-- all three direct official URLs returned non-retryable retrieval errors in the automated environment;
-- a search restricted to `myanimelist.net` returned no indexable copy;
-- no wrapper, mirror, generated SDK, MoeList, DailyAL, AniList or other third-party source was used as contractual evidence.
+- `SOURCE_CONFIRMED`: `GET /anime/{id}` and `GET /manga/{id}`.
+- `SOURCE_CONFIRMED`: the mandatory reference lists the exact selectable anime and manga detail fields.
+- `REPOSITORY_CONFIRMED`: the application requests a conservative subset for presentation.
+- Gap: one shared `CATALOG_FIELDS` union is used for both media types. Anime requests include `num_chapters` and `num_volumes`, which are absent from the source-confirmed anime list. Manga requests include `num_episodes`, which is absent from the source-confirmed manga list.
+- Classification: those cross-media extras are `UNVERIFIED`, not source-confirmed.
+- Missing optional source-confirmed fields such as anime `broadcast`, `studios`, `statistics`, or manga `authors` and `serialization` are safe omissions, not transport violations.
 
-The repository compliance inventory proves what Kizomi currently implements, but its own official-reference boundary states that paths, methods, parameters, fields, enum values and page constraints still require comparison with a complete current official reference.
+### Ranking and Popular
 
-Classification:
+- `SOURCE_CONFIRMED`: `GET /anime/ranking` and `GET /manga/ranking`.
+- `SOURCE_CONFIRMED`: `bypopularity` is documented for both anime and manga.
+- `SOURCE_CONFIRMED`: ranking maximum `limit=500`.
+- `REPOSITORY_CONFIRMED`: #6 uses only default `all` and constant `bypopularity`; its current maximum 100 is conservative.
+- Boundary gap: `MalCatalogRequestFactory` validates ranking values with a broad lowercase regex rather than the source-confirmed media-specific enum sets. Current UI calls are source-confirmed, but the factory itself can construct an unverified ranking value.
 
-- `REPOSITORY-PROVEN`: directly supported by current source/tests/CI;
-- `OFFICIALLY-PROVEN`: supported by a current accessible official MAL source;
-- `INFERENCE`: engineering conclusion from repository contracts, identified as such;
-- `UNVERIFIED`: current official MAL documentation could not be checked.
+### Seasonal Anime
 
-No endpoint-, field-, enum-, limit-, polling- or policy-level claim in this report is classified `OFFICIALLY-PROVEN`.
+- `SOURCE_CONFIRMED`: `GET /anime/season/{year}/{season}`.
+- `SOURCE_CONFIRMED`: seasons winter/spring/summer/fall.
+- `SOURCE_CONFIRMED`: sorts `anime_score` and `anime_num_list_users`.
+- `SOURCE_CONFIRMED`: maximum `limit=500`.
+- `REPOSITORY_CONFIRMED`: both catalogue and calendar factories use the correct route and source-confirmed sorts; their maximum 100 is conservative.
 
-## Cross-worker ownership and collision audit
+### Anime and manga list reads
 
-### Ownership
+- `SOURCE_CONFIRMED`: `GET /users/{user_name}/animelist` and `GET /users/{user_name}/mangalist`, including `@me`.
+- `SOURCE_CONFIRMED`: anime and manga status enum sets and maximum `limit=1000`.
+- `REPOSITORY_CONFIRMED`: `MalListRequestFactory` uses `users/@me/animelist` and `users/@me/mangalist` and caps at 1000.
+- Boundary gap: optional `status` is passed as an arbitrary nonblank string rather than validated against the source-confirmed media-specific status allowlists. Current Library UI statuses map to the confirmed values, but the request boundary is broader than the source.
+- The mandatory reference does not enumerate every nested `list_status` response subfield. Parsed nested values beyond the explicit reference remain `REPOSITORY_CONFIRMED`, not automatically `SOURCE_CONFIRMED`.
 
-- #6 changes only assigned Discover/details adapter, neutral presentation, dedicated resources/tests and its report paths.
-- #7 changes only assigned Library/provider-facing tracking adapter, dedicated locale resources/tests and its report paths.
-- #8 changes only assigned account/settings/diagnostics main/debug source sets, dedicated resources/tests and its report paths.
-- #9 changes only assigned provider-calendar/MAL-calendar/widget/MAL-worker, dedicated resource/test and report paths.
-- #10 remains limited to its additive QA test and exclusive report.
+### Anime and manga PATCH
 
-No worker changed central navigation, `MainActivity`, `AniSyncApplication`, `MainScreen`, central provider state, central tracking core, purge core, manifests, Gradle, workflows, Room migrations/schemas or canonical parity documents.
+- `SOURCE_CONFIRMED`: `PATCH /anime/{id}/my_list_status` and `PATCH /manga/{id}/my_list_status`, user OAuth, form encoding, sparse update semantics.
+- `SOURCE_CONFIRMED`: status, rewatch/reread boolean, score 0–10, watched episodes or read chapters/volumes, priority, repeat count/value, tags and comments as listed by media type.
+- `REPOSITORY_CONFIRMED`: current central writes use correct endpoints and form encoding; status, progress, manga volume progress, score, rewatch/reread boolean and repeat count map to source-confirmed names.
+- Gap: central transport actively writes `start_date` and `finish_date`. Those fields are absent from the accepted PATCH field lists. #7 exposes these fields in its editor and command set.
+- Classification: active date writes are `UNVERIFIED` and must be hidden or capability-gated until matching official evidence exists.
 
-### Direct collisions
+### Anime and manga DELETE
 
-No two worker PRs modify the same file. Their requested Integrator wiring converges on reserved navigation, provider routing, calendar extension registration, scheduling, widget selection and diagnostics instrumentation. Those are conceptual integration collisions, not branch file collisions, and must remain single-writer Integrator work.
+- `SOURCE_CONFIRMED`: `DELETE /anime/{id}/my_list_status` and `DELETE /manga/{id}/my_list_status`.
+- `SOURCE_CONFIRMED`: 200 means deleted; 404 means absent; the source warns about retries.
+- `INFERRED` engineering consequence required by the source: a 404 after a prior delete attempt may mean the first attempt succeeded and the item is already absent.
+- Current gap: `MalTrackingProviderAdapter.httpFailureOrNull()` maps every 404 directly to terminal `MISSING_IDENTITY` before the delete operation reaches absence read-back reconciliation.
+- Required behavior: for delete intent, reconcile a 404 by confirming list absence before choosing confirmed deletion versus terminal failure.
+
+### Controlled read-back
+
+- `SOURCE_CONFIRMED`: detail GET endpoints and fields `id`, `title`, `main_picture`, `my_list_status` are in the accepted field lists.
+- `REPOSITORY_CONFIRMED`: central tracking read-back uses exactly that subset.
+- Verdict: read-back endpoint and requested field subset match.
+
+### Calendar broadcast metadata
+
+- `SOURCE_CONFIRMED`: Seasonal Anime, `anime_num_list_users`, and top-level anime `broadcast`.
+- The mandatory reference explicitly permits a recurring/degraded broadcast-slot presentation with null handling.
+- `INFERRED`: weekly future-slot projection is an application interpretation of provider metadata, not proof of exact episode schedules.
+- `REPOSITORY_CONFIRMED`: #9 always uses `episodeNumber=null`, precision `RECURRING_BROADCAST_SLOT`, explicit change/unsupported notices, active-provider gating and no AniList fallback.
+- Verdict: do not remove the capability solely for evidence. Never label it an exact episode schedule or notification feed.
 
 ## PR #6 — Discover and Details
 
-### Repository-proven positives
+### Confirmed strengths
 
-- Changed scope is owned and contains no reserved file.
-- Shared Discover/details surfaces consume presentation contracts and typed `ProviderMediaIdentity`; MAL wire conversion stays in MAL adapters.
-- MAL-only ViewModels use the active MAL account and do not import an AniList/Apollo client or repository.
-- Search, ranking, current-season anime, paging, stale cache, loading, empty, retry and typed details states have focused tests.
-- Manga current-season is unavailable rather than emulated.
-- Central route registration was not edited; the report gives explicit typed Integrator wiring requests.
-- Current exact head is fully green.
+- `REPOSITORY_CONFIRMED`: owned scope, no reserved/canonical edit, exact-head CI green.
+- `REPOSITORY_CONFIRMED`: typed MAL anime/manga identities are preserved through Discover, details, related media and recommendations.
+- `REPOSITORY_CONFIRMED`: no AniList/Apollo fallback or transport DTO reaches shared presentation.
+- `SOURCE_CONFIRMED`: `bypopularity` for anime and manga.
+- `SOURCE_CONFIRMED`: Seasonal Anime and both supported sorts.
+- `REPOSITORY_CONFIRMED`: current UI calls only `all`, `bypopularity`, search and Seasonal Anime.
+- Optional field subset omissions are truthful: unsupported sections remain hidden rather than synthesized.
 
-### Findings and blockers
+### Blocking findings
 
-1. **Official support remains unverified.** The report calls `ranking_type=bypopularity` “documented,” but the current official API-v2 renderer was inaccessible and no accessible official evidence was produced. Repository code proves the value is sent, not that MAL currently documents or accepts it.
-2. **Details field support remains unverified.** The existing repository requests relations, recommendations and several detail fields, but current official field evidence was unavailable. A green build is not provider-contract proof.
-3. **Localization gate is bypassed.** `strings_mal_discover_details.xml` applies `tools:ignore="MissingTranslation"` at the entire `<resources>` root while containing ordinary user-visible strings such as Discover, Search, Retry, error copy and Details section labels. This suppresses rather than satisfies supported-locale coverage.
-4. Real-device navigation, provider-approved account calls, adaptive visuals and accessibility acceptance remain outside this worker proof.
+1. `strings_mal_discover_details.xml` applies root-wide `tools:ignore="MissingTranslation"` to ordinary user-visible Discover, Details, action, state and error copy. No matching supported-locale files are in PR #6.
+2. The central shared catalogue field union sends the cross-media extras identified above. This is an Integrator-owned request-boundary correction, but #6 depends on that request factory.
+3. The ranking factory accepts arbitrary regex-valid values even though current #6 calls are source-confirmed constants.
+4. Central navigation, device traffic capture, adaptive visuals and accessibility acceptance remain Integrator/device gates.
 
 ### Verdict
 
-Scope, provider isolation, typed identity, transport separation and CI pass. PR #6 is not merge-ready until the localization suppression is removed with real supported-locale coverage and the report changes provider-documentation claims to `UNVERIFIED` unless current official evidence becomes accessible. Central typed route wiring remains Integrator-owned.
+Provider evidence for Popular and Seasonal is now corrected to `SOURCE_CONFIRMED`. Scope, identity, isolation and presentation architecture pass. PR #6 remains blocked on real locale resources and exact media-specific request-field enforcement before integration authorization.
 
 ## PR #7 — Library and Tracking
 
-### Repository-proven positives
+### Confirmed strengths
 
-- Changed scope is owned and central tracking/router code is untouched.
-- Local, MAL and AniList identities remain structurally separate.
-- A MAL edit requires `ProviderMediaIdentity.MyAnimeList` and invokes only `TrackingCommandService.enqueueMal`; one action cannot create an AniList target.
-- Locale files exist for the repository-supported locale folders and exact-head lint/build is green.
-- Existing central MAL transport tests prove the provider adapter performs a write followed by controlled MAL read-back when the outbox operation is delivered.
-- The report gives explicit reserved wiring requests.
+- `REPOSITORY_CONFIRMED`: owned scope, typed MAL identity, exactly one `enqueueMal` target, no AniList fallback.
+- `REPOSITORY_CONFIRMED`: the earlier enqueue-versus-success blocker is technically closed in the worker surface.
+- `MalLibraryProviderViewModel` now publishes `EnqueueAccepted`, observes the accepted receipt, retains optimistic state only while pending/retrying, and removes it on provider confirmation or rollback.
+- `MalLibraryTrackingAdapter.observe()` emits pending, retryable, provider-confirmed, permanent-failure and rollback states from durable target/snapshot flows.
+- Provider confirmation requires a successful target plus matching provider snapshot; enqueue acceptance is not durable success.
+- Accepted-to-terminal failure emits rollback to the last-good item.
+- Date syntax validation now parses real `LocalDate` values rather than accepting every numeric shape.
+- Real locale resources exist for all repository-supported locale folders without blanket translation suppression.
+- Exact-head tests and CI are green.
 
-### Blocking semantic findings
+### Blocking findings
 
-1. **Accepted enqueue is still not durable success.** `MalLibraryTrackingAdapter.submit()` maps `TrackingEnqueueResult.Accepted` immediately to `MalLibraryEditOutcome.Accepted` with an optimistic item and rollback item.
-2. **The ViewModel observes no durable lifecycle.** `MalLibraryProviderViewModel.submitEdit()` and `delete()` only emit the immediate adapter result. They do not observe the receipt through delivery, confirmed MAL read-back, supersession, terminal failure, lease exhaustion or retry exhaustion.
-3. **Required lifecycle tests are absent.** The worker tests cover immediate acceptance/rejection behavior but not accepted-then-terminal-failure rollback or accepted-then-confirmed-read-back UI success.
-4. **The report overstates rollback semantics.** “Permanent and transient rejections restore the last-good item” describes immediate enqueue rejection only; it does not prove reconciliation after a previously accepted command later fails.
-5. **Date validation is syntactic only.** `isValidOptionalIsoDate()` accepts every `\d{4}-\d{2}-\d{2}` shape, including impossible dates.
-6. **Provider-neutral claim is incomplete.** `ProviderLibraryScreen` is described as provider-neutral but its public state/action API is `MalLibraryProviderUiState` / `MalLibraryProviderAction`, and resources are MAL-prefixed. This is not a wire-DTO leak, but it is a MAL-specific public contract.
-7. **User-visible failure leakage remains.** The ViewModel passes `failure.kind.name` into the presentation snapshot instead of a localized typed failure mapping.
-8. Official MAL write fields, repeat/date semantics, constraints and delete behavior remain `UNVERIFIED` against a current accessible official reference.
+1. `UNVERIFIED` date mutation fields remain exposed and actively translated to `start_date` / `finish_date`, absent from the accepted PATCH list.
+2. DELETE 404 is classified terminal before absence reconciliation, contrary to the source retry caveat.
+3. Layering violation: `presentation/provider/library/MalLibraryTrackingAdapter.kt` imports `TrackingDao` and `ProviderTrackingSnapshotEntity` directly. Durable observation should sit behind a typed data/domain interface rather than making presentation depend on Room implementation types.
+4. The ViewModel still passes `failure.kind.name` into presentation state, exposing raw enum names instead of localized typed failure mapping.
+5. The list request boundary accepts arbitrary status strings, although current UI mappings are source-confirmed.
+6. The optimistic overlay is intentionally in-memory; process recreation falls back safely to durable provider truth, but that limitation must remain visible during UI integration.
 
 ### Verdict
 
-Provider isolation, identity safety, owned scope, localization file presence and CI pass. PR #7 is not ready for Integrator authorization until durable receipt-to-delivery/read-back/terminal-failure reconciliation is implemented or the UI stops representing enqueue acceptance as success; lifecycle tests, real date parsing and localized failure mapping are also required.
+The major durable read-back/UI-reconciliation requirement is now `REPOSITORY_CONFIRMED` and must no longer be reported as absent. PR #7 remains blocked by unverified date writes, DELETE-404 reconciliation, presentation-to-Room coupling and raw failure localization.
 
 ## PR #8 — Account, Settings and Diagnostics
 
-### Repository-proven positives
+### Confirmed strengths
 
-- Changed scope is owned.
-- Destructive account actions delegate to the existing `ProviderSessionCoordinator`; purge core is not bypassed.
-- Dashboard screen, ViewModel, snapshot source and Hilt binding are in debug source sets.
-- The debug snapshot source reads local stores/database and imports no provider network client.
-- Source tests check that direct dashboard screen/ViewModel references do not exist in main/release sources.
-- Account/settings strings have supported-locale resource files and exact-head CI is green.
-- The report explicitly identifies missing Integrator recorder hooks and source-revision limitations.
+- `REPOSITORY_CONFIRMED`: destructive actions delegate to the existing provider-session purge coordinator.
+- `REPOSITORY_CONFIRMED`: dashboard implementation and visible resources are debug-source-only; main/release source trees contain no dashboard implementation or visible dashboard resources.
+- Real account and debug-dashboard locale resources now exist for every supported locale. The rejected blanket `translatable="false"` file was removed.
+- The copied/exported diagnostics path now receives realistic fake token, code, client/account ID, callback, OAuth state, raw response and username fixtures and proves they are redacted.
+- The dashboard ViewModel behavioral test records local reads and zero network calls on open/recreation.
+- Pending OAuth health and source revision remain truthful unknown/unavailable states.
+- Recorder APIs accept low-cardinality categories/counters rather than raw provider material.
+- Exact-head CI is green.
 
-### Blocking truthfulness, privacy and localization findings
+### Blocking findings
 
-1. **Misleading inactive-provider checklist semantics remain unchanged.** `inactive_provider_request_count_zero` passes when `blockedInactiveRequestCount == 0`. That proves only that no blocked attempt was recorded, not that zero inactive-provider requests occurred.
-2. **Parity status is still hard-coded.** `authentication_session` is declared `IMPLEMENTED_AND_TESTED` in a manual registry. The added drift test cannot establish canonical evidence merely from key stability.
-3. **The named secret-export proof remains vacuous.** The export test asserts that token/code/verifier/state/account/list fixture strings are absent, but those fixtures are never inserted into the snapshot passed to the exporter. The test cannot fail if an equivalent sensitive value is added through a future field.
-4. **Runtime counters are uninstrumented.** The report correctly admits they remain zero until Integrator hooks are added. The dashboard must represent such metrics as unavailable/unknown rather than evidence-backed zero.
-5. **The previously rejected localization bypass remains.** `strings_mal_account_diagnostics_debug.xml` marks ordinary user-visible screen titles, notices, actions, section names, expand/collapse text, status values and metric labels `translatable="false"`. These are not immutable protocol literals; this bypasses supported-locale requirements.
-6. **Release exclusion proof is source-layout proof, not packaged-artifact proof.** The test checks source locations and textual references. It does not inspect a release APK or prove an Integrator-owned release route cannot be registered later.
-7. **Zero-network proof is narrow.** The test proves the local snapshot source contains no listed network-client symbols. It does not instrument dashboard open/reload to assert zero network calls across injected dependencies.
-8. The report states that tests cover every sensitive-value class and sanitized export, but the current export-path fixture does not satisfy the Integrator’s requested non-vacuous boundary proof.
+1. `DiagnosticsParityRegistry.checklist()` still marks `inactive_provider_request_count_zero` passed when `blockedInactiveRequestCount == 0`. A zero blocked-attempt count does not prove zero inactive-provider requests. This is the same logical defect previously identified.
+2. `authentication_session` remains manually hard-coded `IMPLEMENTED_AND_TESTED`; key-set stability alone is not evidence for the status value.
+3. Runtime counters remain uninstrumented until Integrator hooks are wired. Numeric zero may be shown as a local counter value, but must not be converted into an acceptance proof.
+4. Source-set exclusion is strong worker evidence, but final packaged release APK/class/route exclusion remains an Integrator release gate after route registration.
+5. The debug route and recorder producers remain intentionally unwired in reserved files.
 
 ### Verdict
 
-Coordinator reuse, debug source separation, owned scope and CI pass. PR #8 is not ready for Integrator authorization until the counter/checklist semantics are truthful, parity claims are evidence-backed, a fixture-bearing redaction boundary exists, debug UI strings are genuinely localized, and release/zero-network claims receive stronger proof or are narrowed in the report.
+Previous stale claims about vacuous redaction and missing localization are corrected: those areas now pass worker-level proof. PR #8 remains blocked by the misleading inactive-request checklist and evidence-free parity status. Integrator hooks and packaged release verification remain explicit handoff gates.
 
 ## PR #9 — Calendar, Widgets and Background
 
-### Repository-proven positives
+### Confirmed strengths
 
-- Changed scope is owned and reserved scheduling/navigation/manifest files are untouched.
-- `ProviderCalendarRouter` selects exactly one source from authoritative `ActiveProvider` and never falls back.
-- `MalCalendarRepository` refuses network work unless traffic is allowed, the runtime provider is `MAL_ONLY`, and an account key exists.
-- Requests are bounded by range, page size, pages per season, cache TTL and a mutex-coalesced load.
-- Paging URLs are constrained to the official HTTPS origin, credential-free form, expected seasonal path and exact requested field string.
-- Entries are explicitly `RECURRING_BROADCAST_SLOT` with `episodeNumber = null`; exact episode schedule and notifications are represented unavailable.
-- Widget data reads local snapshots rather than performing network work on open.
-- Lifecycle code cancels both unique work names and purges memory/snapshot on disable, logout, purge and non-MAL provider state.
-- Periodic/immediate work uses unique names and bounded WorkManager policies.
-- Current exact head is green and the report gives explicit Integrator wiring requests.
+- `SOURCE_CONFIRMED`: Seasonal Anime endpoint, `anime_num_list_users` sort and anime `broadcast` field.
+- `REPOSITORY_CONFIRMED`: active provider and traffic gates prevent MAL work outside `MAL_ONLY` and prevent fallback.
+- Requests are conservatively bounded to 100 rows, two pages per season, a 62-day query, cache TTL and mutex-coalesced loads.
+- Paging is restricted to the official HTTPS origin, credential-free form, seasonal path family and exact field string.
+- Broadcast projection is explicitly degraded recurring metadata, with `episodeNumber=null`; exact schedules and notifications are unavailable.
+- Widgets read provider-scoped local snapshots and perform no network work on render.
+- Provider change, account change, process restart, logout, disable and purge lifecycle tests cover scheduling, cancellation and snapshot/memory cleanup.
+- WorkManager uses unique names, `KEEP`, connected-network constraint and exponential backoff.
+- Exact-head CI and final marker pass.
 
-### Blocking provider-proof, status and localization findings
+### Blocking findings
 
-1. **The final report marker is wrong.** It ends `READY FOR INTEGRATOR — DRAFT PR; DO NOT MERGE`, not the contract-required exact marker `READY FOR INTEGRATOR REVIEW`.
-2. **New transport fields are not currently official-proofed.** `MalCalendarApi` newly requests and parses `broadcast.day_of_the_week` and `broadcast.start_time`. The accessible repository compliance inventory lists the seasonal endpoint but explicitly keeps field-level review open. The live official API-v2 reference was inaccessible. These fields are repository-implemented but `UNVERIFIED`, not officially approved.
-3. **Background use amplifies an unverified field assumption.** The worker schedules recurring reads and persists widget snapshots based on those fields. Until current official evidence is recorded, the Integrator must not treat the degraded calendar as provider-supported production capability.
-4. **The report overstates its evidence.** It says the MAL data model exposes the broadcast fields while simultaneously admitting the official renderer was inaccessible. That statement is repository assumption unless backed by a separately retained official source.
-5. **Localization is bypassed.** All eight normal user-visible calendar/widget strings use `tools:ignore="MissingTranslation"` instead of supported-locale resources.
-6. **Capability naming needs Integrator review.** The extension advertises `CalendarCapability.NATIVE_SCHEDULE` while the worker model explicitly lacks exact episode schedule. This may be acceptable only if the central capability contract defines native recurring slots broadly; otherwise it risks misleading consumers. This is an engineering inference, not a demonstrated defect.
-7. **Extension identifier collision risk.** `extensionId = "calendar.provider.native.broadcast"` is provider-generic although the implementation is MAL-specific and registry IDs/settings namespaces must be unique. A future/provider extension could collide. This is an inference that should be resolved before registration.
-8. Real-device WorkManager, reboot, timezone/DST, stale snapshot and provider-switch acceptance remain external despite unit coverage.
+1. Every ordinary calendar/widget string individually suppresses `MissingTranslation`; PR #9 contains no supported-locale resource files.
+2. Weekly slot projection remains `INFERRED` application semantics and must continue to display the recurring/change disclaimer.
+3. Hilt registration, shared calendar routing, widget rendering, central scheduling and purge wiring are Integrator-owned and not active yet.
+4. Real-account timezone/display acceptance remains external.
 
 ### Verdict
 
-Provider isolation, fail-closed routing, bounded lifecycle behavior, local widget reads, owned scope and CI pass. PR #9 is not ready for Integrator authorization until the exact report marker is corrected, normal UI strings are localized, and current official evidence verifies the newly used broadcast fields or the feature remains disabled/unavailable. The capability and extension-ID semantics also require Integrator resolution before registration.
+The former evidence blocker is corrected: the endpoint, sort and top-level broadcast capability are `SOURCE_CONFIRMED`. PR #9 remains blocked on genuine supported-locale resources. Its lifecycle, provider isolation and degraded semantic boundary otherwise pass worker review.
 
-## Capability matrix after refreshed audit
+## Additive QA scanner
 
-| Capability | Repository proof | Current official proof | Final classification |
-|---|---|---|---|
-| Search, ranking, seasonal catalogue, details | existing typed request/repository code; #6 presentation | inaccessible | REPOSITORY-PROVEN; UNVERIFIED provider contract |
-| `bypopularity` ranking | #6 sends the value | inaccessible | repository assumption; UNVERIFIED |
-| Relations/recommendations/detail field set | existing request and #6 mapping | inaccessible | REPOSITORY-PROVEN mapping; UNVERIFIED fields |
-| User anime/manga list reads | existing list API/repository and #7 projection | inaccessible | REPOSITORY-PROVEN; UNVERIFIED contract |
-| List writes/delete/read-back | existing central outbox/provider adapter; #7 immediate ingress | inaccessible | transport path REPOSITORY-PROVEN; UI durability incomplete; provider contract UNVERIFIED |
-| Repeat/date/volume fields | existing adapter and #7 editor | inaccessible | REPOSITORY-PROVEN implementation; UNVERIFIED semantics |
-| Provider profile hydration | no provider-profile request found | inaccessible | ABSENT |
-| Recurring broadcast fields | new #9 `broadcast` parsing/projection | inaccessible | REPOSITORY-PROVEN code; newly UNVERIFIED transport fields |
-| Exact episode schedule | #9 explicitly unavailable | inaccessible | ABSENT/UNSUPPORTED in implementation |
-| Airing notifications | #9 explicitly unavailable | inaccessible | ABSENT/UNSUPPORTED in implementation |
-| MAL widget snapshot | #9 local snapshot implementation | provider policy inaccessible | REPOSITORY-PROVEN local feature; provider-input fields UNVERIFIED |
-| MAL background refresh | #9 bounded WorkManager design | polling/rate policy inaccessible | REPOSITORY-PROVEN implementation; policy UNVERIFIED |
-| Scraping/private endpoints/fallback | no audited implementation | not applicable | ABSENT; prohibited |
+New file:
 
-## Severity-ranked findings
+`app/src/test/java/com/anisync/android/presentation/parity/qa/MalApiV2SourceContractAuditTest.kt`
 
-| Severity | Finding | Required disposition |
-|---|---|---|
-| P1 tracking | #7 accepted enqueue is not observed to durable delivery/read-back/terminal failure | implement reconciliation and tests or stop presenting acceptance as success |
-| P1 provider contract | #9 adds/schedules production behavior around unverified broadcast fields | verify against current official API or keep capability disabled/unavailable |
-| P1 localization | #6 and #9 suppress `MissingTranslation`; #8 marks ordinary debug UI text non-translatable | add real supported-locale resources; do not weaken lint semantics |
-| P2 diagnostics | #8 blocked-counter checklist semantics are false evidence | rename/use a real metric or mark unknown/pending |
-| P2 privacy evidence | #8 export test never injects the named sensitive fixtures | add a fixture-bearing typed boundary that would fail on leakage |
-| P2 evidence drift | #8 parity statuses are manual and not canonically evidenced | derive/validate statuses against approved evidence |
-| P2 report accuracy | #6 calls unverified ranking value documented; #7 overstates rollback; #9 overstates field evidence and has wrong marker | correct reports before authorization |
-| P2 validation | #7 accepts impossible ISO-shaped dates | parse real dates and add boundaries |
-| P2 architecture | #7 shared-surface claim exposes MAL-specific public API | document as MAL-owned or introduce a neutral contract |
-| P3 integration | #9 generic extension ID may collide; native-schedule capability may be too broad | Integrator resolves before Hilt registration |
-| P3 acceptance | all workers still lack final real-account/device/network-capture/visual acceptance | complete after controlled integration |
+The scanner:
 
-No direct secret exposure, provider fallback, cross-provider data transfer, scraping implementation, raw MAL wire DTO in neutral shared presentation or reserved-file collision was found in the frozen worker heads.
+- verifies source-confirmed catalogue/list paths and conservative limits;
+- verifies `bypopularity` for anime and manga;
+- verifies both source-confirmed Seasonal Anime sorts;
+- freezes the known cross-media catalogue field-union exceptions;
+- freezes the presence of unverified date writes;
+- freezes the current terminal DELETE-404 branch so it cannot disappear from the audit record without a deliberate correction.
 
-## Integrator follow-ups
+The two known-gap checks are evidence guards, not approval of the gaps. A future correction should update the scanner and this report together.
 
-1. Keep all worker PRs Draft and authorize no merge from this QA report.
-2. Treat PR #6 as the active queue slot only after its localization suppression and unverified “documented” wording are corrected and its new exact head is green.
-3. Keep #7 blocked until durable operation reconciliation, lifecycle tests, real date validation and localized failures are complete.
-4. Keep #8 blocked until truthful unknown metrics, non-vacuous redaction proof, evidence-backed parity status and real debug localization are complete.
-5. Keep #9 blocked until official broadcast-field evidence or a disabled/unavailable implementation, exact report marker and real localization are complete.
-6. Preserve one-provider/no-fallback/typed-identity/purge contracts during all central wiring.
-7. After one explicitly authorized owner merge, run exact-head CI on PR #5 before considering the next queue item.
-8. Official endpoint/field/enum/limit/policy verification remains an open external gate; do not convert repository implementation into provider approval.
+## Required Integrator and worker follow-ups
 
-## QA test status
+1. #6 worker: replace root translation suppression with real locale resources.
+2. Integrator catalogue boundary: split anime/manga requested field sets and replace broad ranking regex with source-confirmed allowlists.
+3. #7 worker/Integrator: hide or gate start/completion date writes until matching source evidence exists.
+4. Central tracking: reconcile DELETE 404 through confirmed absence before final status.
+5. #7 worker: move Room observation behind a typed data/domain boundary and localize API failure presentation.
+6. #8 worker: correct the inactive-request checklist semantics and evidence-back or downgrade manual parity statuses.
+7. Integrator: wire diagnostics producers only at existing boundaries and prove packaged release exclusion after route integration.
+8. #9 worker: add real locale resources without lint suppression.
+9. Integrator: register #9 once, preserve active-provider routing, no network-on-widget-open, lifecycle purge and recurring/degraded copy.
+10. After any authorized owner merge, freeze the new PR #5 head and require full exact-head CI before the next queue action.
 
-The existing additive `MalParityQaArchitectureTest` remains unchanged. It protects frozen integration contracts for:
+## QA publication and CI
 
-- exclusive provider state;
-- one-target tracking without fallback;
-- shared app shell;
-- official HTTPS request host and strict paging validation;
-- destructive local purge coverage.
-
-Its previous exact test/report status head `651d259b9612112243121a7051e97645fc6784ae` passed run `30111746290` / `367`, job `89542677997`. This refreshed report publication commit requires and will be judged only by its own exact-head workflow.
-
-## Status
+- Previous refreshed QA head: `4318bab8ef851d468addaa5d1acaead53b012eba`, run `30118359428` / `387`, job `89564513821`, success.
+- Additive source-contract scanner head before this report update: `78d0cc66c04346b2b862f8bc4708da6967e1923d`.
+- The final report-only successor cannot self-embed its own SHA. PR #10 and its attached workflow are the authoritative exact final-head evidence.
+- PR #10 must remain Draft and receives no merge authorization from this audit.
 
 READY FOR INTEGRATOR REVIEW
