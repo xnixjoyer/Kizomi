@@ -14,8 +14,7 @@ Each extension declares:
 - a capability set;
 - current availability;
 - an isolated settings namespace;
-- whether user enablement is allowed;
-- lifecycle hooks and their timeout/error policy.
+- lifecycle hooks with per-extension error isolation.
 
 Capabilities are neutral, such as schedule read, reminder projection, local annotation, or provider-native calendar contribution. A capability never authorizes use of an inactive provider.
 
@@ -40,7 +39,7 @@ The registry:
 - rejects duplicate IDs and invalid settings namespaces;
 - filters by the active provider and requested capability;
 - exposes only independently enabled and currently available extensions;
-- invokes hooks with failure isolation;
+- invokes hooks with failure isolation and redacted neutral failure records;
 - disables and purges provider-incompatible extensions during provider transition;
 - performs no provider fallback;
 - performs no account-data transfer between extensions or providers.

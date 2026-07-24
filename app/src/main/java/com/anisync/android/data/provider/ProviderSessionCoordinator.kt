@@ -18,6 +18,8 @@ import com.anisync.android.data.local.dao.UserProfileDao
 import com.anisync.android.data.mal.account.MalAccountRepository
 import com.anisync.android.data.mal.oauth.MalOAuthSessionStore
 import com.anisync.android.domain.provider.ActiveProvider
+import com.anisync.android.domain.calendar.CalendarExtensionContext
+import com.anisync.android.domain.calendar.CalendarExtensionRegistry
 import com.anisync.android.domain.provider.ProviderRuntimeState
 import com.anisync.android.domain.provider.ProviderTransitionPhase
 import com.anisync.android.domain.tracking.TrackingProvider
@@ -50,27 +52,38 @@ class ProviderSessionCoordinator @Inject constructor(
     private val apolloClient: ApolloClient,
     @ApplicationContext private val context: Context,
     private val imageLoader: ImageLoader,
+    private val calendarExtensions: CalendarExtensionRegistry,
 ) {
     private val transitionMutex = Mutex()
 
     suspend fun initialize(): ProviderRuntimeState = transitionMutex.withLock {
         withContext(Dispatchers.IO) {
-        if (stateStore.snapshot().transitionPhase == ProviderTransitionPhase.PURGING) {
-            purgeEveryProviderLocally()
-            stateStore.finishPurge()
-        }
-        val hasAniList = aniListAccounts.accounts.value.isNotEmpty()
-        val hasMal = malAccounts.listAccounts().isNotEmpty()
-        val current = stateStore.snapshot()
-        if (current.transitionPhase == ProviderTransitionPhase.AUTHENTICATING) {
-            val completed = when (current.pendingProvider) {
-                ActiveProvider.ANILIST_ONLY -> hasAniList && !hasMal
-                ActiveProvider.MAL_ONLY -> hasMal && !hasAniList
-                else -> false
+            if (stateStore.snapshot().transitionPhase == ProviderTransitionPhase.PURGING) {
+                purgeEveryProviderLocally()
+                calendarExtensions.onPurge(CalendarExtensionContext(ActiveProvider.UNCONFIGURED))
+                stateStore.finishPurge()
             }
-            if (completed) return@withContext stateStore.completeLogin(requireNotNull(current.pendingProvider))
-        }
-        stateStore.reconcileLocalAccounts(hasAniList, hasMal)
+            val hasAniList = aniListAccounts.accounts.value.isNotEmpty()
+            val hasMal = malAccounts.listAccounts().isNotEmpty()
+            val current = stateStore.snapshot()
+            val reconciled = if (current.transitionPhase == ProviderTransitionPhase.AUTHENTICATING) {
+                val completed = when (current.pendingProvider) {
+                    ActiveProvider.ANILIST_ONLY -> hasAniList && !hasMal
+                    ActiveProvider.MAL_ONLY -> hasMal && !hasAniList
+                    else -> false
+                }
+                if (completed) {
+                    stateStore.completeLogin(requireNotNull(current.pendingProvider))
+                } else {
+                    stateStore.reconcileLocalAccounts(hasAniList, hasMal)
+                }
+            } else {
+                stateStore.reconcileLocalAccounts(hasAniList, hasMal)
+            }
+            calendarExtensions.onProcessRestart(
+                CalendarExtensionContext(reconciled.activeProvider)
+            )
+            reconciled
         }
     }
 
@@ -87,7 +100,9 @@ class ProviderSessionCoordinator @Inject constructor(
                 ActiveProvider.UNCONFIGURED -> error("unreachable")
             }
             purgeSharedTrackingState()
-            stateStore.completeLogin(provider)
+            val completed = stateStore.completeLogin(provider)
+            calendarExtensions.onAccountChanged(CalendarExtensionContext(provider))
+            completed
         } }
 
     suspend fun selectLegacyProvider(provider: ActiveProvider): ProviderRuntimeState =
@@ -105,13 +120,19 @@ class ProviderSessionCoordinator @Inject constructor(
                 ActiveProvider.UNCONFIGURED -> error("unreachable")
             }
             purgeSharedTrackingState()
-            stateStore.activateExisting(provider)
+            val activated = stateStore.activateExisting(provider)
+            calendarExtensions.onAccountChanged(CalendarExtensionContext(provider))
+            activated
         } }
 
     suspend fun disconnectAndDeleteAllLocalProviderData(): ProviderRuntimeState =
         transitionMutex.withLock { withContext(Dispatchers.IO) {
+            val previousProvider = stateStore.snapshot().activeProvider
             stateStore.beginPurge()
+            calendarExtensions.onLogout(CalendarExtensionContext(previousProvider))
+            calendarExtensions.disableAll(CalendarExtensionContext(previousProvider))
             purgeEveryProviderLocally()
+            calendarExtensions.onPurge(CalendarExtensionContext(previousProvider))
             stateStore.finishPurge()
         } }
 

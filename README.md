@@ -31,7 +31,7 @@ See `PRIVACY.md`, `TERMS_OF_USE.md`, `DATA_DELETION.md`, `SUPPORT.md`, `SECURITY
 
 ## Calendar extensions
 
-Calendar support uses a neutral modular extension contract. Extensions declare supported active-provider modes and capabilities, keep isolated settings, can be enabled or disabled independently, receive account/logout/purge/restart lifecycle events, and are failure-isolated. The public registry has no knowledge of private implementations and never triggers a provider fallback.
+Calendar support uses a neutral modular extension contract. Extensions declare supported active-provider modes and capabilities, keep isolated settings, can be enabled or disabled independently, receive account/logout/purge/restart lifecycle events, and are failure-isolated. The public registry has no knowledge of optional implementation details and never triggers a provider fallback.
 
 ## Build
 

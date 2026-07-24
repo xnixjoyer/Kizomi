@@ -9,6 +9,14 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
+    "app/src/test/java/com/anisync/android/domain/calendar/CalendarExtensionRegistryTest.kt": (
+        "four neutral extensions register enable filter isolate settings and clean lifecycle",
+        "a failed enable is isolated and never persisted",
+        "neutral.ani.native",
+        "neutral.mal.native",
+        "neutral.shared.widget",
+        "neutral.failure.isolation",
+    ),
     "app/src/test/java/com/anisync/android/data/mal/oauth/AuthenticatedMalClientTest.kt": (
         "401 performs one refresh and retries once",
         "second 401 is not retried",

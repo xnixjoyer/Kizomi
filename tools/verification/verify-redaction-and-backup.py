@@ -13,6 +13,10 @@ REQUIRED_EXCLUSIONS = (
     "auth_prefs.xml",
     "mal_token_vault.xml",
     "mal_oauth_session.xml",
+    "calendar_extension_settings.xml",
+    "calendar_extension_enablement.xml",
+    "anisync.db",
+    "apollo_cache.db",
 )
 SENSITIVE_WORDS = re.compile(
     r"(?i)(access.?token|refresh.?token|authorization|code.?verifier|client.?secret|oauth.?code)"
