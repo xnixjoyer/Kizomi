@@ -18,7 +18,7 @@ import org.junit.Test
 
 class DiagnosticRedactorTest {
     @Test
-    fun `every sensitive value class redacts a realistic fixture`() {
+    fun `every sensitive value class redacts a realistic marker-free fixture`() {
         realisticFixtures.forEach { (valueClass, fixture) ->
             val redacted = DiagnosticRedactor.redact(fixture, valueClass)
             assertEquals(DiagnosticRedactor.REDACTED, redacted)
@@ -27,125 +27,159 @@ class DiagnosticRedactorTest {
     }
 
     @Test
-    fun `free form categories reject realistic URLs tokens codes verifiers and identifiers`() {
+    fun `realistic fixtures cannot enter rendered values or accessibility semantics`() {
         realisticFixtures.values.forEach { fixture ->
-            assertEquals(DiagnosticRedactor.REDACTED, DiagnosticRedactor.sanitizeCategory(fixture))
+            val rendered = DiagnosticPresentationBoundary.metadata(fixture)
+            val semantics = DiagnosticsStatusSemantics.contentDescription(
+                label = "Diagnostic value",
+                value = rendered,
+                valueIsAlreadySafe = true,
+            )
+
+            assertEquals(DiagnosticRedactor.REDACTED, rendered)
+            assertEquals("Diagnostic value: <redacted>", semantics)
+            assertNoFixtureLeak(rendered)
+            assertNoFixtureLeak(semantics)
         }
-        val bearerFixture =
-            "Authorization: " + "Bearer " + "eyJhbGciOiJSUzI1NiJ9.fake.payload.signature"
-        assertEquals(
-            DiagnosticRedactor.REDACTED,
-            DiagnosticRedactor.sanitizeCategory(bearerFixture),
-        )
-        assertEquals(
-            DiagnosticRedactor.REDACTED,
-            DiagnosticRedactor.sanitizeCategory(
-                "https://myanimelist.net/v1/oauth2/authorize?code=FAKE-AUTH-CODE-7391",
-            ),
-        )
     }
 
     @Test
-    fun `exported and copied diagnostics retain typed state but omit every realistic secret`() {
-        val fixture = realisticFixtures
-        val export = SanitizedDiagnosticExporter.format(
-            IntegrationDiagnosticsSnapshot(
-                build = DiagnosticsBuildMetadata(
-                    versionName = "3.2.0-debug",
-                    versionCode = 20L,
-                    buildType = "debug",
-                    sourceRevision = fixture.getValue(SensitiveDiagnosticValueClass.ACCOUNT_IDENTIFIER),
-                    oauthEnvironment = fixture.getValue(SensitiveDiagnosticValueClass.CLIENT_IDENTIFIER),
-                    redirectScheme = fixture.getValue(SensitiveDiagnosticValueClass.CALLBACK_URL),
-                    redirectHost = fixture.getValue(SensitiveDiagnosticValueClass.USERNAME),
-                    redirectPath = fixture.getValue(SensitiveDiagnosticValueClass.AUTHORIZATION_CODE),
-                    clientIdPresent = true,
-                    databaseSchemaVersion = 28,
-                ),
-                session = DiagnosticsSessionMetadata(
-                    activeProvider = ActiveProvider.MAL_ONLY,
-                    transitionPhase = ProviderTransitionPhase.IDLE,
-                    configuration = DiagnosticAvailability.AVAILABLE,
-                    sessionState = DiagnosticSessionState.CONNECTED,
-                    pendingOAuthTransaction = DiagnosticAvailability.UNKNOWN,
-                    tokenVaultHealth = DiagnosticAvailability.AVAILABLE,
-                    accountRecordPresent = true,
-                    lastSuccessfulRestoreEpochMillis = 1L,
-                    lastRefreshOutcome = fixture.getValue(SensitiveDiagnosticValueClass.ACCESS_TOKEN),
-                    lastRefreshEpochMillis = 2L,
-                ),
-                runtime = DiagnosticsRuntimeMetrics(
-                    activeProviderRequestCount = 2L,
-                    blockedInactiveProviderRequestCount = 0L,
-                    lastSuccessfulRequestCategory =
-                        fixture.getValue(SensitiveDiagnosticValueClass.RAW_PROVIDER_RESPONSE),
-                    lastFailureCategory =
-                        fixture.getValue(SensitiveDiagnosticValueClass.REFRESH_TOKEN),
-                    lastFailureHttpClass = "4xx",
-                    lastProviderChangeResult =
-                        fixture.getValue(SensitiveDiagnosticValueClass.OAUTH_STATE),
-                ),
-                parity = listOf(
-                    DiagnosticParityItem(
-                        fixture.getValue(SensitiveDiagnosticValueClass.PKCE_VERIFIER),
-                        DiagnosticParityStatus.IMPLEMENTED_AND_TESTED,
-                    ),
-                ),
-                checklist = listOf(
-                    DiagnosticChecklistItem(
-                        fixture.getValue(SensitiveDiagnosticValueClass.PKCE_CHALLENGE),
-                        true,
-                        fixture.getValue(SensitiveDiagnosticValueClass.PERSONAL_LIST_CONTENT),
-                    ),
-                ),
-                capturedAtEpochMillis = 3L,
-            ),
+    fun `fixture-bearing snapshot is safe in copy export logs and every toString boundary`() {
+        val snapshot = fixtureBearingSnapshot()
+        val outputs = listOf(
+            SanitizedDiagnosticExporter.format(snapshot),
+            SanitizedDiagnosticLogFormatter.format(snapshot),
+            snapshot.toString(),
+            snapshot.build.toString(),
+            snapshot.session.toString(),
+            snapshot.runtime.toString(),
+            snapshot.parity.toString(),
+            snapshot.checklist.toString(),
         )
 
-        assertTrue(export.contains("activeProvider=MAL_ONLY"))
-        assertTrue(export.contains("pendingOAuth=UNKNOWN"))
-        assertTrue(export.contains("clientIdPresent=true"))
-        realisticFixtures.values.forEach { secret ->
-            assertFalse("Secret fixture leaked into copied export", export.contains(secret))
+        outputs.forEach { output ->
+            assertTrue("Expected explicit redaction in output", output.contains(DiagnosticRedactor.REDACTED))
+            assertNoFixtureLeak(output)
         }
-        listOf(
-            "FAKE-ACCESS-7f9c",
-            "FAKE-REFRESH-0d31",
-            "FAKE-AUTH-CODE-7391",
-            "fake-private-user",
-            "Cowboy Bebop",
-            "https://",
-        ).forEach { secretFragment ->
-            assertFalse("Secret fragment leaked into copied export", export.contains(secretFragment))
+
+        val copiedExport = outputs.first()
+        assertTrue(copiedExport.contains("activeProvider=MAL_ONLY"))
+        assertTrue(copiedExport.contains("pendingOAuth=UNKNOWN"))
+        assertTrue(copiedExport.contains("clientIdPresent=true"))
+        assertTrue(copiedExport.contains("cacheHits=unknown"))
+    }
+
+    @Test
+    fun `safe low-cardinality categories and structural metadata remain useful`() {
+        assertEquals("library_read", DiagnosticPresentationBoundary.category("library_read"))
+        assertEquals("4xx", DiagnosticPresentationBoundary.category("4xx"))
+        assertEquals("debug", DiagnosticPresentationBoundary.metadata("debug"))
+        assertEquals("/mal/callback", DiagnosticPresentationBoundary.metadata("/mal/callback"))
+        assertEquals("3.2.0-debug", DiagnosticPresentationBoundary.metadata("3.2.0-debug"))
+    }
+
+    private fun fixtureBearingSnapshot(): IntegrationDiagnosticsSnapshot {
+        val fixture = realisticFixtures
+        return IntegrationDiagnosticsSnapshot(
+            build = DiagnosticsBuildMetadata(
+                versionName = "3.2.0-debug",
+                versionCode = 20L,
+                buildType = "debug",
+                sourceRevision = fixture.getValue(SensitiveDiagnosticValueClass.ACCESS_TOKEN),
+                oauthEnvironment = fixture.getValue(SensitiveDiagnosticValueClass.REFRESH_TOKEN),
+                redirectScheme = fixture.getValue(SensitiveDiagnosticValueClass.CALLBACK_URL),
+                redirectHost = fixture.getValue(SensitiveDiagnosticValueClass.CLIENT_IDENTIFIER),
+                redirectPath = fixture.getValue(SensitiveDiagnosticValueClass.AUTHORIZATION_CODE),
+                clientIdPresent = true,
+                databaseSchemaVersion = 28,
+            ),
+            session = DiagnosticsSessionMetadata(
+                activeProvider = ActiveProvider.MAL_ONLY,
+                transitionPhase = ProviderTransitionPhase.IDLE,
+                configuration = DiagnosticAvailability.AVAILABLE,
+                sessionState = DiagnosticSessionState.CONNECTED,
+                pendingOAuthTransaction = DiagnosticAvailability.UNKNOWN,
+                tokenVaultHealth = DiagnosticAvailability.AVAILABLE,
+                accountRecordPresent = true,
+                lastSuccessfulRestoreEpochMillis = null,
+                lastRefreshOutcome = fixture.getValue(SensitiveDiagnosticValueClass.PKCE_VERIFIER),
+                lastRefreshEpochMillis = null,
+            ),
+            runtime = DiagnosticsRuntimeMetrics(
+                activeProviderRequestCount = null,
+                blockedInactiveProviderRequestCount = null,
+                lastSuccessfulRequestCategory =
+                    fixture.getValue(SensitiveDiagnosticValueClass.RAW_PROVIDER_RESPONSE),
+                lastFailureCategory = fixture.getValue(SensitiveDiagnosticValueClass.PKCE_CHALLENGE),
+                lastFailureHttpClass = "4xx",
+                lastProviderChangeResult = fixture.getValue(SensitiveDiagnosticValueClass.OAUTH_STATE),
+            ),
+            parity = listOf(
+                DiagnosticParityItem(
+                    fixture.getValue(SensitiveDiagnosticValueClass.ACCOUNT_IDENTIFIER),
+                    DiagnosticParityStatus.IN_PROGRESS,
+                ),
+            ),
+            checklist = listOf(
+                DiagnosticChecklistItem(
+                    fixture.getValue(SensitiveDiagnosticValueClass.USERNAME),
+                    passed = null,
+                    detail = fixture.getValue(SensitiveDiagnosticValueClass.PERSONAL_LIST_CONTENT),
+                ),
+            ),
+            capturedAtEpochMillis = 3L,
+        )
+    }
+
+    private fun assertNoFixtureLeak(output: String) {
+        realisticFixtures.values.forEach { secret ->
+            assertFalse("Secret fixture leaked: $secret", output.contains(secret))
+        }
+        distinctiveFragments.forEach { fragment ->
+            assertFalse("Secret fragment leaked: $fragment", output.contains(fragment))
         }
     }
 
     private companion object {
         val realisticFixtures = mapOf(
             SensitiveDiagnosticValueClass.ACCESS_TOKEN to
-                "access_token=FAKE-ACCESS-7f9c.eyJhbGciOiJSUzI1NiJ9.payload.signature",
+                "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.ZmFrZS1hY2Nlc3MtcGF5bG9hZA.c2lnbmF0dXJl",
             SensitiveDiagnosticValueClass.REFRESH_TOKEN to
-                "refresh_token=FAKE-REFRESH-0d31.def50200.long-refresh-material",
+                "def50200FAKE0d31b729e6f5c2a44c0f8d5b1a9e7c3f0aa21refresh",
             SensitiveDiagnosticValueClass.AUTHORIZATION_CODE to
-                "authorization_code=FAKE-AUTH-CODE-7391-SplxlOBeZQQYbYS6WxSbIA",
+                "SplxlOBeZQQYbYS6WxSbIA",
             SensitiveDiagnosticValueClass.PKCE_VERIFIER to
-                "pkce_verifier=FAKE-VERIFIER-abcdefghijklmnopqrstuvwxyz0123456789-._~",
+                "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk-FAKE-verifier-73",
             SensitiveDiagnosticValueClass.PKCE_CHALLENGE to
-                "pkce_challenge=FAKE-CHALLENGE-c2hhMjU2LWJhc2U2NHVybA",
+                "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
             SensitiveDiagnosticValueClass.OAUTH_STATE to
-                "oauth_state=FAKE-STATE-3d17c1b2a9e84f60",
+                "3d17c1b2a9e84f60b8c6d247e1259aa0",
             SensitiveDiagnosticValueClass.CLIENT_IDENTIFIER to
-                "client_id=FAKE-PUBLIC-CLIENT-1234567890abcdef",
+                "1234567890abcdef1234567890abcdef",
             SensitiveDiagnosticValueClass.ACCOUNT_IDENTIFIER to
-                "account_id=987654321012345678",
+                "987654321012345678",
             SensitiveDiagnosticValueClass.CALLBACK_URL to
-                "anisyncplus-debug://oauth/mal/callback?code=FAKE-AUTH-CODE-7391",
+                "anisyncplus-debug://oauth/mal/callback?code=SplxlOBeZQQYbYS6WxSbIA&state=3d17c1b2",
             SensitiveDiagnosticValueClass.RAW_PROVIDER_RESPONSE to
-                "raw_response={\"id\":987654321,\"name\":\"fake-private-user\"}",
+                "{\"id\":987654321,\"name\":\"private-user\",\"status\":\"watching\"}",
             SensitiveDiagnosticValueClass.PERSONAL_LIST_CONTENT to
-                "personal_list=Cowboy Bebop|WATCHING|episode=17|score=9",
+                "Cowboy Bebop The Movie | watching | episode 17 | score 9",
             SensitiveDiagnosticValueClass.USERNAME to
-                "username=fake-private-user@example.test",
+                "private-user@example.test",
+        )
+
+        val distinctiveFragments = listOf(
+            "ZmFrZS1hY2Nlc3M",
+            "FAKE0d31",
+            "SplxlOBeZQQYbYS6WxSbIA",
+            "dBjftJeZ4CVP",
+            "E9Melhoa2Owv",
+            "3d17c1b2a9e84f60",
+            "1234567890abcdef",
+            "987654321012345678",
+            "anisyncplus-debug://",
+            "private-user",
+            "Cowboy Bebop",
         )
     }
 }
