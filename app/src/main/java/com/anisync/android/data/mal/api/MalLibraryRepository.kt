@@ -43,7 +43,7 @@ class MalLibraryRepository @Inject constructor(
         provider = MediaIdentityProvider.MYANIMELIST.name,
         providerAccountId = localAccountId,
         mediaType = mediaType.name,
-    ).map { snapshots -> snapshots.mapNotNull(ProviderTrackingSnapshotEntity::toLibraryItem) }
+    ).map { snapshots -> snapshots.mapNotNull { snapshot -> snapshot.toLibraryItem() } }
 
     /**
      * Refreshes a complete provider-native list into normalized staging rows. Existing last-good
