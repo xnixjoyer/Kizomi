@@ -52,7 +52,7 @@ class DebugIntegrationDashboardViewModel @Inject constructor(
         val updated = _uiState.value.expandedSections.toMutableSet().apply {
             if (!add(section)) remove(section)
         }.toSet()
-        savedStateHandle[KEY_EXPANDED_SECTIONS] = ArrayList(updated.map(Enum<*>::name))
+        savedStateHandle[KEY_EXPANDED_SECTIONS] = ArrayList(updated.map { it.name })
         _uiState.value = _uiState.value.copy(expandedSections = updated)
     }
 
