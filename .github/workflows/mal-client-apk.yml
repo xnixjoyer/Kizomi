@@ -2,12 +2,17 @@ name: Build MAL client APK
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mal-client-apk.yml'
+      - 'app/build.gradle.kts'
+      - 'tools/verification/**'
 
 permissions:
   contents: read
 
 concurrency:
-  group: mal-client-apk-${{ github.ref }}
+  group: mal-client-apk-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -15,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      SOURCE_SHA: ${{ github.sha }}
-      MAL_CLIENT_ID_STABLE: ${{ vars.MAL_CLIENT_ID_STABLE }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      MAL_CLIENT_ID_STABLE: ${{ github.event_name == 'workflow_dispatch' && vars.MAL_CLIENT_ID_STABLE || 'KizomiPullRequestValidationClientId0001' }}
 
     steps:
       - name: Checkout selected source head
@@ -81,23 +86,27 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
           path = Path("app/build.gradle.kts")
           text = path.read_text(encoding="utf-8")
-          old = '''            val malOAuthEnvironment = when {
-                  channelFlavor == "preview" -> "PREVIEW"
-                  variant.buildType == "debug" -> "DEBUG"
-                  else -> "STABLE"
-              }
-'''
-          new = '''            // GitHub-only owner test builds intentionally use the approved stable
-              // public-client registration while retaining Android debug signing.
-              val malOAuthEnvironment = "STABLE"
-'''
-          if text.count(old) != 1:
-              raise SystemExit("Expected MAL OAuth environment block was not found exactly once")
-          path.write_text(text.replace(old, new), encoding="utf-8")
+          pattern = re.compile(
+              r'''            val malOAuthEnvironment = when \{\n'''
+              r'''                channelFlavor == "preview" -> "PREVIEW"\n'''
+              r'''                variant\.buildType == "debug" -> "DEBUG"\n'''
+              r'''                else -> "STABLE"\n'''
+              r'''            \}\n'''
+          )
+          replacement = (
+              '            // GitHub-only owner test builds intentionally use the approved stable\n'
+              '            // public-client registration while retaining Android debug signing.\n'
+              '            val malOAuthEnvironment = "STABLE"\n'
+          )
+          updated, count = pattern.subn(replacement, text)
+          if count != 1:
+              raise SystemExit(f"Expected one MAL OAuth environment block, replaced {count}")
+          path.write_text(updated, encoding="utf-8")
           PY
           git diff --check
           git diff -- app/build.gradle.kts
@@ -119,8 +128,8 @@ jobs:
         run: |
           set -euo pipefail
           echo "::add-mask::$MAL_CLIENT_ID_STABLE"
-          build_config="$(find app/build/generated -type f -path '*stableDebug*' -name 'BuildConfig.*' | head -n 1)"
-          [[ -n "$build_config" && -f "$build_config" ]] || { echo 'Generated BuildConfig not found'; exit 1; }
+          build_config="$(find app/build/generated/source/buildConfig/stable/debug -type f -name 'BuildConfig.*' -print -quit)"
+          [[ -n "$build_config" && -f "$build_config" ]] || { echo 'Generated stable/debug BuildConfig not found'; exit 1; }
           BUILD_CONFIG="$build_config" MAL_CLIENT_ID_STABLE="$MAL_CLIENT_ID_STABLE" python3 - <<'PY'
           import os
           import re
@@ -165,6 +174,7 @@ jobs:
           echo "directory=$out" >> "$GITHUB_OUTPUT"
 
       - name: Upload installable MAL client APK
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: Kizomi-MAL-client-test-${{ env.SOURCE_SHA }}
