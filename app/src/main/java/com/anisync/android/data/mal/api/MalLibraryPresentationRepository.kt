@@ -10,7 +10,7 @@ import com.anisync.android.domain.tracking.TrackingStatus
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
@@ -68,7 +68,7 @@ class MalLibraryPresentationRepository @Inject constructor(
             provider = MediaIdentityProvider.MYANIMELIST.name,
             providerAccountId = localAccountId,
             mediaType = mediaType.name,
-        ).mapLatest { snapshots ->
+        ).map { snapshots ->
             snapshots.mapNotNull { snapshot ->
                 val cache = dao.getMalMedia(snapshot.providerMediaId, snapshot.mediaType)
                 snapshot.toMalLibraryPresentationRecord(cache, json)
