@@ -1,6 +1,5 @@
 package com.anisync.android.presentation.mal
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -24,18 +22,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.anisync.android.data.mal.api.MalMediaKey
 import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.presentation.adapters.toMediaListItemPresentation
+import com.anisync.android.presentation.components.ProviderMediaListItem
+import com.anisync.android.presentation.model.PresentationMediaType
+import com.anisync.android.presentation.model.ProviderMediaIdentity
 import com.anisync.android.presentation.util.LocalMainNavBarInset
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +47,10 @@ fun MalSharedLibraryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val navigationInset = LocalMainNavBarInset.current
+    val entries = remember(state.entries) {
+        state.entries.map { it.toMediaListItemPresentation() }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = { TopAppBar(title = { Text("Library") }) },
@@ -85,32 +89,20 @@ fun MalSharedLibraryScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(state.entries, key = { it.localMediaId }) { entry ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            onMediaClick(MalMediaKey(entry.mediaType, entry.malId))
-                        },
-                    ) {
-                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            AsyncImage(
-                                model = entry.coverUrl,
-                                contentDescription = null,
-                                modifier = Modifier.padding(end = 12.dp),
-                            )
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    entry.title,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    "${entry.state.status?.name.orEmpty()} · ${entry.state.progress}",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                items(entries, key = { it.identity.stableKey }) { entry ->
+                    ProviderMediaListItem(
+                        item = entry,
+                        onClick = { identity ->
+                            if (identity is ProviderMediaIdentity.MyAnimeList) {
+                                onMediaClick(
+                                    MalMediaKey(
+                                        mediaType = identity.mediaType.toTrackingMediaType(),
+                                        malId = identity.malId,
+                                    )
                                 )
                             }
-                        }
-                    }
+                        },
+                    )
                 }
             }
         }
@@ -164,4 +156,9 @@ fun MalSharedAccountScreen(
             },
         )
     }
+}
+
+private fun PresentationMediaType.toTrackingMediaType(): TrackingMediaType = when (this) {
+    PresentationMediaType.ANIME -> TrackingMediaType.ANIME
+    PresentationMediaType.MANGA -> TrackingMediaType.MANGA
 }
