@@ -1,293 +1,250 @@
 # Calendar, Widgets and Background worker report
 
-## Final remote verification
+## Final Round-04 checkpoint
 
 - Repository: `xnixjoyer/Kizomi`
 - Assigned branch: `parallel/mal-calendar-widgets-background`
 - Draft PR: `#9`
 - Required base: `planning/mal-ui-feature-parity`
-- Worker head before this report-only finish commit: `aa2e3fc8b8bbbbe62d9ac6c54bf2f5279c246f9c`
-- Current integration head re-fetched before this finish: `7492f2cd3d33caf0b2f358154330dc28086ceac9`
-- Merge base with the current integration branch: `3e1ebc10b40d63f4cce48678884ee9dc5dd08035`
-- PR state: open, mergeable, Draft, not merged
+- Current integration head observed before final report: `e110bc5b4647f73f366afe42976510a72762cc1c`
+- Exact code-and-resource validation head: `2920d402489ae0473516f7cda7deb37b2cee79c8`
+- Exact validation workflow: `Pull request and push CI`
+- Run ID / number: `30126407066` / `495`
+- Verify job ID: `89590842129`
+- Result: `success`
+- PR state at finalization: open, mergeable, Draft, not merged
+- Changed-file inventory before this report-only replacement: 27 files, all inside Agent-05 ownership
 - Review threads: none
-- Changed-file inventory: 17 files, all within the Calendar/Widgets/Background worker ownership
-- No application entry, manifest, Gradle, Room, workflow, central scheduling, shared receiver, shared navigation, canonical context, OAuth, provider-state core, or existing shared widget file was changed.
 
-The integration branch has advanced independently with Integrator-owned documentation and coordination commits. This worker branch was not rebased, force-pushed, or merged with that branch, in accordance with the concurrency contract.
+No application entry, manifest, Gradle file, Room schema, workflow, central scheduling entry point, shared receiver, shared widget renderer, navigation route, canonical coordination file, OAuth implementation, provider-state core, or existing AniList calendar implementation was edited.
 
-## Evidence classification
+The integration branch advanced independently. This worker branch was not rebased, merged, force-pushed, marked Ready, approved, or auto-merged.
 
-### Current official-reference boundary
+## Evidence model
 
-The live MyAnimeList API-v2 renderer at `https://myanimelist.net/apiconfig/references/api/v2` was re-attempted during finalization and remained inaccessible from the automated environment. Search restricted to the official MyAnimeList domain also returned no retrievable API-v2 reference content.
+The mandatory project source is:
 
-Therefore:
+`docs/mal-parity/MAL_API_V2_AI_REFERENCE.md`
 
-- the implementation does not claim that inaccessible endpoint or field details were newly verified during this finish;
-- the repository's existing audited contract in `docs/mal-compliance/MAL_API_USAGE.md` remains the evidence basis for the seasonal route family `GET anime/season/{year}/{season}`;
-- the request/response field names `broadcast.day_of_the_week` and `broadcast.start_time` remain conservatively classified as repository-proven implementation inputs whose current provider-reference verification is still an external evidence gate;
-- no undocumented numerical provider rate limit is claimed;
-- no exact episode-airing timestamp, next-episode number, notification feed, subscription, or schedule-change webhook is claimed.
+That file is the repository-accepted extraction of the owner-supplied official MAL API-v2 PDF. The following labels distinguish provider evidence from repository behavior and inference.
 
-Official-reference anchor retained for owner/Integrator verification:
+### SOURCE_CONFIRMED
 
-`https://myanimelist.net/apiconfig/references/api/v2#operation/anime_season_year_season_get`
+The accepted MAL source confirms:
 
-### Proven repository contracts
+- API base family `https://api.myanimelist.net/v2`;
+- Seasonal Anime route `GET /anime/season/{year}/{season}`;
+- seasons `winter`, `spring`, `summer`, and `fall`;
+- seasonal sort values `anime_score` and `anime_num_list_users`;
+- seasonal `limit` default `100`, maximum `500`, and non-negative `offset`;
+- optional detail selection through the `fields` parameter;
+- anime detail fields used here: `id`, `title`, `main_picture`, `start_date`, `end_date`, `broadcast`, and `my_list_status`;
+- `broadcast` as nullable anime metadata;
+- provider time strings in `HH:mm` form;
+- ordinary list paging through provider-supplied `paging.next` URLs.
 
-The implementation is also bounded by the already-green repository contracts:
+The worker request uses only those source-confirmed fields and the source-confirmed `anime_num_list_users` sort. Its conservative default page request remains `100`, while request validation accepts the source-confirmed range through `500`.
 
-- exactly one active provider: `UNCONFIGURED`, `ANILIST_ONLY`, or `MAL_ONLY`;
-- zero inactive-provider work and no provider fallback;
-- no transfer of account or calendar data between providers;
-- credentials remain behind `AuthenticatedMalClient`;
-- paging URLs must remain on the exact MAL API origin and expected seasonal path family;
-- provider transition and purge fail closed;
-- calendar extensions are independently registered and lifecycle-isolated;
-- shared MAL authentication refreshes near-expiry credentials, coalesces concurrent refresh, logs out the affected account after unrecoverable authorization failure, and never restores credentials after logout.
+### REPOSITORY_CONFIRMED
 
-## Capability decision
+The implementation and tests prove:
 
-### Supported by this worker implementation
+- authenticated MAL traffic is delegated to the existing `AuthenticatedMalClient`;
+- paging remains on the exact configured MAL origin and seasonal route family;
+- paging credentials, fragments, foreign hosts, altered field sets, and altered sort values are rejected before authenticated execution;
+- exactly one active provider source is selected and no fallback source is attempted;
+- `ANILIST_ONLY`, `UNCONFIGURED`, and provider-transition states cause zero MAL calendar traffic;
+- a missing active MAL account fails closed before a calendar request;
+- cache entries are scoped by account and query and expire after six hours;
+- identical loads are coalesced under a mutex and force refresh bypasses cache;
+- queries above 62 days are rejected before provider traffic;
+- seasonal retrieval is bounded to two pages per season;
+- snapshots are provider-scoped, atomic, stored in `noBackupFilesDir`, and contain no account identifier, credential, token, or raw response;
+- widgets consume only local active-provider snapshots and never start network work while rendering;
+- periodic and immediate WorkManager requests use distinct stable unique names and `KEEP` duplicate policies;
+- provider switch, logout, purge, disable, account change, and process recreation follow explicit cancellation, purge, and scheduling contracts;
+- all user-visible Agent-05 strings have real matching resources for every relevant repository locale qualifier, with no Agent-05 `MissingTranslation` suppression.
 
-- Bounded seasonal anime catalogue reads through the existing authenticated MAL client.
-- Parsing of the requested MAL broadcast metadata.
-- Projection of recurring weekly broadcast slots from `Asia/Tokyo` to absolute epoch timestamps.
-- Typed MAL media identity retained as a `Long`; it is never aliased to an AniList integer.
-- Provider-neutral calendar load/content/unavailable/failure models.
-- Six-hour account-and-query-scoped in-memory cache.
-- Coalesced repository loads under a mutex.
-- Maximum 62-day calendar query window.
-- Maximum two pages per season and 100 rows requested per page.
-- Local provider-scoped widget snapshots in `noBackupFilesDir` using `AtomicFile`.
-- Snapshot-only widget data access with no network request on widget open.
-- Twelve-hour periodic MAL refresh with a two-hour flex window.
-- Connected-network constraint, exponential WorkManager backoff, unique work names, and `KEEP` duplicate coalescing.
-- Provider/account/logout/purge/process-restart lifecycle controller.
-- Explicit degraded notices and unavailable states.
+### INFERRED AND EXPLICITLY MODELED
 
-### Explicitly unsupported or unavailable
+The accepted source provides recurring broadcast day/time metadata but does not state an exact per-episode schedule or an explicit timezone contract in the extracted reference.
 
-- Exact per-episode airing timestamps.
-- Next episode number derived from the provider broadcast field.
-- Airing reminders or notifications.
-- Real-time schedule-change subscriptions.
-- AniList fallback while `MAL_ONLY` is active.
-- MAL fallback while `ANILIST_ONLY` is active.
-- Provider mixing, comparison, import, reconciliation, or data transfer.
-- Network refresh initiated by a widget render.
-- Scraping, HTML parsing, private endpoints, legacy endpoints, or undocumented provider assumptions.
+Kizomi therefore treats complete `broadcast.day_of_the_week` plus `broadcast.start_time` as a conservative recurring broadcast slot projected from `Asia/Tokyo`. This is a project-approved inference, not a claim that MAL supplied an exact episode timestamp.
 
-A MAL calendar entry therefore always has `episodeNumber = null` and `precision = RECURRING_BROADCAST_SLOT`. It must be presented as recurring broadcast metadata that may change, not as an exact episode schedule.
+Every projected entry records:
+
+- `precision = RECURRING_BROADCAST_SLOT`;
+- `episodeNumber = null`;
+- `sourceTimeZoneId = Asia/Tokyo`;
+- a recurring/may-change notice;
+- explicit exact-schedule and notification unavailability notices.
+
+The source timezone survives domain mapping, presentation mapping, and widget snapshot serialization so Integrator-owned rendering can label the data truthfully.
+
+### UNVERIFIED OR UNAVAILABLE
+
+This worker does not claim or synthesize:
+
+- exact per-episode airing dates or timestamps;
+- next episode numbers;
+- airing notifications or reminder feeds;
+- real-time schedule-change subscriptions or webhooks;
+- undocumented rate-limit numbers;
+- AniList data as fallback while MAL is active;
+- MAL data as fallback while AniList is active;
+- provider mixing, reconciliation, or cross-provider transfer;
+- network refresh initiated by widget rendering.
+
+## Broadcast metadata semantics
+
+`broadcast` is optional and fail-closed.
+
+- Complete valid day and time: project recurring slots, retain `RECURRING_BROADCAST_SLOTS`, and expose the source timezone and degraded notices.
+- Null or completely missing day/time for all returned media: return content without synthetic slots, omit `RECURRING_BROADCAST_SLOTS`, and add `BROADCAST_METADATA_UNAVAILABLE`.
+- One-sided day or time, or a mixture of complete and incomplete records: project only independently complete records and add `PARTIAL_BROADCAST_METADATA`.
+- Invalid day or invalid time: produce no slot for that record.
+- Provider page failure after usable records: preserve usable records and add `PARTIAL_PROVIDER_RESPONSE`.
+- No usable records plus provider failure: return a typed redacted failure.
+
+No branch of this logic contacts AniList.
 
 ## Implemented production inventory
 
-### Domain and routing
+### Provider calendar contract and presentation
 
 - `app/src/main/java/com/anisync/android/domain/calendar/provider/ProviderCalendarContract.kt`
   - provider-neutral capabilities, precision, notices, unavailable reasons, session/query/entry models;
-  - fail-closed `ProviderCalendarRouter` that invokes exactly one active-provider source and never falls back.
+  - explicit broadcast-metadata unavailable and partial notices;
+  - source-timezone field;
+  - fail-closed one-provider router.
+- `app/src/main/java/com/anisync/android/presentation/calendar/provider/ProviderCalendarPresentation.kt`
+  - typed MAL identity retained as `Long`;
+  - recurring precision, notices, and source timezone preserved for UI integration;
+  - no coercion into legacy AniList IDs.
 
-### MAL data implementation
+### MAL seasonal transport and repository
 
 - `app/src/main/java/com/anisync/android/data/mal/calendar/MalCalendarApi.kt`
-  - seasonal request factory;
-  - exact-origin and exact-season-path paging validation;
-  - bounded field list and page size;
-  - redacted models and failure mapping;
-  - structured cancellation propagation.
+  - source-confirmed seasonal route and sort;
+  - minimal source-confirmed field list;
+  - default page size 100 and validated maximum 500;
+  - optional broadcast parsing;
+  - exact-origin/path/fields/sort paging validation;
+  - typed redacted transport and HTTP failures;
+  - structured coroutine cancellation.
 - `app/src/main/java/com/anisync/android/data/mal/calendar/MalCalendarRepository.kt`
-  - provider/account guards;
-  - range and zone validation;
-  - cache and request coalescing;
-  - bounded season/page loading;
-  - JST recurring-slot projection;
-  - partial-result notices and explicit unsupported-capability notices;
-  - account-bound memory purge.
+  - active-provider/account/range/zone guards;
+  - bounded seasonal paging;
+  - account/query cache and coalescing;
+  - explicit complete/partial/missing broadcast semantics;
+  - recurring `Asia/Tokyo` projection only for valid complete metadata;
+  - no episode-number synthesis;
+  - memory purge contract.
 
-### Presentation input
-
-- `app/src/main/java/com/anisync/android/presentation/calendar/provider/ProviderCalendarPresentation.kt`
-  - provider-neutral loading/content/empty/unavailable/error projection;
-  - typed MAL presentation identity;
-  - explicit degraded capability notices.
-
-### Widget data boundary
+### Widget snapshot boundary
 
 - `app/src/main/java/com/anisync/android/widget/provider/ProviderCalendarSnapshotStore.kt`
-  - atomic no-backup snapshot storage;
+  - `AtomicFile` in no-backup storage;
   - strict provider matching;
   - corrupt/mismatched snapshot deletion;
-  - no account ID, token, OAuth material, or raw provider payload.
+  - source timezone persisted;
+  - no account ID, credentials, OAuth material, or raw provider body.
 - `app/src/main/java/com/anisync/android/widget/provider/ProviderCalendarWidgetDataSource.kt`
-  - active-provider-only local reads;
-  - no snapshot read while unconfigured or transitioning;
-  - explicit missing and stale snapshot states;
-  - zero network behavior.
+  - local active-provider snapshot reads only;
+  - explicit unconfigured, transition, missing, and stale states;
+  - no network path.
 
 ### Background and lifecycle
 
 - `app/src/main/java/com/anisync/android/worker/mal/MalCalendarRefreshWorker.kt`
-  - active-provider and active-account gate;
-  - seven-day refresh query;
+  - MAL-only provider and active-account gates;
+  - seven-day refresh window;
+  - snapshot write only after successful MAL content;
   - retry/permanent-failure mapping;
-  - snapshot write only after successful MAL content load;
-  - WorkManager requests with network and exponential-backoff contracts.
+  - connected-network constraint and exponential backoff.
 - `app/src/main/java/com/anisync/android/worker/mal/MalCalendarLifecycle.kt`
-  - unique periodic and immediate work with `KEEP`;
-  - cancellation of both unique work names;
-  - account/provider purge;
-  - process-restart registration;
-  - degraded neutral `CalendarExtension` implementation.
+  - stable periodic and immediate unique work names;
+  - explicit `KEEP` duplicate policies;
+  - cancellation of both names;
+  - provider/account/logout/purge/process-restart lifecycle controller;
+  - degraded MAL-only neutral calendar extension.
+
+### Localized visible resources
+
+Default English resource:
+
 - `app/src/main/res/values/strings_mal_calendar_widgets.xml`
-  - isolated MAL calendar/widget unavailable and disclaimer copy;
-  - local `MissingTranslation` suppression only, with no global lint or baseline change.
 
-## Implemented versus integration scaffold
+Matching dedicated translations:
 
-### Complete and executable inside PR #9
+- `app/src/main/res/values-de/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-ar/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-es/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-pt-rBR/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-pt/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-fr/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-fa/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-peo/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-ru/strings_mal_calendar_widgets.xml`
+- `app/src/main/res/values-ta/strings_mal_calendar_widgets.xml`
 
-The following are complete implementations, not placeholders:
+The `values-peo` file is required because that legacy qualifier already exists in the repository and Android Lint treats it as a separate translation locale. No lint baseline, global rule, `translatable="false"`, or `tools:ignore="MissingTranslation"` was added by Agent 05.
 
-- request construction and parsing;
-- repository loading, caching, projection, paging limits, and failures;
-- provider routing contract;
-- presentation mapping;
-- snapshot persistence and validation;
-- widget data source;
-- refresh coordinator and worker;
-- WorkManager request definitions;
-- lifecycle controller and extension;
-- tests and resources.
-
-### Intentionally not activated by this worker
-
-The following remain integration scaffold because their owner files are reserved to the Integrator:
-
-- Hilt multibinding of `MalCalendarExtension` into the central extension set;
-- construction and use of `ProviderCalendarRouter` from the shared calendar route;
-- replacement of the existing default-provider selection in the legacy calendar repository;
-- rendering of `ProviderCalendarWidgetDataSource` by the existing Glance widget receivers/widgets;
-- central login/provider-change/process-start scheduling calls;
-- central cancellation and purge wiring;
-- typed MAL details navigation from shared calendar/widget cards.
-
-Until those reserved changes are integrated, the new MAL implementation exists and is tested behind its boundaries, but the existing shared app entry, legacy calendar route, shared widget rendering, and application-level scheduling do not automatically call it. Adding MAL as a higher-priority default provider would be incorrect because it could contact the inactive provider.
-
-## Lifecycle and isolation test matrix
-
-### Provider switching and deactivation
-
-Direct Agent-05 coverage:
-
-- `MalCalendarLifecycleTest.provider change cancels and purges MAL work when MAL becomes inactive`
-  - cancellation requested once;
-  - no MAL periodic or immediate scheduling;
-  - memory cache purged;
-  - widget snapshot purged.
-- `MalCalendarLifecycleTest.MAL account change purges old snapshot before scheduling coalesced refresh`
-  - account-bound data removed before periodic and immediate work are requested.
-- `ProviderCalendarRouterIsolationTest`
-  - exactly one active provider source is invoked;
-  - no inactive-provider fallback.
-
-### Process recreation
-
-Direct Agent-05 coverage:
-
-- `MalCalendarLifecycleTest.process restart registers MAL work only for MAL and refreshes only when snapshot is absent`
-  - MAL restart re-registers periodic work;
-  - immediate work is skipped when a snapshot exists;
-  - immediate work is requested when the snapshot is absent;
-  - unconfigured restart cancels MAL work.
-
-### Stale, missing, mismatched, and transitioning widget state
-
-Direct Agent-05 coverage:
-
-- active-provider snapshot content;
-- provider mismatch rejection;
-- zero snapshot reads while unconfigured;
-- zero snapshot reads during provider transition;
-- stale snapshot returned as `STALE_SNAPSHOT` with no network fallback.
-
-### No active account
-
-Fail-closed production coverage:
-
-- `MalCalendarRepository` returns `AUTHENTICATION_REQUIRED` before a MAL request when the session has no account key;
-- `MalCalendarRefreshCoordinator` returns permanent `Failure` before loading or writing a snapshot when `activeAccount()` is absent;
-- the Integrator must not schedule this worker without an active MAL account.
-
-### Expired or invalid account credentials
-
-Shared green MAL authentication-contract coverage used by the calendar API:
-
-- near-expiry tokens are refreshed before the request;
-- parallel refresh calls share one refresh flight;
-- a second 401 is not retried indefinitely, removes the affected credential, and returns `RELOGIN_REQUIRED`;
-- invalid grant logs out only the affected MAL account;
-- logout during refresh prevents late credential restoration.
-
-Calendar-specific mapping:
-
-- `MalCalendarApi` maps account missing, token unavailable, refresh failure, repeated authorization failure, offline, timeout, transport, and cancellation into typed redacted failures;
-- `MalCalendarRefreshCoordinator` does not write a snapshot for unavailable or failed loads;
-- retry is limited to failure kinds marked retryable by the authenticated MAL stack.
-
-### Cancellation
-
-Direct Agent-05 coverage:
-
-- API cancellation is rethrown as structured coroutine control flow;
-- worker-decision cancellation is rethrown rather than converted to success or retry.
-
-### Duplicate scheduling and request coalescing
-
-Direct and production-contract coverage:
-
-- repeated repository loads for the same account/query are serialized and reuse cache/in-flight work;
-- force refresh performs a new request;
-- periodic work uses the stable unique name `mal_calendar_periodic_refresh_v1` with `ExistingPeriodicWorkPolicy.KEEP`;
-- immediate work uses the stable unique name `mal_calendar_immediate_refresh_v1` with `ExistingWorkPolicy.KEEP`;
-- repeated process-restart lifecycle calls may request registration again, but WorkManager retains one active item per unique name.
-
-### Purge and extension failure isolation
-
-Direct Agent-05 coverage:
-
-- provider change, disable, logout, purge, and non-MAL restart cancel both unique work names and remove memory/snapshot data;
-- one failing extension lifecycle does not prevent another extension from completing purge;
-- snapshot contents cannot survive the Agent-05 purge path.
-
-## Test inventory
+## Test inventory and results
 
 Agent-05 test files:
 
-- `app/src/test/java/com/anisync/android/domain/calendar/provider/ProviderCalendarRouterIsolationTest.kt`
 - `app/src/test/java/com/anisync/android/data/mal/calendar/MalCalendarApiTest.kt`
 - `app/src/test/java/com/anisync/android/data/mal/calendar/MalCalendarRepositoryTest.kt`
+- `app/src/test/java/com/anisync/android/domain/calendar/provider/ProviderCalendarRouterIsolationTest.kt`
 - `app/src/test/java/com/anisync/android/presentation/calendar/provider/ProviderCalendarPresentationTest.kt`
 - `app/src/test/java/com/anisync/android/widget/provider/ProviderCalendarWidgetDataSourceTest.kt`
 - `app/src/test/java/com/anisync/android/worker/mal/MalCalendarLifecycleTest.kt`
 - `app/src/test/java/com/anisync/android/worker/mal/MalCalendarRefreshCoordinatorTest.kt`
 
-All 26 Agent-05 unit tests passed with zero failures on the exact validated worker head. Shared MAL OAuth/account tests additionally prove the credential-expiry, refresh, relogin, logout-race, and refresh-coalescing contracts consumed by this workstream.
+Exact results on the validated code head:
+
+- MAL calendar API: 5 tests;
+- MAL calendar repository: 7 tests;
+- provider router isolation: 4 tests;
+- presentation mapping: 2 tests;
+- widget data source: 5 tests;
+- MAL calendar lifecycle: 7 tests;
+- refresh coordinator/worker decision: 4 tests;
+- total: 34 tests, 0 failures, 0 errors, 0 skipped.
+
+Focused coverage includes:
+
+- source-confirmed seasonal route, sort, fields, year, limit, and offset bounds;
+- null and partial broadcast payloads;
+- hostile paging rejection and redacted rate-limit handling;
+- recurring precision, null episode number, and source timezone;
+- missing/partial metadata degraded states;
+- account/query caching, force refresh, stale-cache refresh, and request coalescing;
+- query-bound rejection before traffic;
+- exact one-provider routing and zero inactive-provider traffic;
+- typed MAL presentation identity;
+- widget provider mismatch, transition, missing, and stale snapshots;
+- provider switch, account change, logout, purge, process restart, cancellation, and extension failure isolation;
+- distinct unique work names and production `KEEP` duplicate policies;
+- retryable/permanent worker decisions and structured cancellation.
+
+Shared green MAL authentication tests additionally cover near-expiry refresh, concurrent refresh coalescing, repeated 401/relogin, invalid grant, logout during refresh, and preservation of valid credentials after transient failures.
 
 ## Exact-head CI evidence
 
-Validated worker head before this report-only finish commit:
+Validated code-and-resource head:
 
-- exact head: `aa2e3fc8b8bbbbe62d9ac6c54bf2f5279c246f9c`
+- SHA: `2920d402489ae0473516f7cda7deb37b2cee79c8`
 - workflow: `Pull request and push CI`
-- run ID / number: `30111804829` / `368`
+- run ID / number: `30126407066` / `495`
 - job: `verify`
+- job ID: `89590842129`
 - conclusion: `success`
 
-Successful gates:
+Successful gates include:
 
-- exact-head checkout;
+- exact published-head checkout;
 - public-provider boundary;
 - exclusive-provider/private-reference boundary;
 - provider-native boundary;
@@ -298,76 +255,86 @@ Successful gates:
 - product readiness contracts;
 - MAL application readiness;
 - signing workflow contracts;
-- Stable Debug unit tests;
-- Stable Debug lint;
+- all Stable Debug unit tests;
+- Stable Debug lint with real locale resources;
 - Stable Debug APK;
 - Stable Debug Android-test APK;
 - committed Room schema verification;
 - diagnostic APK and evidence artifact production.
 
-The earlier run `30110440969` / `342` failed only because the eight isolated strings were initially subject to the repository's multi-locale `MissingTranslation` lint. The assigned string file was corrected with per-string `tools:ignore="MissingTranslation"`; no baseline, global lint configuration, or translation file was changed. Subsequent exact-head runs `364` and `368` succeeded.
+Round-04 correction history:
 
-This finish commit changes only this report and must retain the same full exact-head CI result before the head is considered frozen.
+- Run `30125322046` / `465` found one Kotlin method-reference compilation error in the new metadata-state mapping. It was replaced with the equivalent valid lambda.
+- Run `30125648941` / `482` compiled and passed all 34 Agent-05 tests, then Lint identified the repository's separate existing `values-peo` qualifier.
+- The dedicated `values-peo/strings_mal_calendar_widgets.xml` resource closed that final localization gap.
+- Run `30126407066` / `495` then passed the full pipeline.
 
-## Exact Integrator wiring requests
+This report replacement is the only change after the validated implementation head. Its own automatically triggered exact-head workflow must remain successful before the new PR head is treated as frozen.
 
-### 1. Register the extension once
+## Implemented versus Integrator-owned wiring
 
-In an Integrator-owned Hilt module, bind exactly one `MalCalendarExtension` into the existing `Set<CalendarExtension>` using `@Binds` and `@IntoSet`.
+The transport, repository, provider router, presentation input, snapshot store, widget data source, worker, scheduler definitions, lifecycle controller, extension, translations, and focused tests are complete implementations rather than placeholders.
 
-Requirements:
+They are intentionally not connected through reserved shared application files on this worker branch.
 
-- enable only for `MAL_ONLY`;
-- no second MAL calendar source or extension;
-- no `UNCONFIGURED` work;
-- preserve per-extension failure isolation.
+### INTEGRATOR ACTION REQUIRED — register exactly one extension
 
-### 2. Route the shared calendar by authoritative provider state
+In an Integrator-owned Hilt module:
+
+- bind exactly one `MalCalendarExtension` into `Set<CalendarExtension>`;
+- make it eligible only for `MAL_ONLY`;
+- do not register a second MAL calendar source/extension;
+- preserve per-extension failure isolation;
+- schedule nothing in `UNCONFIGURED`.
+
+### INTEGRATOR ACTION REQUIRED — route the shared calendar by authoritative provider
 
 In Integrator-owned shared calendar construction:
 
-- derive `ProviderCalendarSession` from the current `ProviderRuntimeState` and exact active account;
-- register the existing AniList source for `ANILIST_ONLY` and `MalCalendarRepository` for `MAL_ONLY`;
-- invoke `ProviderCalendarRouter`;
-- map results through `ProviderCalendarPresentationMapper`;
-- render MAL degraded notices and unsupported states;
-- never add MAL as the unqualified higher-priority default in `DefaultCalendarProviderRegistry`;
-- never contact AniList when MAL is active.
+- derive `ProviderCalendarSession` from authoritative `ProviderRuntimeState` and the exact active account;
+- use the existing AniList calendar source only for `ANILIST_ONLY`;
+- use `MalCalendarRepository` only for `MAL_ONLY`;
+- invoke `ProviderCalendarRouter` and `ProviderCalendarPresentationMapper`;
+- render recurring, partial, unavailable, exact-schedule-unavailable, and notification-unavailable states;
+- use typed `ProviderMediaIdentity.MyAnimeList` for details navigation;
+- never convert a MAL `Long` into legacy `AiringEpisode.mediaId: Int`;
+- never make MAL an unqualified higher-priority default provider;
+- never fall back to AniList in MAL mode.
 
-For navigation, use the typed MAL presentation identity. Do not convert a MAL `Long` ID to legacy `AiringEpisode.mediaId: Int`.
+### INTEGRATOR ACTION REQUIRED — connect existing widgets without network fallback
 
-### 3. Update existing shared widgets without network fallback
-
-In the Integrator-owned Glance entry points and rendering:
+In the existing Integrator-owned Glance receivers and renderers:
 
 - `ANILIST_ONLY`: retain the existing AniList DAO path;
 - `MAL_ONLY`: read only `ProviderCalendarWidgetDataSource`;
 - `UNCONFIGURED` or provider transition: render explicit unavailable state;
-- missing/stale MAL snapshot: render the corresponding unavailable state;
-- never invoke a network client from `provideGlance`;
+- missing/stale MAL snapshot: render the corresponding localized state;
+- preserve recurring precision and source-timezone labeling;
+- never invoke a provider client from `provideGlance`;
 - never read the AniList airing table in MAL mode.
 
-### 4. Wire central lifecycle and scheduling
+### INTEGRATOR ACTION REQUIRED — wire central lifecycle and scheduling
 
 In Integrator-owned application/provider-session wiring:
 
-- successful MAL login/account change: purge prior MAL calendar memory/snapshot, register periodic work, enqueue unique immediate work;
-- process restart in MAL mode: register periodic work and enqueue immediate work only when the MAL snapshot is absent;
-- no/expired account: cancel or avoid scheduling and surface authentication/relogin state;
+- successful MAL login/account change: purge prior MAL memory/snapshot, register unique periodic work, and enqueue unique immediate work;
+- process restart in MAL mode: register periodic work and enqueue immediate work only when no valid MAL snapshot exists;
+- no/expired account: avoid or cancel scheduling and surface authentication/relogin state;
 - provider switch, logout, purge, disable, transition, or `UNCONFIGURED`: cancel both MAL unique work names and purge memory/snapshot;
 - AniList mode: zero MAL worker calls;
 - do not schedule the legacy AniList `AiringScheduleWorker` as a MAL fallback.
 
-No manifest entry is needed for the `@HiltWorker`; retain the existing Hilt WorkManager factory and all central provider-transition gates.
+No manifest entry is needed for the `@HiltWorker`; retain the existing Hilt WorkManager factory and central provider-transition gates.
 
-## Remaining external gates
+## Remaining external acceptance gates
 
-These do not require another worker implementation change:
+These do not require another Agent-05 implementation change:
 
-- retrieve or owner-supply the current complete official MAL API-v2 reference;
-- verify the seasonal route, requested field names, sort value, and page-size assumptions against that current reference;
-- perform Integrator-owned registration, navigation, widget, and scheduling wiring;
-- run integration exact-head CI after PR #9 is eventually merged in the authorized sequence;
-- perform real-account/device acceptance for displayed recurring times, logout, provider switch, process death, stale snapshot, and widget rendering.
+- Integrator-owned registration, shared calendar/navigation, widget rendering, and lifecycle wiring;
+- exact-head integration CI after authorized sequential integration;
+- real MAL account/device acceptance for recurring-time display, timezone labeling, null/partial broadcast records, logout, provider switch, process death, stale snapshot, and widget rendering;
+- localization review by native speakers and visual/accessibility verification in the supported locales.
+
+Seasonal Anime, `anime_num_list_users`, and anime `broadcast` no longer require the owner to re-prove them merely because the live renderer is inaccessible; they are `SOURCE_CONFIRMED` by the accepted repository reference. Exact per-episode schedules and notifications remain explicitly unavailable.
 
 READY FOR INTEGRATOR REVIEW
