@@ -5,97 +5,166 @@
 - Planning baseline on `main`: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 - Integration branch: `planning/mal-ui-feature-parity`
 - Integration PR: Draft `#5 – MAL stability and shared Kizomi UI parity`
-- Green multi-agent integration checkpoint: `41ff9f05888b1318c702199bcd8b0d4f6694fcff`
-- Exact-head workflow run ID / number: `30106544534` / `250`
-- Verify job: `89525244135`
+- Published exact-green checkpoint before this canonical refresh: `5d56b6fc6ea1ea2902e4e6abc3192d6378a3b3c4`
+- Exact-head workflow run ID / number: `30123370413` / `417`
 - Result: `success`
-- Production readiness: **NO-GO** until worker work is reviewed, owner-merged in order, integrated with green exact-head CI, and real-device/provider acceptance is complete.
+- Worker implementation integrated at that checkpoint: **none**
+- Production readiness: **NO-GO**
 
-## Verified completed work
+The canonical refresh commits after `5d56b6fc...` require a new successful exact-head workflow before becoming the next green checkpoint.
 
-### Phase 1 — stability foundation
+## Verified integrated foundation
 
-Implemented and green:
+### Phase 1 — stability
 
-- typed, process-restorable MAL details navigation;
-- recoverable invalid-route state with no repository/network work;
-- persisted MAL account restoration;
-- deterministic restore-before-readiness startup;
-- fail-closed missing/corrupt/keystore-reset credential behavior;
+Integrated and automated:
+
+- typed process-restorable MAL details navigation;
+- recoverable malformed-route state with no repository/network work;
+- persisted MAL account restoration and restore-before-readiness ordering;
+- fail-closed missing/corrupt/keystore-reset credential handling;
 - cold-start and resumed OAuth callback handling.
 
-Historical exact implementation evidence: head `686e95e7eecdb3b30bc8a0d455981668329751c6`, run `30095988062` / `211`, 416 tests, APK SHA-256 `cc96ccdffa3740be685c5b2a3e0e98e3b2e910e604f391a09b0934a2680fa596`.
+### Phase 2 — shared shell
 
-### Phase 2 — common Kizomi app shell
+Integrated and automated:
 
-Implemented and green:
-
-- one adaptive `MainScreen` scaffold for AniList and MAL;
-- shared bottom navigation and wide rail;
-- provider-aware root capability projection without preference mutation;
+- one adaptive `MainScreen` for AniList and MAL;
+- provider-aware roots without preference mutation;
 - MAL roots limited to Library, Discover and Profile;
-- provider-native MAL graph with typed details;
-- AniList-only side effects gated out of MAL mode;
-- old MAL shell reduced to compatibility delegation.
+- inactive-provider side effects gated out;
+- former MAL shell reduced to compatibility delegation.
 
-Historical exact implementation evidence: head `5bd9aa79340f4fe0e0c3f40155a448d86f3a621d`, run `30098259776` / `225`, 424 tests, APK SHA-256 `536b6b792ccfb92c221ff2ff3e426f090e3815f7a44a18ca6ffa1980a1ad645a`.
+### Phase 3 — initial provider-neutral presentation
 
-### Phase 3 — first provider-neutral presentation slice
+Integrated and automated:
 
-Implemented and green:
-
-- sealed, non-interchangeable AniList and MyAnimeList media identities;
-- media type retained in identity;
-- minimal neutral list/search presentation model;
-- explicit AniList and MAL adapters;
+- sealed AniList/MyAnimeList media identities with media type;
+- explicit provider adapters;
+- neutral list/search presentation model;
 - shared `ProviderMediaListItem`;
-- production use in MAL Library and AniList Library search results;
-- tests preventing provider-ID aliasing, raw-ID callbacks and transport models in shared UI.
+- tests preventing ID aliasing, raw-ID callbacks and transport DTO leakage into shared UI.
 
-Exact code-slice evidence: head `3c290be9a27665f49cd734e621b38856b736807d`, run `30101279625` / `243`, result `success`.
+## Accepted Round-04 provider evidence
 
-The complete coordination/documentation state was subsequently proven green at head `41ff9f05888b1318c702199bcd8b0d4f6694fcff`, run `30106544534` / `250`.
+`docs/mal-parity/MAL_API_V2_AI_REFERENCE.md` is accepted project source evidence when live official pages are inaccessible.
 
-## Multi-agent operating model
+Source-confirmed for current work:
 
-`docs/mal-parity/MULTI_AGENT_COORDINATION.md` is binding.
+- anime/manga ranking `bypopularity`;
+- Seasonal Anime and sorts `anime_score` / `anime_num_list_users`;
+- nullable anime `broadcast` metadata;
+- anime/manga list reads;
+- documented sparse PATCH fields and score `0..10`;
+- anime/manga DELETE, including absent `404` semantics.
 
-Only the Integrator may write to:
+The reference does not prove exact per-episode schedules. MAL calendar work must remain recurring/degraded metadata with no episode-number synthesis.
 
-- `planning/mal-ui-feature-parity` and PR #5;
-- `NEXT_AI_PROMPT.md`;
-- `EXECUTION_STATE.md`;
-- `BUG_REGISTER.md`;
-- `FEATURE_PARITY_MATRIX.md`;
-- `MULTI_AGENT_COORDINATION.md`;
-- reserved central architecture and final wiring files.
+## Live worker state — Round 04
 
-Workers use isolated branches and Draft PRs targeting `planning/mal-ui-feature-parity`. They write status only to their exclusive file under `docs/mal-parity/agent-reports/` and may not change canonical context or reserved files.
+All worker code below remains unmerged and non-canonical.
 
-## Active worker queue
+### PR #6 — Discover and Details
 
-| Order | Workstream | Branch | Draft PR | Status |
-|---:|---|---|---:|---|
-| 1 | Discover and Details | `parallel/mal-discover-details` | #6 | Not integrated |
-| 2 | Library and Tracking | `parallel/mal-library-tracking` | #7 | Not integrated |
-| 3 | Account, Settings and Diagnostics | `parallel/mal-account-settings-diagnostics` | #8 | Not integrated |
-| 4 | Calendar, Widgets and Background | `parallel/mal-calendar-widgets-background` | #9 | Not integrated |
-| 5 | QA, API Research and Parity Audit | `parallel/mal-qa-research` | #10 | Not integrated |
+Progress:
 
-The Integrator reviews scope, changed files, reports and exact-head CI. The owner merges only one authorized worker PR at a time using **Create a merge commit**. A green integration run is mandatory before the next merge authorization.
+- shared typed Discover/details presentation, paging/stale/error states and provider isolation are implemented;
+- Popular and current-season provider evidence is source-confirmed;
+- real locale files are being added.
 
-## Remaining milestones
+Still required on one final frozen SHA:
 
-- shared Discover and search presentation;
-- shared anime/manga details hierarchy;
-- shared Library, edit and read-back presentation;
-- shared Account and Settings;
-- debug-only redacted integration dashboard;
-- capability-correct MAL calendar, widgets and background work;
-- localization, accessibility and compact/wide/foldable visual evidence;
-- final exact-head CI, cloud MAL APK and independent artifact verification;
-- real-device login persistence, process recreation, writes/read-back, provider isolation, purge and provider-change acceptance.
+- complete every repository-supported locale, including `values-peo`;
+- remove all translation suppression;
+- update report to the accepted evidence source;
+- successful exact-head CI and exact final marker.
 
-## Evidence discipline
+### PR #7 — Library and Tracking
 
-A green worker branch is not integrated evidence. A claim becomes canonical only after Integrator review, owner merge into the integration branch and successful exact-head integration CI. PR #5 remains Draft.
+Progress:
+
+- real localized Library/editor UI;
+- one-target MAL enqueue;
+- pending/retry/confirmed/terminal/rollback lifecycle;
+- confirmed read-back and mismatch reconciliation;
+- typed data-layer delivery repository added.
+
+Blocking:
+
+- current PR diff contains reserved central `MalTrackingProviderAdapter.kt` changes; worker must revert that file;
+- central DELETE-404 reconciliation remains an Integrator task;
+- final report/frozen CI must follow the scope correction.
+
+### PR #8 — Account, Settings and Diagnostics
+
+Progress:
+
+- provider-neutral account/settings presentation;
+- debug-only local dashboard and real locale resources;
+- realistic fixture-bearing redaction/copy tests;
+- uninstrumented counters now nullable/unknown;
+- inactive-provider traffic remains explicitly unknown without boundary instrumentation;
+- manual parity defaults are conservatively downgraded.
+
+Still required:
+
+- final report matching the new semantics;
+- stable exact-head CI;
+- later Integrator recorder hooks, debug route and packaged release exclusion evidence.
+
+### PR #9 — Calendar, Widgets and Background
+
+Progress:
+
+- source-confirmed Seasonal Anime, sort and nullable broadcast metadata;
+- recurring `Asia/Tokyo` slots with `episodeNumber = null` and degraded notices;
+- active-provider gating, bounded paging/cache, widget snapshots and WorkManager lifecycle;
+- real locale files and additional tests are being added.
+
+Still required:
+
+- complete supported locales without suppression;
+- final report using accepted evidence labels;
+- stable exact-head CI;
+- later Integrator registration/routing/widget/scheduling/purge wiring.
+
+### PR #10 — QA/API audit
+
+- additive API-v2 contract scanner and Round-04 report exist;
+- current report snapshot predates later #6–#9 corrective heads;
+- final re-audit must occur after those heads stop moving and after PR #11 findings are available.
+
+### PR #11 — read-only legacy/new audit
+
+- scope is correctly limited to one report file;
+- current report still says the audit has not been performed;
+- advisory findings are pending and do not independently block workers.
+
+## Confirmed Integrator-owned implementation tasks
+
+After the ordered owner merges and between green integration checkpoints:
+
+1. Split catalogue selectable fields by anime/manga and enforce source-confirmed ranking/list-status allowlists.
+2. Correct central DELETE-404 behavior through controlled absence read-back; preserve sparse PATCH and score normalization; add central tests.
+3. Wire Discover/Details, Library/editor lifecycle, Account/Settings and typed details navigation without provider-ID coercion.
+4. Wire diagnostics recorder producers at safe existing boundaries and register the dashboard through a debug-only bridge.
+5. Register exactly one MAL calendar extension; select calendar/widget sources by authoritative provider state; keep widget rendering network-free and purge/scheduling fail-closed.
+
+## Merge protocol
+
+Current decision: **authorize no worker merge**.
+
+Order remains #6, #7, #8, #9, #10. A worker becomes eligible only when one frozen SHA has owned scope, a complete report ending exactly `READY FOR INTEGRATOR REVIEW`, conservative evidence, all blockers closed and successful exact-head CI.
+
+The owner merges exactly one authorized SHA using **Create a merge commit**. The resulting integration head must become exact-head green before any next authorization.
+
+## Remaining release milestones
+
+- ordered worker integration and central wiring;
+- final supported-locale validation;
+- accessibility and compact/wide/foldable visual evidence;
+- provider-isolation and no-network captures;
+- exact final CI, Room/security/signing evidence and independently verified diagnostic APK;
+- real-device login persistence, process recreation, write/read-back, delete-404, provider switch, purge and widget acceptance.
+
+A worker branch being green is not integrated evidence. PR #5 remains Draft.
