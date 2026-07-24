@@ -31,7 +31,7 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
     ) {
         activeProviderRequests.incrementAndGet()
         lastSuccessfulRequest.set(
-            DiagnosticEvent(DiagnosticRedactor.sanitizeCategory(category), nowEpochMillis),
+            DiagnosticEvent(DiagnosticCategorySanitizer.sanitize(category), nowEpochMillis),
         )
     }
 
@@ -46,7 +46,7 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
     ) {
         lastFailure.set(
             DiagnosticFailureEvent(
-                category = DiagnosticRedactor.sanitizeCategory(category),
+                category = DiagnosticCategorySanitizer.sanitize(category),
                 httpClass = httpStatus?.takeIf { it in 100..599 }?.let { "${it / 100}xx" },
                 epochMillis = nowEpochMillis,
             ),
@@ -86,12 +86,12 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
         nowEpochMillis: Long = System.currentTimeMillis(),
     ) {
         lastRefresh.set(
-            DiagnosticEvent(DiagnosticRedactor.sanitizeCategory(category), nowEpochMillis),
+            DiagnosticEvent(DiagnosticCategorySanitizer.sanitize(category), nowEpochMillis),
         )
     }
 
     fun recordProviderChangeResult(result: String) {
-        lastProviderChangeResult.set(DiagnosticRedactor.sanitizeCategory(result))
+        lastProviderChangeResult.set(DiagnosticCategorySanitizer.sanitize(result))
     }
 
     fun setActiveWorkerCount(count: Long) {
