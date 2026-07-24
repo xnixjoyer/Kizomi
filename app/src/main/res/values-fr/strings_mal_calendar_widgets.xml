@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_calendar_recurring_broadcast_title">Créneau de diffusion récurrent</string>
+    <string name="mal_calendar_recurring_broadcast_disclaimer">Les horaires sont des métadonnées récurrentes de diffusion du fournisseur et peuvent changer. Les horaires exacts par épisode ne sont pas disponibles.</string>
+    <string name="mal_calendar_exact_schedule_unavailable">Les heures exactes de diffusion par épisode ne sont pas disponibles chez ce fournisseur.</string>
+    <string name="mal_calendar_notifications_unavailable">Les notifications de diffusion ne sont pas disponibles chez ce fournisseur.</string>
+    <string name="mal_calendar_widget_unconfigured">Connectez-vous pour afficher les données du calendrier.</string>
+    <string name="mal_calendar_widget_transition">Les données du calendrier sont indisponibles pendant le changement de fournisseur.</string>
+    <string name="mal_calendar_widget_no_snapshot">Les données du calendrier n’ont pas encore été actualisées.</string>
+    <string name="mal_calendar_widget_stale_snapshot">Les données du calendrier sont obsolètes. Ouvrez Kizomi pour les actualiser.</string>
+</resources>
