@@ -41,7 +41,6 @@ data class MalTrackingCapability(
     fun unsupported(requested: Set<TrackingField>): Set<TrackingField> = requested - supportedFields
 }
 
-/** Explicit fail-closed field matrix for MAL v2 list writes. */
 object MalTrackingCapabilities {
     private val common = setOf(
         TrackingField.STATUS,
@@ -53,24 +52,20 @@ object MalTrackingCapabilities {
         TrackingField.DELETE,
     )
 
-    fun forMediaType(mediaType: TrackingMediaType): MalTrackingCapability =
-        MalTrackingCapability(
-            mediaType = mediaType,
-            supportedFields = if (mediaType == TrackingMediaType.MANGA) {
-                common + TrackingField.PROGRESS_SECONDARY
-            } else {
-                common
-            },
-        )
+    fun forMediaType(mediaType: TrackingMediaType): MalTrackingCapability = MalTrackingCapability(
+        mediaType = mediaType,
+        supportedFields = if (mediaType == TrackingMediaType.MANGA) {
+            common + TrackingField.PROGRESS_SECONDARY
+        } else {
+            common
+        },
+    )
 }
 
 internal class MalTrackingRequestFactory(
     private val baseUrl: HttpUrl = MAL_API_BASE_URL.toHttpUrl(),
 ) {
-    fun write(
-        request: TrackingProviderRequest,
-        clientId: String,
-    ): Request {
+    fun write(request: TrackingProviderRequest, clientId: String): Request {
         val draft = request.command.draft
         val builder = Request.Builder()
             .url(baseUrl.newBuilder().addPathSegments(statusPath(draft.mediaType, request.providerMediaId)).build())
@@ -83,10 +78,6 @@ internal class MalTrackingRequestFactory(
         val body = FormBody.Builder().apply {
             if (TrackingField.STATUS in fields) {
                 add("status", requireNotNull(desired.status).toMalStatus(draft.mediaType))
-                add(
-                    if (draft.mediaType == TrackingMediaType.ANIME) "is_rewatching" else "is_rereading",
-                    (desired.status == TrackingStatus.REPEATING).toString(),
-                )
             }
             if (TrackingField.PROGRESS in fields) {
                 add(
@@ -101,11 +92,13 @@ internal class MalTrackingRequestFactory(
             if (TrackingField.PROGRESS_SECONDARY in fields) {
                 add("num_volumes_read", requireNotNull(desired.progressSecondary).toString())
             }
-            if (TrackingField.REPEAT_COUNT in fields) {
+            if (TrackingField.STATUS in fields || TrackingField.REPEAT_COUNT in fields) {
                 add(
                     if (draft.mediaType == TrackingMediaType.ANIME) "is_rewatching" else "is_rereading",
                     (desired.status == TrackingStatus.REPEATING).toString(),
                 )
+            }
+            if (TrackingField.REPEAT_COUNT in fields) {
                 add(
                     if (draft.mediaType == TrackingMediaType.ANIME) {
                         "num_times_rewatched"
@@ -153,10 +146,7 @@ internal class MalTrackingRequestFactory(
 
 @Singleton
 class MalTrackingProviderAdapter internal constructor(
-    private val executeAuthenticated: suspend (
-        localAccountId: String,
-        requestFactory: () -> Request,
-    ) -> MalAuthenticatedResult,
+    private val executeAuthenticated: suspend (String, () -> Request) -> MalAuthenticatedResult,
     private val clientId: () -> String?,
     private val requests: MalTrackingRequestFactory,
 ) : TrackingProviderAdapter {
@@ -167,9 +157,7 @@ class MalTrackingProviderAdapter internal constructor(
     ) : this(
         executeAuthenticated = client::execute,
         clientId = {
-            (configuration.capability as? MalOAuthCapability.Configured)
-                ?.configuration
-                ?.clientId
+            (configuration.capability as? MalOAuthCapability.Configured)?.configuration?.clientId
         },
         requests = MalTrackingRequestFactory(),
     )
@@ -191,10 +179,11 @@ class MalTrackingProviderAdapter internal constructor(
         }
 
         return try {
-            val write = executeAuthenticated(request.providerAccountId) {
-                requests.write(request, publicClientId)
-            }
-            when (write) {
+            when (
+                val write = executeAuthenticated(request.providerAccountId) {
+                    requests.write(request, publicClientId)
+                }
+            ) {
                 is MalAuthenticatedResult.Failure -> write.toTrackingFailure()
                 is MalAuthenticatedResult.Success -> {
                     val response = write.response
@@ -203,8 +192,6 @@ class MalTrackingProviderAdapter internal constructor(
                     if (!ambiguousDeleteAbsence) {
                         response.httpFailureOrNull()?.let { return it }
                     }
-                    // MAL documents DELETE 404 as ambiguous after retries. Always read back the list
-                    // state before deciding whether the delete failed or the item is already absent.
                     reconcile(request, publicClientId)
                 }
             }
@@ -278,10 +265,7 @@ class MalTrackingProviderAdapter internal constructor(
     )
 
     @Serializable
-    private data class WirePicture(
-        val medium: String? = null,
-        val large: String? = null,
-    )
+    private data class WirePicture(val medium: String? = null, val large: String? = null)
 
     @Serializable
     private data class WireListStatus(
@@ -327,7 +311,6 @@ class MalTrackingProviderAdapter internal constructor(
     }
 }
 
-/** MAL score 0 means unscored; 1..10 maps explicitly to Kizomi's canonical 0..100 scale. */
 fun Int.toKizomiPresentationScore(): Double? {
     require(this in 0..10) { "MAL score must be in 0..10" }
     return takeIf { it > 0 }?.times(10.0)
