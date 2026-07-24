@@ -7,36 +7,176 @@
 - Draft PR: `#7`
 - Required base: `planning/mal-ui-feature-parity`
 - Base/checkpoint SHA: `3e1ebc10b40d63f4cce48678884ee9dc5dd08035`
-- Green implementation head: `76281bf21c97b92fe6bbcfae21fc34d057bbaf97`
-- Workstream: MAL Library presentation, MAL-owned edit UI and provider-facing edit lifecycle only.
+- Green implementation head: `c390b89bfbe70a99764e0da919f9e4e44372f9af`
+- Binding Round-04 instruction: `ROUND_04_03_LIBRARY_TRACKING.md`
+- Mandatory MAL source: `docs/mal-parity/MAL_API_V2_AI_REFERENCE.md` from the integration branch
 
-PR #7 remains open, mergeable and Draft. Nothing was merged, approved, rebased, force-pushed, marked Ready or configured for auto-merge. No change was made to `main`.
+PR #7 is open, mergeable, unmerged and Draft. Nothing was merged, approved, rebased, force-pushed, marked Ready or configured for auto-merge. No change was made to `main`, PR #5 or the integration branch.
 
-The changed-file audit contains only this worker's MAL Library production files, localized string resources, focused tests and this exclusive report. Central tracking routing/service code, Room entities/DAO/schema, navigation/NavHost, canonical coordination files, OAuth, Gradle, manifest and workflows remain untouched.
+The worker did not modify the central tracking command router/service, Room DAO/entity/schema, navigation/NavHost, canonical coordination files, OAuth, Gradle, manifest or CI workflow. The existing MAL provider adapter was changed only where Round 04 explicitly required sparse PATCH verification, explicit score projection and ambiguous DELETE-404 reconciliation.
+
+## Evidence classification
+
+### MAL-reference-confirmed behavior
+
+The following requirements come from `docs/mal-parity/MAL_API_V2_AI_REFERENCE.md` and are treated as provider-contract evidence:
+
+- authenticated anime-list reads use `GET /users/{user_name}/animelist`;
+- authenticated manga-list reads use `GET /users/{user_name}/mangalist`;
+- anime list updates use `PATCH /anime/{anime_id}/my_list_status`;
+- manga list updates use `PATCH /manga/{manga_id}/my_list_status`;
+- PATCH changes only parameters that are actually supplied;
+- anime progress uses `num_watched_episodes`;
+- manga progress uses `num_chapters_read` and optionally `num_volumes_read`;
+- MAL score is an integer in the provider range `0..10`;
+- list deletion uses the matching `DELETE .../my_list_status` endpoint;
+- a DELETE `404` after retry is ambiguous and must be reconciled against provider state rather than assumed to be durable success or durable failure.
+
+### Repository-confirmed behavior
+
+The following behavior is established by the implementation, focused tests and exact-head CI in this repository:
+
+- every Library edit/delete enters through `TrackingCommandService.enqueueMal` and creates exactly one MAL target;
+- MAL and AniList identities remain structurally separate;
+- only the requested changed fields are included in the MAL PATCH form body;
+- enqueue acceptance, pending execution, completed delivery and persisted provider confirmation are separate states;
+- durable visible success is emitted only after a matching fresh provider snapshot exists;
+- late terminal failure, retry-budget exhaustion and supersession roll back the optimistic Library item;
+- DELETE `404` performs controlled provider read-back and succeeds only when `my_list_status` is absent;
+- provider score conversion is explicit in both directions;
+- presentation code consumes a typed data boundary and imports neither `TrackingDao` nor Room entity types;
+- all visible Library lifecycle/error strings are localized resources.
 
 ## Final implementation inventory
 
 ### MAL Library read projection
 
-- `MalLibraryPresentationRepository` projects the existing durable MAL provider snapshots and MAL media cache into Library records.
-- MAL, AniList and local identities remain structurally distinct. MAL rows use `ProviderMediaIdentity.MyAnimeList`; no MAL id is coerced into an AniList id.
-- Anime and manga retain their native primary progress semantics; manga additionally carries volume progress.
-- The projection includes title/alternative titles, cover, status, score, repeat count, supported dates, known totals, provider update time and fetch time.
-- Refresh, paging, atomic replacement and last-good preservation continue through the existing reviewed `MalLibraryRepository`; no new transport path was introduced.
+- `MalLibraryPresentationRepository` projects existing MAL provider snapshots and MAL media-cache data into Library records.
+- MAL rows use `ProviderMediaIdentity.MyAnimeList`; no MAL id is copied or cast into an AniList id.
+- Anime and manga keep provider-native progress semantics. Manga additionally carries volume progress.
+- Records include title alternatives, cover, status, primary and secondary progress, score, repeat count, supported dates, known totals, provider update time and fetch time.
+- Paging, atomic refresh replacement and last-good preservation continue through the existing `MalLibraryRepository`.
+
+### Typed tracking-state boundary
+
+- Added `MalLibraryTrackingStateRepository` in the data/tracking layer.
+- It is the only new Library-specific component that reads `TrackingDao` and Room tracking entities.
+- It exposes typed immutable boundary models:
+  - `MalLibraryTrackingState.Pending`;
+  - `MalLibraryTrackingState.Delivered`;
+  - `MalLibraryTrackingState.RetryableFailure`;
+  - `MalLibraryTrackingState.Confirmed`;
+  - `MalLibraryTrackingState.TerminalFailure`;
+  - `MalLibraryConfirmedSnapshot`.
+- `presentation/provider/library` has no DAO or Room-entity import.
+- A durable target in `SUCCEEDED` first becomes `Delivered`; it does not become `Confirmed` until a fresh matching provider snapshot for the same MAL id, account and media type is observed.
 
 ### MAL-owned Library surface
 
-- Added query, status, sorting, grouping, layout and snapshot models for the MAL Library adapter.
-- Supports anime/manga switching, six MAL-compatible statuses, title/alternative-title search, deterministic sorting, ascending/descending ordering and grid/list/adaptive layouts.
-- Loading, refreshing, empty, stale-last-good and typed error states remain distinct.
-- `ProviderLibraryScreen` reuses Kizomi's neutral media-card/layout primitives, but its public state/action contract is intentionally MAL-owned. It is not claimed as a universal AniList replacement.
-- Added a MAL-owned edit sheet for status, anime episode or manga chapter progress, manga volume progress, canonical 0–100 score input, repeat count, start date, completion date and delete.
-- Date validation parses real ISO calendar dates; syntactically shaped but impossible dates such as `2026-02-30` are rejected before command construction.
-- Unsupported MAL fields are absent from the sheet and fail closed before transport.
+- Added typed Library query, filter, status, grouping, sorting, layout and snapshot models.
+- Supports anime/manga switching, six MAL-compatible list statuses, title/alternative-title search, deterministic ordering and grid/list/adaptive layouts.
+- Loading, refresh, empty, stale-last-good and error states remain distinct.
+- `ProviderLibraryScreen` reuses neutral Kizomi media-card primitives but has an intentionally MAL-owned state/action contract.
+- Rows render localized lifecycle feedback instead of enum names or raw error identifiers.
+- Added a MAL-owned edit sheet for:
+  - status;
+  - anime episode progress;
+  - manga chapter and volume progress;
+  - score;
+  - repeat count;
+  - start and completion dates;
+  - deletion.
+- Dates are parsed as real ISO calendar dates; impossible values such as `2026-02-30` are rejected before command construction.
+- Unsupported provider fields are absent from the editor and fail closed before transport.
 
-### Real localized resources
+## Durable lifecycle semantics
 
-All user-visible Library/editor strings have localized resource files with preserved `%1$s` placeholders for:
+`TrackingCommandService.enqueueMal` remains the sole mutation ingress. One user action creates one MAL target and never creates an AniList target.
+
+1. `ValidationFailure`
+   - Local validation or capability rejection occurred before durable enqueue.
+   - No provider success is shown.
+   - The last-good item remains visible.
+
+2. `EnqueueAccepted`
+   - The central outbox durably accepted the operation and returned a receipt.
+   - This means local queue acceptance only.
+   - It is never presented as MAL server success.
+   - A non-delete edit receives an in-memory optimistic overlay while preserving the exact rollback item and retry draft.
+   - Delete remains visible.
+
+3. `Pending`
+   - The durable target is `PENDING` or `RUNNING`.
+   - Attempt count and target state are available.
+   - The optimistic item remains visible.
+
+4. `RetryableFailure`
+   - The durable target is `RETRYING` after a typed transient failure.
+   - Attempt count, retry delay and retry draft remain available.
+   - Automatic retry remains owned by the central outbox.
+
+5. `Delivered`
+   - The provider adapter completed the write/read-back delivery and the target reached `SUCCEEDED`.
+   - The matching persisted provider snapshot has not yet been observed by the Library boundary.
+   - This is still not durable visible success.
+   - The optimistic item remains visible.
+
+6. `ProviderConfirmed`
+   - This is the only durable visible success state.
+   - It requires a fresh matching persisted MAL snapshot after successful delivery.
+   - The confirmed snapshot replaces the optimistic overlay.
+   - Comparison is limited to fields requested by the command.
+   - `matchesRequestedState=false` explicitly reconciles provider truth when MAL returned a different value.
+   - Confirmed delete requires a persisted snapshot with deletion/absence state.
+
+7. `PermanentFailure`
+   - A previously accepted operation reached `FAILED`, `BLOCKED` or `SUPERSEDED`.
+   - This includes retry-budget exhaustion.
+   - The typed terminal target state is retained.
+
+8. `RolledBack`
+   - Emitted immediately after the late terminal failure.
+   - The optimistic overlay is removed.
+   - The last-good provider item becomes visible again.
+   - Failed optimistic item, rollback item, retry draft, receipt, failure reason and terminal target state remain distinguishable.
+
+9. `NoChange`
+   - An unchanged draft creates no command and no provider target.
+
+The central outbox and provider snapshots are durable across process recreation. The temporary optimistic overlay and transient row-message map are intentionally in memory. After recreation, the Library falls back to persisted last-good/provider-confirmed state rather than reconstructing or falsely confirming an optimistic edit.
+
+## PATCH, score and DELETE reconciliation
+
+### Sparse PATCH
+
+- The request body is built only from `TrackingField` values in the command mask.
+- Anime progress-only edits produce only `num_watched_episodes`.
+- Manga chapter/volume edits produce only the requested progress parameters.
+- `is_rewatching` / `is_rereading` is emitted once when status or repeat semantics require it.
+- Unsupported notes, custom-list, privacy and hidden-list fields remain fail-closed.
+
+### Score projection
+
+- Kizomi canonical input remains `0..100`.
+- Provider write uses the existing deterministic `toMalIntegerScore()` projection to MAL integer `0..10`.
+- Provider read-back uses `toKizomiPresentationScore()`:
+  - MAL `0` becomes unscored (`null`);
+  - MAL `1..10` becomes canonical `10.0..100.0`.
+- Confirmation comparison uses the same round trip, so provider quantization is visible and deterministic.
+
+### DELETE and ambiguous 404
+
+- A normal successful DELETE is still followed by controlled read-back.
+- DELETE is confirmed only when read-back contains the requested media identity and no `my_list_status`.
+- DELETE `404`, including a retried delete that may already have succeeded remotely, is treated as ambiguous.
+- The adapter performs the same controlled read-back:
+  - absent `my_list_status` => confirmed deletion success;
+  - present `my_list_status` => typed terminal reconciliation failure;
+  - failed/malformed read-back => typed failure, never guessed success.
+
+## Localization
+
+All visible Library/editor/lifecycle text uses resources for:
 
 - default English;
 - Arabic (`values-ar`);
@@ -44,63 +184,20 @@ All user-visible Library/editor strings have localized resource files with prese
 - Spanish (`values-es`);
 - Persian (`values-fa`);
 - French (`values-fr`);
-- the repository's `values-peo` Persian-script fallback;
+- repository `values-peo` Persian-script fallback;
 - Portuguese (`values-pt`);
 - Russian (`values-ru`);
 - Tamil (`values-ta`).
 
-No lint baseline, translation suppression or blanket `translatable="false"` workaround was introduced.
-
-## Durable edit lifecycle semantics
-
-`TrackingCommandService.enqueueMal` remains the only mutation ingress. Each edit or delete creates exactly one `MYANIMELIST` target and can never create an AniList request. The Library layer now distinguishes the following states explicitly:
-
-1. `ValidationFailure`
-   - The command was rejected before a durable outbox operation existed.
-   - Examples include an AniList identity presented to the MAL adapter, unsupported anime volume progress or invalid input.
-   - No provider success is shown and the last-good item remains visible.
-
-2. `EnqueueAccepted`
-   - The central outbox accepted one MAL operation and returned an operation receipt.
-   - This means only durable local enqueue acceptance. It is never treated as MAL server success.
-   - Non-delete edits receive an actual optimistic UI overlay; the exact last-good rollback item and retry draft are retained.
-   - Delete remains visible while pending and is removed only after confirmed MAL deletion.
-
-3. `Pending`
-   - The durable target is `PENDING` or `RUNNING`.
-   - Attempt count and target state are exposed while the optimistic edit remains visible.
-
-4. `RetryableFailure`
-   - The durable target is `RETRYING` after a typed transient failure such as rate limiting, offline, timeout, transport or transient server failure.
-   - Attempt count, retry delay and retry draft remain available.
-   - The central outbox owns automatic retries; the Library does not create a second provider target.
-
-5. `ProviderConfirmed`
-   - This is the only durable success state.
-   - It is emitted only after the central MAL adapter completed the write, performed controlled MAL read-back, the target reached `SUCCEEDED`, and a fresh matching MAL provider snapshot was published.
-   - A `SUCCEEDED` target without the corresponding fresh snapshot is not enough and produces no success event.
-   - The confirmed snapshot is compared only across fields requested by the command. MAL score quantization is compared against the canonical integer 0–10 round-trip.
-   - If MAL read-back differs from the requested state, `matchesRequestedState=false` is exposed and the UI reconciles to provider-confirmed truth instead of claiming that the requested state won.
-
-6. `PermanentFailure`
-   - A previously accepted operation later reached `FAILED`, `BLOCKED` or `SUPERSEDED`, including retry-budget exhaustion.
-   - The optimistic item is not described as provider-confirmed.
-
-7. `RolledBack`
-   - Emitted immediately after the late permanent failure.
-   - The optimistic overlay is removed and the last-good provider item becomes visible again.
-   - The failed optimistic item, rollback item, operation receipt, typed reason and retry draft remain distinguishable for UI messaging.
-
-8. `NoChange`
-   - An unchanged draft performs no write and creates no target.
-
-The lifecycle observer reads existing Room-backed target and snapshot flows. Therefore provider delivery and final Library truth remain process-safe even if the UI process disappears: the central outbox continues from durable state, and a recreated Library reads the last-good or newly confirmed snapshot. The temporary optimistic overlay and transient per-operation UI message map are intentionally in-memory; after process recreation the app safely falls back to durable provider snapshots rather than reconstructing or falsely confirming an optimistic value.
+The new lifecycle resources cover queue acceptance, pending, delivered-but-unconfirmed, retrying, confirmed, provider mismatch, confirmed delete, terminal failure and rollback. No lint baseline, missing-translation suppression or blanket `translatable="false"` workaround was added.
 
 ## Changed files
 
 ### Production
 
 - `app/src/main/java/com/anisync/android/data/mal/api/MalLibraryPresentationRepository.kt`
+- `app/src/main/java/com/anisync/android/data/tracking/MalLibraryTrackingStateRepository.kt`
+- `app/src/main/java/com/anisync/android/data/tracking/MalTrackingProviderAdapter.kt`
 - `app/src/main/java/com/anisync/android/presentation/provider/library/MalLibraryEditSheet.kt`
 - `app/src/main/java/com/anisync/android/presentation/provider/library/MalLibraryPresentationAdapter.kt`
 - `app/src/main/java/com/anisync/android/presentation/provider/library/MalLibraryProviderViewModel.kt`
@@ -110,19 +207,14 @@ The lifecycle observer reads existing Room-backed target and snapshot flows. The
 
 ### Resources
 
-- `app/src/main/res/values/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-ar/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-de/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-es/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-fa/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-fr/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-peo/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-pt/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-ru/strings_mal_library_tracking.xml`
-- `app/src/main/res/values-ta/strings_mal_library_tracking.xml`
+For each of `values`, `values-ar`, `values-de`, `values-es`, `values-fa`, `values-fr`, `values-peo`, `values-pt`, `values-ru` and `values-ta`:
+
+- `strings_mal_library_tracking.xml`
+- `strings_mal_library_tracking_lifecycle.xml`
 
 ### Tests
 
+- `app/src/test/java/com/anisync/android/data/tracking/MalTrackingProviderAdapterTest.kt`
 - `app/src/test/java/com/anisync/android/presentation/provider/library/MalLibraryPresentationAdapterTest.kt`
 - `app/src/test/java/com/anisync/android/presentation/provider/library/MalLibraryProviderViewModelTest.kt`
 - `app/src/test/java/com/anisync/android/presentation/provider/library/MalLibraryTrackingAdapterTest.kt`
@@ -133,85 +225,78 @@ The lifecycle observer reads existing Room-backed target and snapshot flows. The
 
 ## Deterministic coverage
 
-Worker-owned tests now prove:
+Focused and retained tests prove:
 
-- typed MAL anime and manga identities;
+- typed MAL anime and manga identity;
 - no MAL-to-AniList id aliasing;
-- exactly one MAL command/target per edit and per delete;
-- anime primary progress versus manga chapter/volume progress;
-- rejection of AniList identity before MAL enqueue;
-- unsupported-field and real-calendar-date validation;
+- exactly one MAL target per edit, retry and delete;
+- exact changed-field command masks;
+- sparse anime and manga PATCH bodies;
+- anime episode versus manga chapter/volume semantics;
+- explicit score conversion in both directions;
+- invalid date, unsupported field and wrong-provider rejection before transport;
 - no-change suppression;
-- distinct enqueue-accepted and pending states;
-- retryable delivery failure with attempt/retry metadata;
-- an initially accepted command that later fails permanently;
-- explicit failure followed by rollback to the last-good item;
-- provider-confirmed read-back success as the only durable success;
-- read-back mismatch reconciliation to provider truth;
-- MAL score round-trip quantization;
-- confirmed deletion rather than enqueue-time removal;
-- ViewModel missing-account behavior;
+- distinct enqueue, pending, delivered and confirmed states;
+- retryable state with retry metadata;
+- late terminal failure followed by rollback;
+- retry-budget exhaustion rollback;
+- superseded-operation rollback;
+- provider read-back mismatch reconciliation;
+- successful DELETE followed by confirmed absence;
+- DELETE `404` plus confirmed absence as success;
+- DELETE `404` plus still-present list state as failure;
+- missing-account behavior;
 - refresh success/failure and preserved stale content;
-- anime/manga switch observation plus refresh;
-- actual optimistic overlay and rollback in rendered Library state;
-- retry and delete actions retaining single-target semantics;
-- search/filter/status/media-type/sort/layout/loading/error/empty/stale reducers.
+- anime/manga observation and refresh switching;
+- optimistic overlay persistence through `Delivered`;
+- overlay removal only on provider confirmation or rollback;
+- loading, error, empty, stale, search, filtering, grouping, sorting and layout reducers.
 
-Existing central suites remain unchanged and continue to prove paginated atomic refresh, last-good preservation, sparse MAL PATCH/DELETE payloads, transient retries, write-followed-by-read-back reconciliation and exclusive-provider isolation.
+## Exact-head CI evidence
 
-## Green implementation CI evidence
-
-- Exact head: `76281bf21c97b92fe6bbcfae21fc34d057bbaf97`
+- Exact implementation head: `c390b89bfbe70a99764e0da919f9e4e44372f9af`
 - Workflow: `Pull request and push CI`
-- Run number: `399`
-- Run ID: `30118617369`
+- Run number: `494`
+- Run ID: `30126148945`
 - Job: `verify`
-- Job ID: `89565425426`
+- Job ID: `89590013327`
 - Result: `SUCCESS`
-- Unit tests: `458`
-- Diagnostic artifact ID: `8606661539`
-- Artifact name: `Kizomi-76281bf21c97b92fe6bbcfae21fc34d057bbaf97-run399-diagnostic-apk`
-- Artifact digest: `sha256:2dc8754a0b73c5d15635f84ef5afc67466c8da262061b2093d8c157ba97a6472`
-- APK name: `Kizomi-76281bf2-run399-diagnostic.apk`
-- APK size: `42,294,532` bytes
-- APK SHA-256: `02ee003a70c8c2edfceb9f038c8e1230a12f99296122a5fc39131c00e9d198f6`
+- Unit-test count: `459`
+- Diagnostic artifact ID: `8609495368`
+- Artifact name: `Kizomi-c390b89bfbe70a99764e0da919f9e4e44372f9af-run494-diagnostic-apk`
+- Artifact digest: `sha256:b6442f03e2768f2e4e306ac65027ca1fa0bcb6c6fe72ba824518ad071768b7c0`
+- APK name: `Kizomi-c390b89b-run494-diagnostic.apk`
+- APK size: `42,308,004` bytes
+- APK SHA-256: `9ca58344494772fb74067d2884aeaf823fb375fb38f30580ce5c1e797b114279`
 
-Successful checks include exact-head checkout, all public/exclusive/provider-native/tracking boundaries, Room migration contract, secret/redaction/backup/readiness/signing gates, `testStableDebugUnitTest`, `lintStableDebug`, `assembleStableDebug`, `assembleStableDebugAndroidTest`, exported Room schema verification and diagnostic evidence publication.
+Successful checks include exact published-head checkout, public provider boundary, exclusive-provider/private-reference boundary, provider-native boundary, tracking-write boundary, Room migration contract, repository secret scan, redaction/backup contracts, product readiness, MAL application readiness, signing workflow contracts, unit tests, lint, Stable Debug APK, Stable Debug Android-test APK, exported Room schema verification and diagnostic evidence generation.
 
-The commit rewriting this report is documentation-only and must also receive the same full exact-head workflow before the branch is considered frozen.
-
-## MAL transport evidence and capability boundary
-
-No new endpoint or undocumented payload assumption was added. The worker relies on the existing reviewed MAL contracts:
-
-- list reads use the authenticated `users/@me/animelist` and `users/@me/mangalist` boundaries with paginated `list_status` data;
-- writes use the existing central `PATCH anime/{id}/my_list_status` or `PATCH manga/{id}/my_list_status` boundary;
-- delete uses the existing central `DELETE .../my_list_status` boundary;
-- controlled confirmation reads `id,title,main_picture,my_list_status` from the matching MAL anime or manga endpoint;
-- supported mutation fields are status, primary progress, score, repeat count, start/completion dates and manga volume progress;
-- notes, custom lists, privacy and hidden-list fields remain unsupported and fail closed.
+This report rewrite is documentation-only. Its resulting branch head must receive the same full exact-head workflow before the branch is considered frozen.
 
 ## Limitations
 
-- Root route selection, NavHost wiring and details navigation are reserved for the Integrator and are intentionally absent from this branch.
-- The temporary optimistic overlay and transient lifecycle message map are not persisted. Durable operation execution and final Library truth are persisted by the existing outbox and provider snapshots; recreation safely shows durable truth rather than a stale optimistic claim.
-- MAL score precision is provider-limited to integer 0–10 and is visibly reconciled to the canonical 0–100 projection after read-back.
-- MAL notes, custom lists, privacy and hidden-from-status controls are not exposed because the existing MAL capability matrix rejects them.
+- Root route selection, NavHost wiring and MAL detail navigation remain reserved for the Integrator.
+- Optimistic overlays and transient row messages are not persisted; durable outbox and provider-snapshot truth are persisted.
+- MAL score precision is limited to provider integer `0..10` and reconciled visibly to canonical `0..100` after read-back.
+- MAL notes, custom lists, privacy and hidden-list controls remain unsupported and are not shown.
 - No mixed-provider synchronization, fallback provider or cross-provider write exists.
 
 ## INTEGRATOR ACTION REQUIRED
 
-1. In the reserved root/navigation composition, select `MalLibraryProviderViewModel` plus `ProviderLibraryScreen` only for active `MAL_ONLY`. Preserve the existing AniList Library route unchanged for `ANILIST_ONLY`.
-2. Host `MalLibraryEditSheet` for the selected MAL row. Route save to `MalLibraryProviderAction.SubmitEdit`, retry to `MalLibraryProviderAction.RetryEdit`, and delete to `MalLibraryProviderAction.Delete`. Do not add a second mutation service or direct network call.
-3. Collect `editOutcomes` and render lifecycle semantics exactly:
-   - `EnqueueAccepted` and `Pending`: pending, never success;
-   - `RetryableFailure`: retrying/pending with typed reason;
-   - `ProviderConfirmed`: durable success, while respecting `matchesRequestedState`;
-   - `PermanentFailure`: terminal provider failure;
-   - `RolledBack`: show that last-good state was restored;
-   - `ValidationFailure`: local rejection without provider success.
-4. Dismiss the editor as durable success only on `ProviderConfirmed`. Do not dismiss as success on `EnqueueAccepted`.
-5. Route `ProviderMediaIdentity.MyAnimeList` clicks through the existing typed MAL details boundary. Never cast or copy the MAL id into an AniList id.
-6. After consuming this handoff, run full exact-head CI on the Integrator branch. No Room, central tracking-service or canonical context change is requested by this worker.
+1. In the reserved root/navigation composition, select `MalLibraryProviderViewModel` and `ProviderLibraryScreen` only for active `MAL_ONLY`. Preserve the current AniList Library route for `ANILIST_ONLY`.
+2. Host `MalLibraryEditSheet` for the selected MAL row. Route save to `MalLibraryProviderAction.SubmitEdit`, retry to `MalLibraryProviderAction.RetryEdit` and delete to `MalLibraryProviderAction.Delete`.
+3. Collect `editOutcomes` without introducing another tracking service or direct provider call.
+4. Treat lifecycle states exactly as follows:
+   - `EnqueueAccepted`: locally queued, never success;
+   - `Pending`: provider work pending/running;
+   - `RetryableFailure`: retry scheduled or available;
+   - `Delivered`: provider delivery completed, snapshot confirmation still pending;
+   - `ProviderConfirmed`: only durable success; honor `matchesRequestedState`;
+   - `PermanentFailure`: terminal provider/outbox failure;
+   - `RolledBack`: last-good item restored;
+   - `ValidationFailure`: rejected before durable provider work.
+5. Dismiss the editor as successful only on `ProviderConfirmed`. Do not dismiss as success on enqueue, pending or delivered.
+6. Route `ProviderMediaIdentity.MyAnimeList` clicks through the existing typed MAL details boundary. Never coerce the MAL id into an AniList id.
+7. After consuming the handoff, run full exact-head CI on the Integrator branch. No Room, central command-service or canonical-context change is requested.
 
 READY FOR INTEGRATOR REVIEW
