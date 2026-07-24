@@ -1,6 +1,6 @@
 package com.anisync.android.data.diagnostics
 
-import android.net.Uri
+import androidx.core.net.toUri
 import com.anisync.android.BuildConfig
 import com.anisync.android.data.account.AccountStore
 import com.anisync.android.data.local.AppDatabase
@@ -36,7 +36,7 @@ class DebugIntegrationDiagnosticsSnapshotSource @Inject constructor(
             null
         }
         val runtime = recorder.runtimeSnapshot()
-        val redirect = Uri.parse(BuildConfig.MAL_OAUTH_REDIRECT_URI)
+        val redirect = BuildConfig.MAL_OAUTH_REDIRECT_URI.toUri()
         val clientIdPresent = BuildConfig.MAL_OAUTH_CLIENT_ID.isNotBlank()
         val accountPresent = malAccount != null || aniListAccount != null
         val lastRefresh = recorder.lastRefreshOutcome()
