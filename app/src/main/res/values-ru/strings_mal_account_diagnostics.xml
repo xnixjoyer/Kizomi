@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_account_screen_title">Аккаунт и провайдер</string>
+    <string name="provider_account_section_summary">Активный аккаунт</string>
+    <string name="provider_account_section_data">Данные аккаунта</string>
+    <string name="provider_account_anilist">AniList</string>
+    <string name="provider_account_myanimelist">MyAnimeList</string>
+    <string name="provider_account_not_configured">Провайдер не настроен</string>
+    <string name="provider_account_record_present">Локальная запись аккаунта существует. Идентификаторы и содержимое профиля скрыты.</string>
+    <string name="provider_account_record_absent">Активная локальная запись аккаунта недоступна.</string>
+    <string name="provider_account_expiry">Срок действия сохранённой сессии: %1$s</string>
+    <string name="provider_account_status_content_description">Провайдер %1$s, сессия %2$s</string>
+    <string name="provider_account_session_not_configured">Не настроено</string>
+    <string name="provider_account_session_transitioning">Выполняется смена провайдера</string>
+    <string name="provider_account_session_connected">Подключено</string>
+    <string name="provider_account_session_expiring">Подключено; срок действия скоро истечёт</string>
+    <string name="provider_account_session_missing">Сессия отсутствует; войдите снова</string>
+    <string name="provider_account_session_expired">Срок сессии истёк; войдите снова</string>
+    <string name="provider_account_session_corrupt">Хранилище сессии не читается; войдите снова</string>
+    <string name="provider_account_session_keystore_reset">Защищённое хранилище было сброшено; войдите снова</string>
+    <string name="provider_account_session_unknown">Состояние сессии неизвестно</string>
+    <string name="provider_account_disconnect_delete_title">Отключить аккаунт и удалить локальные данные</string>
+    <string name="provider_account_disconnect_delete_summary">Удаляет учётные данные, кэши провайдера, очереди, сопоставления, отложенные задачи, состояние расширений и управляемые локальные экспорты. Удалённый список не изменяется.</string>
+    <string name="provider_account_change_provider_title">Сменить провайдера</string>
+    <string name="provider_account_change_provider_summary">Использует ту же полную локальную очистку, возвращает к выбору провайдера и никогда не копирует данные между провайдерами.</string>
+    <string name="provider_account_revoke_mal_consent_title">Отозвать сохранённое согласие MyAnimeList</string>
+    <string name="provider_account_revoke_mal_consent_summary">Удаляет только локально сохранённую запись согласия. При следующем входе в MyAnimeList потребуется согласие заново.</string>
+    <string name="provider_account_shared_settings_notice">Настройки внешнего вида, языка, специальных возможностей, хранилища и обновлений остаются в общих настройках Kizomi и не относятся к отдельному провайдеру.</string>
+    <string name="provider_account_local_action_failed">Не удалось выполнить локальную операцию с аккаунтом. Обращения к другому провайдеру не было.</string>
+    <string name="provider_account_local_state_unavailable">Не удалось безопасно прочитать локальное состояние аккаунта.</string>
+    <string name="provider_account_change_dialog_title">Удалить локальные данные и сменить провайдера?</string>
+    <string name="provider_account_delete_dialog_title">Отключить аккаунт и удалить локальные данные?</string>
+    <string name="provider_account_delete_dialog_message">Текущий аккаунт будет отключён. Учётные данные, кэши аккаунта, очереди, сопоставления, отложенные задачи, состояние календарных расширений, управляемые записи кэша изображений и локальные экспорты будут удалены. Данные не копируются к другому провайдеру, а удалённый список не изменяется.</string>
+    <string name="provider_account_delete_dialog_confirm">Удалить локальные данные</string>
+    <string name="provider_account_dialog_cancel">Отмена</string>
+</resources>

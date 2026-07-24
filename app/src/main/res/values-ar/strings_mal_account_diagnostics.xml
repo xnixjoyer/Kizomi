@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_account_screen_title">الحساب والموفّر</string>
+    <string name="provider_account_section_summary">الحساب النشط</string>
+    <string name="provider_account_section_data">بيانات الحساب</string>
+    <string name="provider_account_anilist">AniList</string>
+    <string name="provider_account_myanimelist">MyAnimeList</string>
+    <string name="provider_account_not_configured">لم يتم إعداد أي موفّر</string>
+    <string name="provider_account_record_present">يوجد سجل حساب محلي. المعرّفات ومحتوى الملف الشخصي مخفيان.</string>
+    <string name="provider_account_record_absent">لا يتوفر سجل حساب محلي نشط.</string>
+    <string name="provider_account_expiry">انتهاء صلاحية الجلسة المخزنة: %1$s</string>
+    <string name="provider_account_status_content_description">الموفّر %1$s، الجلسة %2$s</string>
+    <string name="provider_account_session_not_configured">غير مُعد</string>
+    <string name="provider_account_session_transitioning">جارٍ تبديل الموفّر</string>
+    <string name="provider_account_session_connected">متصل</string>
+    <string name="provider_account_session_expiring">متصل؛ اقترب انتهاء الصلاحية</string>
+    <string name="provider_account_session_missing">الجلسة مفقودة؛ سجّل الدخول مجددًا</string>
+    <string name="provider_account_session_expired">انتهت صلاحية الجلسة؛ سجّل الدخول مجددًا</string>
+    <string name="provider_account_session_corrupt">تعذر قراءة مخزن الجلسة؛ سجّل الدخول مجددًا</string>
+    <string name="provider_account_session_keystore_reset">تمت إعادة تعيين التخزين الآمن؛ سجّل الدخول مجددًا</string>
+    <string name="provider_account_session_unknown">حالة الجلسة غير معروفة</string>
+    <string name="provider_account_disconnect_delete_title">فصل الحساب وحذف بياناته المحلية</string>
+    <string name="provider_account_disconnect_delete_summary">يحذف بيانات الاعتماد وذاكرات التخزين المؤقت للموفّر والطوابير والتعيينات والعمل المعلّق وحالة الإضافات وعمليات التصدير المحلية القابلة للتحكم. لا يغيّر القائمة البعيدة.</string>
+    <string name="provider_account_change_provider_title">تغيير الموفّر</string>
+    <string name="provider_account_change_provider_summary">يستخدم الحذف المحلي الكامل نفسه، ثم يعيدك إلى اختيار الموفّر، ولا ينسخ البيانات بين الموفّرين.</string>
+    <string name="provider_account_revoke_mal_consent_title">إلغاء موافقة MyAnimeList المحفوظة</string>
+    <string name="provider_account_revoke_mal_consent_summary">يزيل سجل الموافقة المحفوظ محليًا فقط. سيتطلب تسجيل الدخول إلى MyAnimeList لاحقًا الموافقة من جديد.</string>
+    <string name="provider_account_shared_settings_notice">تظل تفضيلات المظهر واللغة وإمكانية الوصول والتخزين والتحديث ضمن إعدادات Kizomi المشتركة وليست خاصة بموفّر.</string>
+    <string name="provider_account_local_action_failed">تعذر إكمال عملية الحساب المحلية. لم يتم الاتصال بموفّر بديل.</string>
+    <string name="provider_account_local_state_unavailable">تعذر قراءة حالة الحساب المحلية بأمان.</string>
+    <string name="provider_account_change_dialog_title">حذف البيانات المحلية وتغيير الموفّر؟</string>
+    <string name="provider_account_delete_dialog_title">فصل الحساب وحذف البيانات المحلية؟</string>
+    <string name="provider_account_delete_dialog_message">سيتم فصل الحساب الحالي. تُحذف بيانات الاعتماد وذاكرات التخزين المؤقت المرتبطة بالحساب والطوابير والتعيينات والعمل المعلّق وحالة إضافات التقويم وإدخالات ذاكرة الصور القابلة للتحكم وعمليات التصدير المحلية. لا تُنسخ أي بيانات إلى موفّر آخر ولا يتغير أي عنصر في القائمة البعيدة.</string>
+    <string name="provider_account_delete_dialog_confirm">حذف البيانات المحلية</string>
+    <string name="provider_account_dialog_cancel">إلغاء</string>
+</resources>

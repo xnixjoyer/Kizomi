@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_account_screen_title">Compte et fournisseur</string>
+    <string name="provider_account_section_summary">Compte actif</string>
+    <string name="provider_account_section_data">Données du compte</string>
+    <string name="provider_account_anilist">AniList</string>
+    <string name="provider_account_myanimelist">MyAnimeList</string>
+    <string name="provider_account_not_configured">Aucun fournisseur configuré</string>
+    <string name="provider_account_record_present">Un enregistrement local du compte est présent. Les identifiants et le contenu du profil sont masqués.</string>
+    <string name="provider_account_record_absent">Aucun enregistrement local de compte actif n’est disponible.</string>
+    <string name="provider_account_expiry">Expiration de la session enregistrée : %1$s</string>
+    <string name="provider_account_status_content_description">Fournisseur %1$s, session %2$s</string>
+
+    <string name="provider_account_session_not_configured">Non configurée</string>
+    <string name="provider_account_session_transitioning">Changement de fournisseur en cours</string>
+    <string name="provider_account_session_connected">Connectée</string>
+    <string name="provider_account_session_expiring">Connectée ; expiration proche</string>
+    <string name="provider_account_session_missing">Session absente ; reconnectez-vous</string>
+    <string name="provider_account_session_expired">Session expirée ; reconnectez-vous</string>
+    <string name="provider_account_session_corrupt">Stockage de session illisible ; reconnectez-vous</string>
+    <string name="provider_account_session_keystore_reset">Le stockage sécurisé a été réinitialisé ; reconnectez-vous</string>
+    <string name="provider_account_session_unknown">État de session inconnu</string>
+
+    <string name="provider_account_disconnect_delete_title">Déconnecter et supprimer les données locales du compte</string>
+    <string name="provider_account_disconnect_delete_summary">Supprime les identifiants, caches du fournisseur, files d’attente, associations, travaux en attente, état des extensions et exportations locales contrôlables. La liste distante n’est pas modifiée.</string>
+    <string name="provider_account_change_provider_title">Changer de fournisseur</string>
+    <string name="provider_account_change_provider_summary">Utilise la même purge locale complète, revient au choix du fournisseur et ne copie jamais de données entre fournisseurs.</string>
+    <string name="provider_account_revoke_mal_consent_title">Révoquer le consentement MyAnimeList enregistré</string>
+    <string name="provider_account_revoke_mal_consent_summary">Supprime uniquement le consentement enregistré localement. Une prochaine connexion à MyAnimeList nécessitera de nouveau votre consentement.</string>
+    <string name="provider_account_shared_settings_notice">Les préférences d’apparence, de langue, d’accessibilité, de stockage et de mise à jour restent dans la hiérarchie de réglages partagée de Kizomi et ne dépendent pas du fournisseur.</string>
+    <string name="provider_account_local_action_failed">L’opération locale sur le compte n’a pas pu être effectuée. Aucun autre fournisseur n’a été contacté.</string>
+    <string name="provider_account_local_state_unavailable">L’état local du compte n’a pas pu être lu de manière sûre.</string>
+
+    <string name="provider_account_change_dialog_title">Supprimer les données locales et changer de fournisseur ?</string>
+    <string name="provider_account_delete_dialog_title">Déconnecter et supprimer les données locales ?</string>
+    <string name="provider_account_delete_dialog_message">Le compte actuel sera déconnecté. Les identifiants, caches liés au compte, files d’attente, associations, travaux en attente, état des extensions de calendrier, entrées contrôlables du cache d’images et exportations locales seront supprimés. Rien ne sera copié vers un autre fournisseur et aucune entrée de la liste distante ne sera modifiée.</string>
+    <string name="provider_account_delete_dialog_confirm">Supprimer les données locales</string>
+    <string name="provider_account_dialog_cancel">Annuler</string>
+</resources>

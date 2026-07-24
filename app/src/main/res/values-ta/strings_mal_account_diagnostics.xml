@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_account_screen_title">கணக்கும் வழங்குநரும்</string>
+    <string name="provider_account_section_summary">செயலில் உள்ள கணக்கு</string>
+    <string name="provider_account_section_data">கணக்கு தரவு</string>
+    <string name="provider_account_anilist">AniList</string>
+    <string name="provider_account_myanimelist">MyAnimeList</string>
+    <string name="provider_account_not_configured">எந்த வழங்குநரும் அமைக்கப்படவில்லை</string>
+    <string name="provider_account_record_present">ஒரு உள்ளூர் கணக்கு பதிவு உள்ளது. அடையாளங்களும் சுயவிவர உள்ளடக்கமும் மறைக்கப்பட்டுள்ளன.</string>
+    <string name="provider_account_record_absent">செயலில் உள்ள உள்ளூர் கணக்கு பதிவு கிடைக்கவில்லை.</string>
+    <string name="provider_account_expiry">சேமிக்கப்பட்ட அமர்வு காலாவதி: %1$s</string>
+    <string name="provider_account_status_content_description">வழங்குநர் %1$s, அமர்வு %2$s</string>
+    <string name="provider_account_session_not_configured">அமைக்கப்படவில்லை</string>
+    <string name="provider_account_session_transitioning">வழங்குநர் மாற்றம் நடைபெறுகிறது</string>
+    <string name="provider_account_session_connected">இணைக்கப்பட்டுள்ளது</string>
+    <string name="provider_account_session_expiring">இணைக்கப்பட்டுள்ளது; காலாவதி நெருங்குகிறது</string>
+    <string name="provider_account_session_missing">அமர்வு இல்லை; மீண்டும் உள்நுழையவும்</string>
+    <string name="provider_account_session_expired">அமர்வு காலாவதியானது; மீண்டும் உள்நுழையவும்</string>
+    <string name="provider_account_session_corrupt">அமர்வு சேமிப்பகத்தைப் படிக்க முடியவில்லை; மீண்டும் உள்நுழையவும்</string>
+    <string name="provider_account_session_keystore_reset">பாதுகாப்பான சேமிப்பகம் மீட்டமைக்கப்பட்டது; மீண்டும் உள்நுழையவும்</string>
+    <string name="provider_account_session_unknown">அமர்வு நிலை தெரியவில்லை</string>
+    <string name="provider_account_disconnect_delete_title">கணக்கை துண்டித்து உள்ளூர் தரவை நீக்கு</string>
+    <string name="provider_account_disconnect_delete_summary">அங்கீகாரத் தகவல்கள், வழங்குநர் தற்காலிக சேமிப்புகள், வரிசைகள், பொருத்தங்கள், நிலுவைப் பணிகள், நீட்டிப்பு நிலை மற்றும் கட்டுப்படுத்தக்கூடிய உள்ளூர் ஏற்றுமதிகளை நீக்கும். தொலைப் பட்டியல் மாற்றப்படாது.</string>
+    <string name="provider_account_change_provider_title">வழங்குநரை மாற்று</string>
+    <string name="provider_account_change_provider_summary">அதே முழுமையான உள்ளூர் சுத்தப்படுத்தலைப் பயன்படுத்தி வழங்குநர் தேர்வுக்கு திரும்பும்; வழங்குநர்களுக்கு இடையில் தரவை ஒருபோதும் நகலெடுக்காது.</string>
+    <string name="provider_account_revoke_mal_consent_title">சேமிக்கப்பட்ட MyAnimeList ஒப்புதலை ரத்து செய்</string>
+    <string name="provider_account_revoke_mal_consent_summary">உள்ளூரில் சேமிக்கப்பட்ட ஒப்புதல் பதிவை மட்டும் நீக்கும். அடுத்த MyAnimeList உள்நுழைவில் மீண்டும் ஒப்புதல் தேவைப்படும்.</string>
+    <string name="provider_account_shared_settings_notice">தோற்றம், மொழி, அணுகல்தன்மை, சேமிப்பு மற்றும் புதுப்பிப்பு விருப்பங்கள் பகிரப்பட்ட Kizomi அமைப்புகளிலேயே இருக்கும்; அவை வழங்குநருக்குச் சிறப்பானவை அல்ல.</string>
+    <string name="provider_account_local_action_failed">உள்ளூர் கணக்கு செயலை முடிக்க முடியவில்லை. மாற்று வழங்குநர் எவரும் தொடர்புகொள்ளப்படவில்லை.</string>
+    <string name="provider_account_local_state_unavailable">உள்ளூர் கணக்கு நிலையை பாதுகாப்பாகப் படிக்க முடியவில்லை.</string>
+    <string name="provider_account_change_dialog_title">உள்ளூர் தரவை நீக்கி வழங்குநரை மாற்றவா?</string>
+    <string name="provider_account_delete_dialog_title">இணைப்பை துண்டித்து உள்ளூர் தரவை நீக்கவா?</string>
+    <string name="provider_account_delete_dialog_message">தற்போதைய கணக்கு துண்டிக்கப்படும். அங்கீகாரத் தகவல்கள், கணக்குடன் இணைந்த தற்காலிக சேமிப்புகள், வரிசைகள், பொருத்தங்கள், நிலுவைப் பணிகள், நாள்காட்டி நீட்டிப்பு நிலை, கட்டுப்படுத்தக்கூடிய படத் தற்காலிக சேமிப்பு பதிவுகள் மற்றும் உள்ளூர் ஏற்றுமதிகள் நீக்கப்படும். வேறு வழங்குநருக்கு எந்தத் தரவும் நகலெடுக்கப்படாது; தொலைப் பட்டியலில் எந்த உருப்படியும் மாற்றப்படாது.</string>
+    <string name="provider_account_delete_dialog_confirm">உள்ளூர் தரவை நீக்கு</string>
+    <string name="provider_account_dialog_cancel">ரத்து</string>
+</resources>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_account_screen_title">Conta e provedor</string>
+    <string name="provider_account_section_summary">Conta ativa</string>
+    <string name="provider_account_section_data">Dados da conta</string>
+    <string name="provider_account_anilist">AniList</string>
+    <string name="provider_account_myanimelist">MyAnimeList</string>
+    <string name="provider_account_not_configured">Nenhum provedor configurado</string>
+    <string name="provider_account_record_present">Existe um registro local da conta. Os identificadores e o conteúdo do perfil estão ocultos.</string>
+    <string name="provider_account_record_absent">Nenhum registro local de conta ativo está disponível.</string>
+    <string name="provider_account_expiry">Validade da sessão armazenada: %1$s</string>
+    <string name="provider_account_status_content_description">Provedor %1$s, sessão %2$s</string>
+
+    <string name="provider_account_session_not_configured">Não configurada</string>
+    <string name="provider_account_session_transitioning">Transição de provedor em andamento</string>
+    <string name="provider_account_session_connected">Conectada</string>
+    <string name="provider_account_session_expiring">Conectada; a expiração está próxima</string>
+    <string name="provider_account_session_missing">Sessão ausente; entre novamente</string>
+    <string name="provider_account_session_expired">Sessão expirada; entre novamente</string>
+    <string name="provider_account_session_corrupt">O armazenamento da sessão está ilegível; entre novamente</string>
+    <string name="provider_account_session_keystore_reset">O armazenamento seguro foi redefinido; entre novamente</string>
+    <string name="provider_account_session_unknown">Estado da sessão desconhecido</string>
+
+    <string name="provider_account_disconnect_delete_title">Desconectar e excluir os dados locais da conta</string>
+    <string name="provider_account_disconnect_delete_summary">Exclui credenciais, caches do provedor, filas, mapeamentos, trabalhos pendentes, estado de extensões e exportações locais controláveis. Não altera a lista remota.</string>
+    <string name="provider_account_change_provider_title">Alterar provedor</string>
+    <string name="provider_account_change_provider_summary">Usa a mesma limpeza local completa, volta à seleção de provedor e nunca copia dados entre provedores.</string>
+    <string name="provider_account_revoke_mal_consent_title">Revogar o consentimento salvo do MyAnimeList</string>
+    <string name="provider_account_revoke_mal_consent_summary">Remove apenas o registro de consentimento salvo localmente. Um futuro login no MyAnimeList exigirá consentimento novamente.</string>
+    <string name="provider_account_shared_settings_notice">As preferências de aparência, idioma, acessibilidade, armazenamento e atualizações permanecem na hierarquia compartilhada de configurações do Kizomi e não são específicas do provedor.</string>
+    <string name="provider_account_local_action_failed">Não foi possível concluir a operação local da conta. Nenhum provedor alternativo foi contatado.</string>
+    <string name="provider_account_local_state_unavailable">Não foi possível ler com segurança o estado local da conta.</string>
+
+    <string name="provider_account_change_dialog_title">Excluir os dados locais e alterar o provedor?</string>
+    <string name="provider_account_delete_dialog_title">Desconectar e excluir os dados locais?</string>
+    <string name="provider_account_delete_dialog_message">A conta atual será desconectada. Credenciais, caches vinculados à conta, filas, mapeamentos, trabalhos pendentes, estado das extensões de calendário, entradas controláveis do cache de imagens e exportações locais serão excluídos. Nada será copiado para outro provedor e nenhuma entrada da lista remota será alterada.</string>
+    <string name="provider_account_delete_dialog_confirm">Excluir dados locais</string>
+    <string name="provider_account_dialog_cancel">Cancelar</string>
+</resources>
