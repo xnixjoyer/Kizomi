@@ -65,11 +65,12 @@ class MalCalendarRepository internal constructor(
                 retryable = false,
             )
         }
-        val queryZone = runCatching { ZoneId.of(query.zoneId) }.getOrNull()
-            ?: return ProviderCalendarLoadResult.Failure(
+        if (runCatching { ZoneId.of(query.zoneId) }.isFailure) {
+            return ProviderCalendarLoadResult.Failure(
                 reason = "invalid_calendar_zone",
                 retryable = false,
             )
+        }
 
         mutex.lock()
         return try {
@@ -82,7 +83,7 @@ class MalCalendarRepository internal constructor(
             ) {
                 cached.result
             } else {
-                val result = loadFresh(accountKey, query, queryZone, now)
+                val result = loadFresh(accountKey, query, now)
                 if (result is ProviderCalendarLoadResult.Content) {
                     cache = CacheEntry(accountKey, query, now, result)
                 }
@@ -105,7 +106,6 @@ class MalCalendarRepository internal constructor(
     private suspend fun loadFresh(
         accountKey: String,
         query: ProviderCalendarQuery,
-        queryZone: ZoneId,
         fetchedAt: Long,
     ): ProviderCalendarLoadResult {
         val allMedia = mutableListOf<MalCalendarMedia>()
@@ -133,21 +133,36 @@ class MalCalendarRepository internal constructor(
             )
         }
 
+        val metadataStates = allMedia.map(MalCalendarMedia::broadcastMetadataState)
+        val completeMetadataCount = metadataStates.count { it == BroadcastMetadataState.COMPLETE }
+        if (allMedia.isNotEmpty() && completeMetadataCount == 0) {
+            notices += ProviderCalendarNotice.BROADCAST_METADATA_UNAVAILABLE
+        }
+        if (metadataStates.any { it == BroadcastMetadataState.PARTIAL } ||
+            completeMetadataCount in 1 until allMedia.size
+        ) {
+            notices += ProviderCalendarNotice.PARTIAL_BROADCAST_METADATA
+        }
+
         val entries = allMedia
             .asSequence()
-            .flatMap { media -> projectBroadcastSlots(media, query, queryZone).asSequence() }
+            .flatMap { media -> projectBroadcastSlots(media, query).asSequence() }
             .distinctBy(ProviderCalendarEntry::stableKey)
             .sortedBy(ProviderCalendarEntry::scheduledAtEpochSeconds)
             .toList()
 
+        val capabilities = linkedSetOf(
+            ProviderCalendarCapability.SEASONAL_CATALOG,
+            ProviderCalendarCapability.BACKGROUND_REFRESH,
+            ProviderCalendarCapability.WIDGET_SNAPSHOT,
+        )
+        if (completeMetadataCount > 0) {
+            capabilities += ProviderCalendarCapability.RECURRING_BROADCAST_SLOTS
+        }
+
         return ProviderCalendarLoadResult.Content(
             entries = entries,
-            capabilities = setOf(
-                ProviderCalendarCapability.SEASONAL_CATALOG,
-                ProviderCalendarCapability.RECURRING_BROADCAST_SLOTS,
-                ProviderCalendarCapability.BACKGROUND_REFRESH,
-                ProviderCalendarCapability.WIDGET_SNAPSHOT,
-            ),
+            capabilities = capabilities,
             notices = notices,
             fetchedAtEpochMillis = fetchedAt,
         )
@@ -204,7 +219,6 @@ class MalCalendarRepository internal constructor(
     private fun projectBroadcastSlots(
         media: MalCalendarMedia,
         query: ProviderCalendarQuery,
-        queryZone: ZoneId,
     ): List<ProviderCalendarEntry> {
         val day = media.broadcastDayOfWeek.toDayOfWeek() ?: return emptyList()
         val time = media.broadcastStartTime.toLocalTimeOrNull() ?: return emptyList()
@@ -239,14 +253,22 @@ class MalCalendarRepository internal constructor(
                     episodeNumber = null,
                     isOnList = media.isOnList,
                     precision = ProviderCalendarPrecision.RECURRING_BROADCAST_SLOT,
+                    sourceTimeZoneId = JAPAN_ZONE.id,
                 )
             }
             date = date.plusWeeks(1)
         }
-        entries.forEach {
-            Instant.ofEpochSecond(it.scheduledAtEpochSeconds).atZone(queryZone)
-        }
         return entries
+    }
+
+    private fun MalCalendarMedia.broadcastMetadataState(): BroadcastMetadataState {
+        val hasDay = !broadcastDayOfWeek.isNullOrBlank()
+        val hasTime = !broadcastStartTime.isNullOrBlank()
+        return when {
+            hasDay && hasTime -> BroadcastMetadataState.COMPLETE
+            hasDay || hasTime -> BroadcastMetadataState.PARTIAL
+            else -> BroadcastMetadataState.MISSING
+        }
     }
 
     private fun String?.toDayOfWeek(): DayOfWeek? = when (this?.trim()?.lowercase()) {
@@ -291,6 +313,12 @@ class MalCalendarRepository internal constructor(
         else -> MalSeason.FALL
     }
 
+    private enum class BroadcastMetadataState {
+        COMPLETE,
+        PARTIAL,
+        MISSING,
+    }
+
     private data class SeasonKey(val year: Int, val season: MalSeason)
 
     private data class SeasonFetch(
@@ -307,7 +335,8 @@ class MalCalendarRepository internal constructor(
     )
 
     companion object {
-        private val JAPAN_ZONE: ZoneId = ZoneId.of("Asia/Tokyo")
+        val BROADCAST_SOURCE_ZONE: ZoneId = ZoneId.of("Asia/Tokyo")
+        private val JAPAN_ZONE: ZoneId = BROADCAST_SOURCE_ZONE
         private val TIME_FORMATS = listOf(
             DateTimeFormatter.ofPattern("HH:mm"),
             DateTimeFormatter.ofPattern("HH:mm:ss"),
