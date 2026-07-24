@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_refresh_failed">Не удалось обновить библиотеку. Сохранённые данные остаются видимыми.</string>
+    <string name="mal_library_edit_state_no_change">Нет изменений для сохранения</string>
+    <string name="mal_library_edit_state_validation_failed">Недопустимое или неподдерживаемое изменение</string>
+    <string name="mal_library_edit_state_enqueue_accepted">Изменение добавлено в локальную очередь</string>
+    <string name="mal_library_edit_state_pending">Ожидание MyAnimeList</string>
+    <string name="mal_library_edit_state_delivered">Отправлено; подтверждается состояние MyAnimeList</string>
+    <string name="mal_library_edit_state_retrying">Временная ошибка; повтор запланирован</string>
+    <string name="mal_library_edit_state_confirmed">Подтверждено MyAnimeList</string>
+    <string name="mal_library_edit_state_confirmed_mismatch">MyAnimeList подтвердил другое значение; показано состояние провайдера</string>
+    <string name="mal_library_edit_state_deleted">Удалено из MyAnimeList</string>
+    <string name="mal_library_edit_state_failed">Не удалось применить изменение</string>
+    <string name="mal_library_edit_state_rolled_back">Восстановлено предыдущее подтверждённое значение</string>
+</resources>
