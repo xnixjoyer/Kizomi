@@ -4,19 +4,18 @@
 
 This is the binding concurrency and integration contract for MAL parity work in `xnixjoyer/Kizomi`. It prevents branch collisions, provider mixing, stale evidence and worker edits to Integrator-owned architecture.
 
-## Published green integration checkpoint before this refresh
+## Last exact-green canonical checkpoint
 
 - `main`: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 - integration branch: `planning/mal-ui-feature-parity`
 - integration PR: Draft #5
-- exact green head: `5d56b6fc6ea1ea2902e4e6abc3192d6378a3b3c4`
-- workflow: `Pull request and push CI`
-- run ID / number: `30123370413` / `417`
+- exact green head: `85d87505b51db539986eb86d8f0dfd01e4327357`
+- workflow run ID / number: `30125841225` / `491`
+- verify job: `89589067856`
 - result: `success`
+- worker implementation integrated: none
 
-The changes from the prior checkpoint to `5d56b6fc...` are Integrator-owned documentation only, including the accepted API-v2 reference and Round-04 prompts. No worker implementation is integrated at that checkpoint.
-
-The commit containing this coordination refresh and every later canonical commit require their own exact-head CI before replacing `5d56b6fc...` as the green checkpoint.
+Canonical audit-consumption commits after that head require their own exact-head CI before replacing it as the green checkpoint.
 
 ## Accepted provider evidence
 
@@ -65,7 +64,7 @@ These remain binding:
 | QA/API Research | `parallel/mal-qa-research` | #10 | `agent-reports/qa-research.md` |
 | Read-only legacy/new audit | `parallel/mal-legacy-new-readonly-audit` | #11 | `agent-reports/legacy-new-readonly-audit.md` only |
 
-PR #11 is advisory and is not automatically part of the owner merge queue.
+PR #11 is advisory and is not part of the owner merge queue.
 
 Only the Integrator may edit:
 
@@ -79,18 +78,20 @@ Only the Integrator may edit:
 
 A worker requiring one of these changes must leave the file unchanged and record an exact `INTEGRATOR ACTION REQUIRED` request.
 
+Worker file ownership remains literal. A glob such as `strings_mal_discover_details*.xml` does not grant permission to modify an existing shared `strings.xml`. A worker's complete PR file list, not only the latest commit, must remain inside its allowed paths.
+
 ## Round-04 live queue snapshot
 
-The feature workers are actively publishing corrective commits. Heads below are observations, not frozen acceptance points. A later head invalidates the row until re-reviewed.
+Heads below are observed review points and may move. A later head invalidates the row until re-reviewed.
 
-| Queue | PR | Latest observed head during refresh | Round-04 state | Decision |
+| Queue | PR | Latest reviewed/observed head | Round-04 state | Decision |
 |---:|---:|---|---|---|
-| 1 | #6 Discover/Details | moving after `332366dd8ffdf38f2217eabcf9aefc1bc0400759` | provider evidence corrected; real locale files being added; `values-peo`, report refresh and stable CI still required at observation | blocked |
-| 2 | #7 Library/Tracking | moving after `85b3656badc259651d85f8ac0d76432c31c833dd` | durable lifecycle and typed data repository added; current PR diff still contains reserved `MalTrackingProviderAdapter.kt`; worker must revert central file | blocked, scope violation |
-| 3 | #8 Account/Diagnostics | moving after `fddf4119c6d25e0aa263130bb426d8f98643c621` | real localization/redaction proof complete; nullable unknown metrics, truthful checklist and downgraded parity implemented; final report/frozen CI pending | blocked pending freeze |
-| 4 | #9 Calendar/Widgets | moving after `2f6e1cccb3dc05014a7ad821a5201babf76f4011` | provider evidence corrected; recurring/degraded semantics accepted; locale and lifecycle/test corrections active; final report/frozen CI pending | blocked pending freeze |
-| 5 | #10 QA/API audit | `f1fc0a67772bc654accf23f35c66007eeceb9d73` at report publication | source-contract test/report added but frozen table predates later #6–#9 heads | blocked; final re-audit last |
-| advisory | #11 read-only audit | `0e30a2faeea6c6015b15787bd22d21b214e00791` | scope and run #418 pass; report still says audit not performed | in progress |
+| 1 | #6 Discover/Details | `4e782f6dda57c303bd4d1bd06060a0014920eabd` | code/report/Run #498 are otherwise complete, but complete diff modifies shared `values-fa/strings.xml` and `values-peo/strings.xml` outside allowed `strings_mal_discover_details*.xml` ownership | blocked, scope violation |
+| 2 | #7 Library/Tracking | `afb27de0d6c43b5d43d0df85622aa58e186b39bc` | durable lifecycle and typed state repository exist; report/Run #494 claim central transport ownership; complete diff still contains reserved adapter and central test; date writes remain unverified | blocked, scope violation |
+| 3 | #8 Account/Diagnostics | moving after `30d67e528cc34748ad6cb699f8caf6df5568dee0` | localization, fixture-bearing redaction, unknown metrics/checklist/parity improved; Run #502 evaluates final numeric-ID sanitizer correction; final report pending | blocked pending freeze |
+| 4 | #9 Calendar/Widgets | moving after `c417c1c1fd036c42c1c53969e64bd86211150c42` | code/locales Run #495 green and report refreshed; provider-scoped extension ID/settings namespace and localized extension metadata still required; report-head Run #503 active | blocked pending worker fix/freeze |
+| 5 | #10 QA/API audit | `f1fc0a67772bc654accf23f35c66007eeceb9d73` | source-contract test/report useful but frozen table predates later #6–#9 heads and completed #11 findings | blocked; final re-audit last |
+| advisory | #11 read-only audit | `a8a9d3b798d8e84ba8d71cde93d9a6fe41474af5` | one report file, run `30125909197` / `493` success, ends `READY FOR INTEGRATOR REVIEW`; actionable findings consumed | complete advisory evidence |
 
 No worker PR is currently authorized for merge.
 
@@ -104,16 +105,23 @@ These must not be implemented on a worker branch:
 2. Tracking transport:
    - for DELETE intent, reconcile HTTP 404 through controlled confirmed absence instead of immediate rollback/failure;
    - preserve sparse PATCH field-mask behavior and explicit provider score `0..10` ↔ Kizomi `0..100` conversion;
+   - capability-gate unsupported date mutations;
    - add focused central transport tests.
 3. Ordered navigation/wiring:
    - consume typed worker contracts only after each authorized merge and green integration CI;
-   - never coerce a MAL `Long` identity into an AniList ID.
-4. Diagnostics:
+   - never coerce a MAL `Long` identity into an AniList ID;
+   - replace transitional MAL surfaces with reviewed worker surfaces.
+4. Exclusive-provider Settings:
+   - replace separate AniList/MAL account cards/routes with one active-provider Account destination and explicit destructive switch flow.
+5. Provider-isolated background execution:
+   - add an execution-time authoritative provider/traffic gate to legacy `AiringScheduleWorker.doWork()`;
+   - test a provider switch while legacy work is already running.
+6. Diagnostics:
    - wire recorder producers only at existing safe boundaries;
    - keep uninstrumented metrics unknown;
    - register dashboard through a debug-only bridge and prove packaged release exclusion.
-5. Calendar/widgets/background:
-   - register one MAL extension;
+7. Calendar/widgets/background:
+   - register one MAL/provider-scoped extension with localized metadata;
    - select sources by authoritative provider state;
    - no network from widget rendering and no AniList airing-table fallback in MAL mode;
    - central lifecycle/purge/scheduling remains fail-closed.
@@ -124,10 +132,10 @@ A worker becomes eligible for an owner merge instruction only when one frozen SH
 
 - correct branch/base and Draft state;
 - complete changed-file scope is owned;
-- no canonical or reserved file changed;
+- no canonical, reserved or shared non-owned file changed;
 - report lists files, tests, limitations, evidence and exact minimal wiring requests;
 - report ends exactly `READY FOR INTEGRATOR REVIEW`;
-- provider claims use the accepted evidence labels and remain conservative;
+- provider claims use accepted evidence labels and remain conservative;
 - focused tests and full exact-head CI are successful for that same SHA;
 - no unresolved Integrator blocker remains.
 
