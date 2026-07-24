@@ -4,7 +4,6 @@ import com.anisync.android.data.TitleLanguage
 import com.anisync.android.data.mal.api.MalLibraryItem
 import com.anisync.android.domain.LibraryEntry
 import com.anisync.android.domain.tracking.TrackingMediaType
-import com.anisync.android.domain.url
 import com.anisync.android.presentation.model.MediaListItemPresentation
 import com.anisync.android.presentation.model.PresentationMediaType
 import com.anisync.android.presentation.model.ProviderMediaIdentity
@@ -14,13 +13,14 @@ import com.anisync.android.util.getTitle
 fun LibraryEntry.toMediaListItemPresentation(
     mediaType: MediaType,
     titleLanguage: TitleLanguage,
+    resolvedCoverUrl: String? = coverUrl,
 ): MediaListItemPresentation = MediaListItemPresentation(
     identity = ProviderMediaIdentity.AniList(
         mediaId = mediaId,
         mediaType = mediaType.toPresentationMediaType(),
     ),
     title = getTitle(titleLanguage),
-    coverUrl = cover.url() ?: coverUrl,
+    coverUrl = resolvedCoverUrl,
     progress = progress,
     total = when (mediaType) {
         MediaType.ANIME -> totalEpisodes
