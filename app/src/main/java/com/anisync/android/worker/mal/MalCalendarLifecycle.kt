@@ -18,6 +18,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal val MAL_PERIODIC_DUPLICATE_POLICY: ExistingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.KEEP
+internal val MAL_IMMEDIATE_DUPLICATE_POLICY: ExistingWorkPolicy = ExistingWorkPolicy.KEEP
+
 interface MalCalendarScheduler {
     fun schedulePeriodic()
     fun enqueueImmediate()
@@ -33,7 +36,7 @@ class WorkManagerMalCalendarScheduler @Inject constructor(
     override fun schedulePeriodic() {
         workManager.enqueueUniquePeriodicWork(
             MalCalendarRefreshWorker.PERIODIC_WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
+            MAL_PERIODIC_DUPLICATE_POLICY,
             MalCalendarRefreshWorker.periodicRequest(),
         )
     }
@@ -41,7 +44,7 @@ class WorkManagerMalCalendarScheduler @Inject constructor(
     override fun enqueueImmediate() {
         workManager.enqueueUniqueWork(
             MalCalendarRefreshWorker.IMMEDIATE_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
+            MAL_IMMEDIATE_DUPLICATE_POLICY,
             MalCalendarRefreshWorker.immediateRequest(),
         )
     }
@@ -77,6 +80,10 @@ class MalCalendarLifecycleController internal constructor(
         } else {
             deactivateAndPurge()
         }
+    }
+
+    suspend fun onAccountChanged(activeProvider: ActiveProvider) {
+        onProviderChanged(activeProvider)
     }
 
     suspend fun onProcessRestart(activeProvider: ActiveProvider) {
@@ -136,7 +143,7 @@ class MalCalendarExtension @Inject constructor(
     override suspend fun onAccountChanged(
         context: CalendarExtensionContext,
         settings: CalendarExtensionSettings,
-    ) = lifecycleController.onProviderChanged(context.activeProvider)
+    ) = lifecycleController.onAccountChanged(context.activeProvider)
 
     override suspend fun onLogout(
         context: CalendarExtensionContext,
