@@ -94,6 +94,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
 
@@ -190,14 +191,22 @@ class MainActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 providerCoordinator.initialize()
-                val malRedirectHandled = handleMalOAuthRedirect(intent)
+                val malRedirectHandled = handleMalOAuthRedirectForStartup(intent)
                 if (!malRedirectHandled) {
                     handleAuthRedirect(intent)
                     if (providerStore.snapshot().activeProvider == ActiveProvider.ANILIST_ONLY) {
                         routeAccountDeepLink(intent)
-                        launch(Dispatchers.IO) { accountManager.reconcileActiveAccount() }
+                        withContext(Dispatchers.IO) { accountManager.reconcileActiveAccount() }
                     }
-                    launch(Dispatchers.IO) { malAuthRepository.resumePendingLogin() }
+                    when (withContext(Dispatchers.IO) {
+                        malAuthRepository.resumePendingLogin()
+                    }) {
+                        is MalCallbackResult.Success -> providerCoordinator.completeLogin(
+                            ActiveProvider.MAL_ONLY
+                        )
+                        is MalCallbackResult.Failure,
+                        null -> Unit
+                    }
                 }
                 _providerStartupReady.value = true
             }
@@ -501,6 +510,16 @@ class MainActivity : AppCompatActivity() {
         return builder.build()
     }
 
+    private suspend fun handleMalOAuthRedirectForStartup(intent: Intent?): Boolean {
+        val callbackUri = intent?.data?.toString() ?: return false
+        if (!malAuthRepository.isCallbackCandidate(callbackUri)) return false
+
+        // Keep the startup loading gate closed until token persistence and provider activation finish.
+        intent.data = null
+        withContext(Dispatchers.IO) { completeMalOAuthRedirect(callbackUri) }
+        return true
+    }
+
     private fun handleMalOAuthRedirect(intent: Intent?): Boolean {
         val callbackUri = intent?.data?.toString() ?: return false
         if (!malAuthRepository.isCallbackCandidate(callbackUri)) return false
@@ -508,15 +527,17 @@ class MainActivity : AppCompatActivity() {
         // Remove sensitive callback query parameters before navigation or another deep-link consumer
         // can observe them. The continuation is persisted only in encrypted session storage.
         intent.data = null
-        lifecycleScope.launch(Dispatchers.IO) {
-            when (malAuthRepository.handleCallback(callbackUri)) {
-                is MalCallbackResult.Success -> providerCoordinator.completeLogin(
-                    ActiveProvider.MAL_ONLY
-                )
-                is MalCallbackResult.Failure -> providerCoordinator.cancelLogin()
-            }
-        }
+        lifecycleScope.launch(Dispatchers.IO) { completeMalOAuthRedirect(callbackUri) }
         return true
+    }
+
+    private suspend fun completeMalOAuthRedirect(callbackUri: String) {
+        when (malAuthRepository.handleCallback(callbackUri)) {
+            is MalCallbackResult.Success -> providerCoordinator.completeLogin(
+                ActiveProvider.MAL_ONLY
+            )
+            is MalCallbackResult.Failure -> providerCoordinator.cancelLogin()
+        }
     }
 
     private fun handleAuthRedirect(intent: Intent?) {

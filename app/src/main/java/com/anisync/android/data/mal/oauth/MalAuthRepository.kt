@@ -268,7 +268,10 @@ class MalAuthRepository @Inject constructor(
                 return MalCallbackResult.Failure(MalAuthFailureReason.SESSION_STORE_FAILED)
             }
             is MalOAuthSessionStoreResult.Success -> stored.value
-        } ?: return null
+        } ?: run {
+            refreshState()
+            return null
+        }
         if (session.isExpired(clock.nowEpochMillis())) {
             consume(session)
             return callbackFailure(MalAuthFailureReason.SESSION_EXPIRED)
