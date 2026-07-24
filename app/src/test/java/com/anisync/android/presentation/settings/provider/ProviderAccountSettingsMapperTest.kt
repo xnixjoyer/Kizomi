@@ -14,7 +14,7 @@ import org.junit.Test
 
 class ProviderAccountSettingsMapperTest {
     @Test
-    fun `missing expired and corrupt MAL sessions render safely`() {
+    fun `missing expired corrupt and keystore reset MAL sessions render safely`() {
         val runtime = ProviderRuntimeState(activeProvider = ActiveProvider.MAL_ONLY)
 
         assertEquals(
@@ -30,29 +30,15 @@ class ProviderAccountSettingsMapperTest {
         )
         assertEquals(
             ProviderSessionDisplayState.EXPIRED,
-            ProviderAccountSettingsMapper.map(
-                providerState = runtime,
-                accountSnapshot = ProviderAccountSnapshot(
-                    malAccount = malAccount(MalTokenStatus.EXPIRED),
-                ),
-                malConsentStored = false,
-                busy = false,
-                error = null,
-                nowEpochMillis = NOW,
-            ).sessionState,
+            mappedMalState(runtime, MalTokenStatus.EXPIRED),
         )
         assertEquals(
             ProviderSessionDisplayState.CORRUPT,
-            ProviderAccountSettingsMapper.map(
-                providerState = runtime,
-                accountSnapshot = ProviderAccountSnapshot(
-                    malAccount = malAccount(MalTokenStatus.CORRUPT),
-                ),
-                malConsentStored = false,
-                busy = false,
-                error = null,
-                nowEpochMillis = NOW,
-            ).sessionState,
+            mappedMalState(runtime, MalTokenStatus.CORRUPT),
+        )
+        assertEquals(
+            ProviderSessionDisplayState.KEYSTORE_RESET,
+            mappedMalState(runtime, MalTokenStatus.KEYSTORE_RESET),
         )
     }
 
@@ -74,11 +60,12 @@ class ProviderAccountSettingsMapperTest {
     }
 
     @Test
-    fun `MAL mode exposes only generic account actions and MAL consent`() {
+    fun `MAL mode exposes only generic account actions and active MAL consent`() {
         val state = ProviderAccountSettingsMapper.map(
             providerState = ProviderRuntimeState(activeProvider = ActiveProvider.MAL_ONLY),
             accountSnapshot = ProviderAccountSnapshot(
                 malAccount = malAccount(MalTokenStatus.ACTIVE, NOW + 100_000L),
+                aniListAccountPresent = true,
             ),
             malConsentStored = true,
             busy = false,
@@ -94,7 +81,57 @@ class ProviderAccountSettingsMapperTest {
             ),
             state.availableActions,
         )
+        assertEquals(ActiveProvider.MAL_ONLY, state.activeProvider)
         assertFalse(state.availableActions.any { it.name.contains("ANILIST") })
+    }
+
+    @Test
+    fun `AniList mode ignores stale MAL account and never exposes MAL consent`() {
+        val state = ProviderAccountSettingsMapper.map(
+            providerState = ProviderRuntimeState(activeProvider = ActiveProvider.ANILIST_ONLY),
+            accountSnapshot = ProviderAccountSnapshot(
+                malAccount = malAccount(MalTokenStatus.ACTIVE, NOW + 100_000L),
+                aniListAccountPresent = true,
+                aniListAccountExpired = false,
+            ),
+            malConsentStored = true,
+            busy = false,
+            error = null,
+            nowEpochMillis = NOW,
+        )
+
+        assertEquals(ProviderSessionDisplayState.CONNECTED, state.sessionState)
+        assertTrue(state.accountRecordPresent)
+        assertEquals(null, state.expiryEpochMillis)
+        assertEquals(
+            setOf(
+                ProviderAccountAction.DISCONNECT_AND_DELETE_LOCAL_DATA,
+                ProviderAccountAction.CHANGE_PROVIDER,
+            ),
+            state.availableActions,
+        )
+        assertFalse(ProviderAccountAction.REVOKE_MAL_CONSENT in state.availableActions)
+    }
+
+    @Test
+    fun `unconfigured state ignores stale provider records and exposes no destructive action`() {
+        val state = ProviderAccountSettingsMapper.map(
+            providerState = ProviderRuntimeState(activeProvider = ActiveProvider.UNCONFIGURED),
+            accountSnapshot = ProviderAccountSnapshot(
+                malAccount = malAccount(MalTokenStatus.CORRUPT),
+                aniListAccountPresent = true,
+                aniListAccountExpired = true,
+            ),
+            malConsentStored = true,
+            busy = false,
+            error = ProviderAccountSettingsError.LOCAL_STATE_UNAVAILABLE,
+            nowEpochMillis = NOW,
+        )
+
+        assertEquals(ProviderSessionDisplayState.NOT_CONFIGURED, state.sessionState)
+        assertFalse(state.accountRecordPresent)
+        assertTrue(state.availableActions.isEmpty())
+        assertEquals(ProviderAccountSettingsError.LOCAL_STATE_UNAVAILABLE, state.error)
     }
 
     @Test
@@ -110,6 +147,18 @@ class ProviderAccountSettingsMapperTest {
             SharedSettingsCatalog.destinations,
         )
     }
+
+    private fun mappedMalState(
+        runtime: ProviderRuntimeState,
+        tokenStatus: MalTokenStatus,
+    ): ProviderSessionDisplayState = ProviderAccountSettingsMapper.map(
+        providerState = runtime,
+        accountSnapshot = ProviderAccountSnapshot(malAccount = malAccount(tokenStatus)),
+        malConsentStored = false,
+        busy = false,
+        error = null,
+        nowEpochMillis = NOW,
+    ).sessionState
 
     private fun malAccount(
         status: MalTokenStatus,
