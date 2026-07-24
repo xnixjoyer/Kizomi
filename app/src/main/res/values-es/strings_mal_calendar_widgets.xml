@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_calendar_recurring_broadcast_title">Franja de emisión recurrente</string>
+    <string name="mal_calendar_recurring_broadcast_disclaimer">Los horarios son metadatos recurrentes de emisión del proveedor y pueden cambiar. No hay horarios exactos por episodio.</string>
+    <string name="mal_calendar_exact_schedule_unavailable">Este proveedor no ofrece horas exactas de emisión por episodio.</string>
+    <string name="mal_calendar_notifications_unavailable">Este proveedor no ofrece notificaciones de emisión.</string>
+    <string name="mal_calendar_widget_unconfigured">Inicia sesión para mostrar los datos del calendario.</string>
+    <string name="mal_calendar_widget_transition">Los datos del calendario no están disponibles mientras se cambia de proveedor.</string>
+    <string name="mal_calendar_widget_no_snapshot">Los datos del calendario aún no se han actualizado.</string>
+    <string name="mal_calendar_widget_stale_snapshot">Los datos del calendario están desactualizados. Abre Kizomi para actualizarlos.</string>
+</resources>
