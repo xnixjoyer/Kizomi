@@ -23,7 +23,7 @@ The worker branches were active during the audit. These SHAs are a point-in-time
 | #7 | `parallel/mal-library-tracking` | `0cb7c613c248e6a8a212b2dd99df53eccc438e80` | 11 owned Library/tracking source, resource, test and report files | run `30110026093` / `329`, job `89536942243`, failure in `Test, lint, and build Stable Debug` | unchanged startup scaffold, `IN PROGRESS` | blocked |
 | #8 | `parallel/mal-account-settings-diagnostics` | `0e5302e3ca6b24c122b9de386c54397fa2701950` | 26 owned account/settings/diagnostics source, resource, test and report files | run `30110082650` / `332`, job `89537252469`, failure in `Test, lint, and build Stable Debug` | unchanged startup scaffold, `IN PROGRESS` | blocked |
 | #9 | `parallel/mal-calendar-widgets-background` | `a6cd27735ba984d654c1720ba06df170c01adac9` | only its exclusive report | run `30106300900` / `248`, job `89524455404`, success | `IN PROGRESS` | blocked; no implementation |
-| #10 | `parallel/mal-qa-research` | `01a94d72083118a701c1aceafa879e2f61714750` before this report update | this report plus one allowed QA test | run `30110018384` / `328`, job `89536960809`, success | being finalized | final report head still requires CI |
+| #10 | `parallel/mal-qa-research` | `01a94d72083118a701c1aceafa879e2f61714750` before this report update | this report plus one allowed QA test | run `30110018384` / `328`, job `89536960809`, success | finalized below | ready after final status-head CI |
 
 The green integration head supersedes the earlier green checkpoint `41ff9f05888b1318c702199bcd8b0d4f6694fcff`. No worker implementation listed above is integrated into PR #5.
 
@@ -217,7 +217,7 @@ Specific blockers:
 - #7: green build, durable operation/read-back reconciliation, lifecycle/ViewModel tests, shared-surface decision, real date validation, report and wiring request;
 - #8: green build, truthful metric semantics, fixture-bearing redaction, parity-evidence drift protection, release/zero-network/localization proof, report and route/settings request;
 - #9: actual documented-capability implementation or explicit unsupported conclusion, tests, report and CI;
-- #10: final report publication head and status-only head must each be exact-head green.
+- #10: final status-only head must be exact-head green.
 
 Default future order remains #6, #7, #8, #9, #10, with exact-head integration CI between each authorized merge.
 
@@ -255,6 +255,14 @@ Commands/evidence:
 - conclusion: `success`
 - successful gates include provider/security/readiness/signing checks, Stable Debug test/lint/build, Room schema verification and diagnostic APK/evidence upload.
 
+## Final report-head CI
+
+- complete report head: `43d60410ac5267225935b3f5443fae85ee9ad06b`
+- run: `30110954260` / `350`
+- verify job: `89540043815`
+- conclusion: `success`
+- Stable Debug test/lint/build, Room schema verification and diagnostic APK/evidence upload all passed.
+
 ## Integration requests
 
 - Keep every endpoint/field/ranking/write/rate claim unverified until the current official MAL pages can be reviewed.
@@ -265,6 +273,4 @@ Commands/evidence:
 
 ## Status
 
-`IN PROGRESS`
-
-Reason: the audited test head is green, but this updated report publication head still requires its own successful exact-head CI before the final status-only transition.
+`READY FOR INTEGRATOR REVIEW`
