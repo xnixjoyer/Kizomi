@@ -32,8 +32,8 @@ import com.anisync.android.presentation.components.AppModalBottomSheet
 import com.anisync.android.presentation.model.PresentationMediaType
 
 /**
- * Capability-aware shared list editor for MAL-backed rows. Unsupported MAL fields are deliberately
- * absent, and all values are validated before a typed [MalLibraryEditDraft] leaves the sheet.
+ * Capability-aware MAL-owned list editor. Unsupported MAL fields are deliberately absent, and all
+ * values are validated before a typed [MalLibraryEditDraft] leaves the sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,7 +76,7 @@ fun MalLibraryEditSheet(
         (!isManga || secondaryProgress.isBlank() || (parsedSecondary != null && parsedSecondary >= 0)) &&
         (score.isBlank() || (parsedScore != null && parsedScore in 0.0..100.0)) &&
         parsedRepeat != null && parsedRepeat >= 0 &&
-        normalizedStarted.isValidOptionalIsoDate() && normalizedCompleted.isValidOptionalIsoDate()
+        normalizedStarted.isValidMalLibraryDate() && normalizedCompleted.isValidMalLibraryDate()
 
     AppModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -126,7 +126,7 @@ fun MalLibraryEditSheet(
                 value = startedAt,
                 onValueChange = { startedAt = it.take(10) },
                 label = { Text(stringResource(R.string.mal_library_started_at)) },
-                isError = !normalizedStarted.isValidOptionalIsoDate(),
+                isError = !normalizedStarted.isValidMalLibraryDate(),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -134,7 +134,7 @@ fun MalLibraryEditSheet(
                 value = completedAt,
                 onValueChange = { completedAt = it.take(10) },
                 label = { Text(stringResource(R.string.mal_library_completed_at)) },
-                isError = !normalizedCompleted.isValidOptionalIsoDate(),
+                isError = !normalizedCompleted.isValidMalLibraryDate(),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -252,6 +252,3 @@ private fun editStatusLabel(status: ProviderLibraryStatus): String = stringResou
         ProviderLibraryStatus.REPEATING -> R.string.mal_library_status_repeating
     }
 )
-
-private fun String?.isValidOptionalIsoDate(): Boolean =
-    this == null || Regex("\\d{4}-\\d{2}-\\d{2}").matches(this)
