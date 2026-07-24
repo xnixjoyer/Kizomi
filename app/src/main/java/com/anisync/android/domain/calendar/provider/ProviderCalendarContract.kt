@@ -26,6 +26,8 @@ enum class ProviderCalendarNotice {
     EXACT_EPISODE_SCHEDULE_UNAVAILABLE,
     AIRING_NOTIFICATIONS_UNAVAILABLE,
     RECURRING_SLOT_MAY_CHANGE,
+    BROADCAST_METADATA_UNAVAILABLE,
+    PARTIAL_BROADCAST_METADATA,
     PARTIAL_PROVIDER_RESPONSE,
 }
 
@@ -70,6 +72,7 @@ data class ProviderCalendarEntry(
     val episodeNumber: Int?,
     val isOnList: Boolean,
     val precision: ProviderCalendarPrecision,
+    val sourceTimeZoneId: String? = null,
 ) {
     init {
         require(provider != ActiveProvider.UNCONFIGURED)
@@ -77,6 +80,7 @@ data class ProviderCalendarEntry(
         require(title.isNotBlank())
         require(scheduledAtEpochSeconds > 0L)
         require(episodeNumber == null || episodeNumber > 0)
+        require(sourceTimeZoneId == null || sourceTimeZoneId.isNotBlank())
     }
 
     val stableKey: String =
@@ -86,7 +90,8 @@ data class ProviderCalendarEntry(
         "ProviderCalendarEntry(provider=${provider.name}, providerMediaId=$providerMediaId, " +
             "mediaType=${mediaType.name}, title=<redacted>, coverUrl=<redacted>, " +
             "scheduledAtEpochSeconds=$scheduledAtEpochSeconds, episodeNumber=${episodeNumber ?: "none"}, " +
-            "isOnList=$isOnList, precision=${precision.name})"
+            "isOnList=$isOnList, precision=${precision.name}, " +
+            "sourceTimeZoneId=${sourceTimeZoneId ?: "none"})"
 }
 
 sealed interface ProviderCalendarLoadResult {
