@@ -9,7 +9,7 @@ This is the binding concurrency contract for MAL parity work in `xnixjoyer/Kizom
 - main SHA: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 - integration branch: `planning/mal-ui-feature-parity`
 - integration PR: Draft #5
-- green branch head before the current canonical refresh: `41ff9f05888b1318c702199bcd8b0d4f6694fcff`
+- last exact green integration head: `41ff9f05888b1318c702199bcd8b0d4f6694fcff`
 - exact-head workflow: `Pull request and push CI`
 - run ID / number: `30106544534` / `250`
 - verify job: `89525244135`
@@ -41,6 +41,33 @@ Stable architecture contracts:
 - provider transport models stay below shared presentation;
 - central routing, capability and tracking boundaries remain single-writer;
 - every newer commit requires a new exact-head run.
+
+## Live Integrator review snapshot — 2026-07-24
+
+The Integrator reviewed remote state from integration head `5959fcc2b45737e9cf3f830265099300171ba9a6`. That head is five canonical-document commits ahead of the last green checkpoint. Its exact-head run `30108001270` / `255`, job `89530111299`, was still queued when this snapshot was prepared. Therefore `5959fcc2b45737e9cf3f830265099300171ba9a6` is not recorded as green evidence here. The commit containing this snapshot also requires its own successful exact-head run before it can become the next green checkpoint.
+
+PR #5 remains open, mergeable and Draft against `main`. No PR comment or review thread requires action.
+
+| Queue | Worker PR | Branch | Verified head | Changed scope | Exact-head CI | Report state | Integrator decision |
+|---:|---:|---|---|---|---|---|---|
+| 1 | #6 | `parallel/mal-discover-details` | `b6b6480293f94b8235df36ba8ce8921a7d2f0f84` | only `agent-reports/discover-details.md` | run `30106242925` / `245`, job `89524264986`, success | `IN PROGRESS` | blocked; no production work, tests or integration request |
+| 2 | #7 | `parallel/mal-library-tracking` | `deaed924fbe61b6e188d3ed67e0a925bfaa4b8d5` | only `agent-reports/library-tracking.md` | run `30106261313` / `246`, job `89524328263`, success | `IN PROGRESS` | blocked; no production work, tests or integration request |
+| 3 | #8 | `parallel/mal-account-settings-diagnostics` | `9322eb0a9fdab9ba6cad8c7658fc577fe1dce5c4` | only `agent-reports/account-settings-diagnostics.md` | run `30106284414` / `247`, job `89524401761`, success | `IN PROGRESS` | blocked; no production work, tests or integration request |
+| 4 | #9 | `parallel/mal-calendar-widgets-background` | `a6cd27735ba984d654c1720ba06df170c01adac9` | only `agent-reports/calendar-widgets-background.md` | run `30106300900` / `248`, job `89524455404`, success | `IN PROGRESS` | blocked; no production work, tests or integration request |
+| 5 | #10 | `parallel/mal-qa-research` | `4deb497c4e9cbbf1c686f765ff73a79ee0a387b5` | only `agent-reports/qa-research.md` | run `30106319746` / `249`, job `89524518145`, success | `IN PROGRESS` | blocked; no audit evidence, additive tests/scanners or integration request |
+
+Verified worker conditions:
+
+- all five PRs are open and Draft;
+- all five PRs target `planning/mal-ui-feature-parity`;
+- every worker changed only its exclusive report;
+- every worker branch is one report commit ahead of and six Integrator commits behind the current integration branch;
+- no worker report ends `READY FOR INTEGRATOR REVIEW`;
+- no worker requests a reserved-file change;
+- no worker PR is authorized for owner merge;
+- green CI for a report-only worker head is not feature or integration evidence.
+
+Central contracts remain frozen. The reviewed worker reports identify no missing typed API, route, capability, tracking, purge or app-shell contract. The Integrator must not duplicate worker feature bodies while this remains true.
 
 ## Roles and branches
 
@@ -197,6 +224,8 @@ No agent may push to `main`, merge, approve, enable auto-merge, rebase, force-pu
 ## Integrator review and merge queue
 
 The Integrator verifies branch/base/Draft state, changed files, report, CI, provider/API/privacy claims and dependencies. The Integrator never merges.
+
+Current queue state: **all entries blocked; authorize no merge**.
 
 Default owner merge order using **Create a merge commit**:
 
