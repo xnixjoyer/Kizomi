@@ -1,0 +1,183 @@
+name: Build MAL client APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mal-client-apk.yml'
+      - 'app/build.gradle.kts'
+      - 'tools/verification/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mal-client-apk-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      MAL_CLIENT_ID_STABLE: ${{ github.event_name == 'workflow_dispatch' && vars.MAL_CLIENT_ID_STABLE || 'KizomiPullRequestValidationClientId0001' }}
+
+    steps:
+      - name: Checkout selected source head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      - name: Validate public MAL client identifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${MAL_CLIENT_ID_STABLE:-}" ]]; then
+            echo '::error::Repository variable MAL_CLIENT_ID_STABLE is missing.'
+            echo 'Open Settings > Secrets and variables > Actions > Variables and create MAL_CLIENT_ID_STABLE.'
+            exit 1
+          fi
+          echo "::add-mask::$MAL_CLIENT_ID_STABLE"
+          MAL_CLIENT_ID_STABLE="$MAL_CLIENT_ID_STABLE" python3 - <<'PY'
+          import os
+          import re
+
+          value = os.environ["MAL_CLIENT_ID_STABLE"]
+          if value != value.strip():
+              raise SystemExit("MAL client identifier has leading or trailing whitespace")
+          if not 8 <= len(value) <= 512:
+              raise SystemExit("MAL client identifier has an unexpected length")
+          if not re.fullmatch(r"[A-Za-z0-9._~-]+", value):
+              raise SystemExit("MAL client identifier contains unsupported characters")
+          print("Public MAL client identifier is present and structurally valid.")
+          PY
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle from wrapper
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify committed source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          bash tools/verification/verify-public-source-boundary.sh
+          python3 tools/verification/verify-exclusive-provider-boundary.py
+          python3 tools/verification/verify-provider-native-boundary.py
+          python3 tools/verification/verify-tracking-write-boundary.py
+          python3 tools/verification/verify-room-migration-contract.py
+          python3 tools/verification/verify-repository-secrets.py
+          python3 tools/verification/verify-redaction-and-backup.py
+          python3 tools/verification/verify-product-readiness-contract.py
+          python3 tools/verification/verify-mal-application-readiness.py
+          bash tools/verification/verify-signing-workflows.sh
+
+      - name: Select stable MAL registration for debug-signed test APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          path = Path("app/build.gradle.kts")
+          text = path.read_text(encoding="utf-8")
+          pattern = re.compile(
+              r'''            val malOAuthEnvironment = when \{\n'''
+              r'''                channelFlavor == "preview" -> "PREVIEW"\n'''
+              r'''                variant\.buildType == "debug" -> "DEBUG"\n'''
+              r'''                else -> "STABLE"\n'''
+              r'''            \}\n'''
+          )
+          replacement = (
+              '            // GitHub-only owner test builds intentionally use the approved stable\n'
+              '            // public-client registration while retaining Android debug signing.\n'
+              '            val malOAuthEnvironment = "STABLE"\n'
+          )
+          updated, count = pattern.subn(replacement, text)
+          if count != 1:
+              raise SystemExit(f"Expected one MAL OAuth environment block, replaced {count}")
+          path.write_text(updated, encoding="utf-8")
+          PY
+          git diff --check
+          git diff -- app/build.gradle.kts
+
+      - name: Test, lint, and build online APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$MAL_CLIENT_ID_STABLE"
+          ./gradlew --build-cache --parallel \
+            testStableDebugUnitTest \
+            lintStableDebug \
+            assembleStableDebug \
+            -PMAL_CLIENT_ID_STABLE="$MAL_CLIENT_ID_STABLE"
+
+      - name: Verify stable OAuth configuration and prepare artifact
+        id: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::add-mask::$MAL_CLIENT_ID_STABLE"
+          build_config="$(find app/build/generated/source/buildConfig/stable/debug -type f -name 'BuildConfig.*' -print -quit)"
+          [[ -n "$build_config" && -f "$build_config" ]] || { echo 'Generated stable/debug BuildConfig not found'; exit 1; }
+          BUILD_CONFIG="$build_config" MAL_CLIENT_ID_STABLE="$MAL_CLIENT_ID_STABLE" python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          text = Path(os.environ["BUILD_CONFIG"]).read_text(encoding="utf-8")
+          expected = {
+              "MAL_OAUTH_ENVIRONMENT": "STABLE",
+              "MAL_OAUTH_REDIRECT_URI": "anisyncplus://oauth/mal/callback",
+              "MAL_OAUTH_CLIENT_ID": os.environ["MAL_CLIENT_ID_STABLE"],
+          }
+          for field, value in expected.items():
+              pattern = rf'{field}\s*=\s*"{re.escape(value)}"'
+              if re.search(pattern, text) is None:
+                  raise SystemExit(f"Generated {field} does not match the required stable configuration")
+          print("Generated OAuth configuration matches the stable MAL registration.")
+          PY
+
+          mapfile -t apks < <(find app/build/outputs/apk/stable/debug -maxdepth 1 -type f -name 'Kizomi-*-universal-debug.apk' -print)
+          [[ ${#apks[@]} -eq 1 ]] || { echo "Expected exactly one universal APK, found ${#apks[@]}"; exit 1; }
+          out="$RUNNER_TEMP/mal-client-apk"
+          mkdir -p "$out"
+          apk="$out/Kizomi-MAL-client-test-${SOURCE_SHA::8}.apk"
+          cp "${apks[0]}" "$apk"
+          apk_size="$(stat -c '%s' "$apk")"
+          apk_sha="$(sha256sum "$apk" | awk '{print $1}')"
+          SOURCE_SHA="$SOURCE_SHA" APK_NAME="$(basename "$apk")" APK_SIZE="$apk_size" APK_SHA="$apk_sha" python3 - <<'PY' > "$out/evidence.json"
+          import json
+          import os
+
+          print(json.dumps({
+              "sourceHead": os.environ["SOURCE_SHA"],
+              "variant": "stableDebug",
+              "oauthEnvironment": "STABLE",
+              "redirectUri": "anisyncplus://oauth/mal/callback",
+              "clientIdentifierPresent": True,
+              "apkName": os.environ["APK_NAME"],
+              "apkSizeBytes": int(os.environ["APK_SIZE"]),
+              "apkSha256": os.environ["APK_SHA"],
+          }, indent=2, sort_keys=True))
+          PY
+          echo "directory=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Upload installable MAL client APK
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kizomi-MAL-client-test-${{ env.SOURCE_SHA }}
+          path: ${{ steps.evidence.outputs.directory }}
+          if-no-files-found: error
+          retention-days: 14
