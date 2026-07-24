@@ -55,8 +55,10 @@ object DiagnosticRedactor {
             .orEmpty()
         if (normalized.isBlank()) return UNKNOWN
         val lower = normalized.lowercase()
-        if ("://" in lower || forbiddenMarkers.any(lower::contains)) return REDACTED
-        if (normalized.length > 48 && normalized.none(Char::isWhitespace)) return REDACTED
+        if ("://" in lower || forbiddenMarkers.any { marker -> marker in lower }) return REDACTED
+        if (normalized.length > 48 && normalized.none { character -> character.isWhitespace() }) {
+            return REDACTED
+        }
         return normalized.replace(Regex("[^A-Za-z0-9 _.-]"), "_")
     }
 }
