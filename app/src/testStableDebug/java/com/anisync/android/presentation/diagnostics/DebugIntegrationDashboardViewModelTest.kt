@@ -22,6 +22,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -41,44 +42,79 @@ class DebugIntegrationDashboardViewModelTest {
     }
 
     @Test
-    fun `opening dashboard reads local snapshot performs zero network calls and keeps unknowns truthful`() =
+    fun `opening and local reload perform zero network calls and keep unknowns truthful`() =
         runTest(dispatcher) {
             val source = RecordingLocalSource()
             val viewModel = DebugIntegrationDashboardViewModel(source, SavedStateHandle())
 
             advanceUntilIdle()
+            viewModel.refreshLocalSnapshot()
+            advanceUntilIdle()
 
             val snapshot = viewModel.uiState.value.snapshot
             assertNotNull(snapshot)
-            assertEquals(1, source.localReads)
+            assertEquals(2, source.localReads)
             assertEquals(0, source.networkCalls)
             assertFalse(viewModel.uiState.value.isLoading)
-            assertEquals(null, snapshot?.build?.sourceRevision)
+            assertNull(snapshot?.build?.sourceRevision)
             assertEquals(
                 DiagnosticAvailability.UNKNOWN,
                 snapshot?.session?.pendingOAuthTransaction,
             )
             assertEquals(DiagnosticsRuntimeMetrics(), snapshot?.runtime)
+            assertNull(snapshot?.runtime?.blockedInactiveProviderRequestCount)
         }
 
     @Test
-    fun `copied diagnostics use sanitized export and never expose realistic fixtures`() =
+    fun `malformed local snapshot failure is recoverable on local reload`() = runTest(dispatcher) {
+        val source = RecoveringLocalSource()
+        val viewModel = DebugIntegrationDashboardViewModel(source, SavedStateHandle())
+
+        advanceUntilIdle()
+        assertEquals(
+            IntegrationDiagnosticsDashboardError.LOCAL_SNAPSHOT_UNAVAILABLE,
+            viewModel.uiState.value.error,
+        )
+        assertNull(viewModel.uiState.value.snapshot)
+
+        viewModel.refreshLocalSnapshot()
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.error)
+        assertNotNull(viewModel.uiState.value.snapshot)
+        assertEquals(2, source.localReads)
+        assertEquals(0, source.networkCalls)
+    }
+
+    @Test
+    fun `copied diagnostics omit marker-free token code ID URL payload and private content`() =
         runTest(dispatcher) {
-            val snapshot = defaultSnapshot().copy(
-                build = defaultSnapshot().build.copy(
-                    sourceRevision = "account_id=987654321012345678",
-                    oauthEnvironment = "client_id=FAKE-COPY-CLIENT-123456",
-                    redirectScheme =
-                        "anisyncplus-debug://oauth/mal/callback?code=FAKE-COPY-CODE-7391",
+            val secrets = listOf(
+                "eyJhbGciOiJSUzI1NiJ9.ZmFrZS1jb3B5LWFjY2Vzcw.c2lnbmF0dXJl",
+                "def50200FAKEcopyrefreshmaterial729e6f5c2a44c0f8d5b1a9e7c3f0",
+                "SplxlOBeZQQYbYS6WxSbIA",
+                "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk-copy-verifier",
+                "1234567890abcdef1234567890abcdef",
+                "987654321012345678",
+                "anisyncplus-debug://oauth/mal/callback?code=SplxlOBeZQQYbYS6WxSbIA",
+                "{\"id\":987654321,\"title\":\"Cowboy Bebop\",\"user\":\"private-user\"}",
+                "Cowboy Bebop The Movie episode 17 score 9",
+                "private-user@example.test",
+            )
+            val base = defaultSnapshot()
+            val snapshot = base.copy(
+                build = base.build.copy(
+                    sourceRevision = secrets[0],
+                    oauthEnvironment = secrets[1],
+                    redirectScheme = secrets[6],
+                    redirectHost = secrets[4],
+                    redirectPath = secrets[2],
                 ),
-                session = defaultSnapshot().session.copy(
-                    lastRefreshOutcome =
-                        "access_token=FAKE-COPY-ACCESS.eyJhbGciOiJSUzI1NiJ9.payload.signature",
-                ),
+                session = base.session.copy(lastRefreshOutcome = secrets[3]),
                 runtime = DiagnosticsRuntimeMetrics(
-                    lastFailureCategory =
-                        "raw_response={\"id\":987654321,\"name\":\"fake-copy-user\"}",
-                    lastProviderChangeResult = "oauth_state=FAKE-COPY-STATE-3d17c1b2",
+                    lastSuccessfulRequestCategory = secrets[7],
+                    lastFailureCategory = secrets[8],
+                    lastProviderChangeResult = secrets[9],
                 ),
             )
             val source = RecordingLocalSource(snapshot)
@@ -89,43 +125,63 @@ class DebugIntegrationDashboardViewModelTest {
 
             assertTrue(copied.contains("activeProvider=UNCONFIGURED"))
             assertTrue(copied.contains("pendingOAuth=UNKNOWN"))
+            assertTrue(copied.contains("blockedInactiveRequests=unknown"))
             assertTrue(copied.contains(DiagnosticRedactor.REDACTED))
+            secrets.forEach { secret ->
+                assertFalse("Copied diagnostics leaked $secret", copied.contains(secret))
+            }
             listOf(
-                "FAKE-COPY-CLIENT",
-                "FAKE-COPY-CODE",
-                "FAKE-COPY-ACCESS",
-                "fake-copy-user",
-                "FAKE-COPY-STATE",
+                "ZmFrZS1jb3B5",
+                "FAKEcopyrefresh",
+                "SplxlOBeZQQYbYS6WxSbIA",
+                "dBjftJeZ4CVP",
+                "1234567890abcdef",
                 "987654321012345678",
                 "anisyncplus-debug://",
-            ).forEach { secret ->
-                assertFalse("Copied diagnostics leaked $secret", copied.contains(secret))
+                "Cowboy Bebop",
+                "private-user",
+            ).forEach { secretFragment ->
+                assertFalse("Copied diagnostics leaked $secretFragment", copied.contains(secretFragment))
             }
             assertEquals(0, source.networkCalls)
         }
 
     @Test
-    fun `expanded sections survive view model recreation`() = runTest(dispatcher) {
-        val handle = SavedStateHandle()
-        val source = RecordingLocalSource()
-        val first = DebugIntegrationDashboardViewModel(source, handle)
-        advanceUntilIdle()
+    fun `expanded sections survive recreation and malformed saved names are ignored`() =
+        runTest(dispatcher) {
+            val handle = SavedStateHandle()
+            val source = RecordingLocalSource()
+            val first = DebugIntegrationDashboardViewModel(source, handle)
+            advanceUntilIdle()
 
-        first.toggleSection(DiagnosticsDashboardSection.BUILD_AND_SOURCE)
-        assertFalse(
-            DiagnosticsDashboardSection.BUILD_AND_SOURCE in
-                first.uiState.value.expandedSections,
-        )
+            first.toggleSection(DiagnosticsDashboardSection.BUILD_AND_SOURCE)
+            assertFalse(
+                DiagnosticsDashboardSection.BUILD_AND_SOURCE in
+                    first.uiState.value.expandedSections,
+            )
 
-        val recreated = DebugIntegrationDashboardViewModel(source, handle)
-        advanceUntilIdle()
+            val recreated = DebugIntegrationDashboardViewModel(source, handle)
+            advanceUntilIdle()
+            assertFalse(
+                DiagnosticsDashboardSection.BUILD_AND_SOURCE in
+                    recreated.uiState.value.expandedSections,
+            )
 
-        assertFalse(
-            DiagnosticsDashboardSection.BUILD_AND_SOURCE in
-                recreated.uiState.value.expandedSections,
-        )
-        assertEquals(0, source.networkCalls)
-    }
+            val malformedHandle = SavedStateHandle(
+                mapOf(
+                    "diagnostics_expanded_sections" to
+                        arrayListOf("NOT_A_SECTION", DiagnosticsDashboardSection.AUTHENTICATION.name),
+                ),
+            )
+            val malformedRestored = DebugIntegrationDashboardViewModel(source, malformedHandle)
+            advanceUntilIdle()
+
+            assertEquals(
+                setOf(DiagnosticsDashboardSection.AUTHENTICATION),
+                malformedRestored.uiState.value.expandedSections,
+            )
+            assertEquals(0, source.networkCalls)
+        }
 
     private class RecordingLocalSource(
         private val snapshotValue: IntegrationDiagnosticsSnapshot = defaultSnapshot(),
@@ -136,6 +192,17 @@ class DebugIntegrationDashboardViewModelTest {
         override suspend fun snapshot(): IntegrationDiagnosticsSnapshot {
             localReads += 1
             return snapshotValue
+        }
+    }
+
+    private class RecoveringLocalSource : IntegrationDiagnosticsSnapshotSource {
+        var localReads = 0
+        var networkCalls = 0
+
+        override suspend fun snapshot(): IntegrationDiagnosticsSnapshot {
+            localReads += 1
+            if (localReads == 1) error("malformed local state")
+            return defaultSnapshot()
         }
     }
 
