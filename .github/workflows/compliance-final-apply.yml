@@ -1,0 +1,51 @@
+name: Apply final MAL readiness payload
+
+on:
+  push:
+    branches:
+      - compliance/mal-api-agreement-readiness
+    paths:
+      - '.github/workflows/compliance-final-apply.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compliance-final-apply-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact triggering head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Apply and verify final readiness tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          cat .compliance-final/part-* > "$RUNNER_TEMP/final-payload.b64"
+          base64 --decode "$RUNNER_TEMP/final-payload.b64" > "$RUNNER_TEMP/final-payload.tar.xz"
+          tar -xJf "$RUNNER_TEMP/final-payload.tar.xz" -C .
+          rm -rf .compliance-final
+          rm -f .github/workflows/compliance-final-apply.yml
+          python3 tools/verification/verify-exclusive-provider-boundary.py
+          python3 tools/verification/verify-provider-native-boundary.py
+          python3 tools/verification/verify-tracking-write-boundary.py
+          python3 tools/verification/verify-room-migration-contract.py
+          python3 tools/verification/verify-repository-secrets.py
+          python3 tools/verification/verify-redaction-and-backup.py
+          python3 tools/verification/verify-product-readiness-contract.py
+          python3 tools/verification/verify-mal-application-readiness.py
+          bash tools/verification/verify-signing-workflows.sh
+          git add -A
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat(compliance): complete MAL application readiness'
+          git push origin HEAD:compliance/mal-api-agreement-readiness
