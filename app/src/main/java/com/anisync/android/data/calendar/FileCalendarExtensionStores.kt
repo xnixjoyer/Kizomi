@@ -60,7 +60,10 @@ class FileCalendarExtensionStores @Inject constructor(
     }
 
     override suspend fun clear(namespace: String) = mutex.withLock {
-        withContext(Dispatchers.IO) { settingsFile(namespace).delete() }
+        withContext(Dispatchers.IO) {
+            settingsFile(namespace).delete()
+            Unit
+        }
     }
 
     private fun settingsFile(namespace: String): File {
