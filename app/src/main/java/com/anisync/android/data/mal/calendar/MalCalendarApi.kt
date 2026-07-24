@@ -35,7 +35,7 @@ internal class MalCalendarRequestFactory(
         require(offset >= 0)
         val url = baseUrl.newBuilder()
             .addPathSegments("anime/season/$year/${season.wireValue}")
-            .addQueryParameter("sort", "anime_num_list_users")
+            .addQueryParameter("sort", SEASONAL_SORT)
             .addQueryParameter("limit", limit.toString())
             .addQueryParameter("offset", offset.toString())
             .addQueryParameter("fields", CALENDAR_FIELDS)
@@ -60,6 +60,8 @@ internal class MalCalendarRequestFactory(
         if (!SEASON_PATH.matches(relativePath)) return null
         val fields = next.queryParameter("fields") ?: return null
         if (fields != CALENDAR_FIELDS) return null
+        val sort = next.queryParameter("sort") ?: return null
+        if (sort != SEASONAL_SORT) return null
         return get(next)
     }
 
@@ -71,10 +73,11 @@ internal class MalCalendarRequestFactory(
 
     companion object {
         const val DEFAULT_PAGE_SIZE = 100
-        private const val MAX_PAGE_SIZE = 100
+        const val MAX_PAGE_SIZE = 500
+        const val SEASONAL_SORT = "anime_num_list_users"
         private val SEASON_PATH = Regex("anime/season/\\d{4}/(winter|spring|summer|fall)")
         const val CALENDAR_FIELDS =
-            "id,title,main_picture,start_date,end_date,status,media_type,num_episodes,broadcast,my_list_status"
+            "id,title,main_picture,start_date,end_date,broadcast,my_list_status"
     }
 }
 
