@@ -10,6 +10,18 @@ This planning baseline was created from `main` at:
 
 The baseline already contains the single-active-provider architecture and the GitHub-only MAL client APK workflow. This folder does not replace those security and provider-boundary contracts.
 
+## Stable prompt location for the owner
+
+The owner should always copy the complete current contents of:
+
+`docs/mal-parity/NEXT_AI_PROMPT.md`
+
+That path is permanent. Each working agent must overwrite the file with the latest standalone continuation prompt before a pause or handoff. The owner does not need to ask the chat for another prompt and does not need to select the newest numbered archive.
+
+Older prompt snapshots are stored under `prompt-history/` only for audit and recovery. They may be stale and are not the normal starting point.
+
+The binding update and archive rules are in `HANDOFF_PROTOCOL.md`.
+
 ## Verified current findings
 
 1. The current MAL interface is not a debug-only placeholder. `MainActivity` routes a connected MAL session to the production composable `MalProviderMainScreen`, which owns a separate Discover/Library/Account shell.
@@ -29,14 +41,18 @@ The baseline already contains the single-active-provider architecture and the Gi
 
 ## Reading order for a new implementation agent
 
-1. `EXECUTION_STATE.md`
-2. `BUG_REGISTER.md`
-3. `UI_PARITY_CONTRACT.md`
-4. `FEATURE_PARITY_MATRIX.md`
-5. `DEBUG_INTEGRATION_DASHBOARD.md`
-6. `TEST_AND_RELEASE_PLAN.md`
-7. `NEXT_AI_PROMPT.md`
-8. Existing contracts under `docs/mal-compliance/` and `docs/mal-integration/`
+1. `HANDOFF_PROTOCOL.md`
+2. `NEXT_AI_PROMPT.md`
+3. `EXECUTION_STATE.md`
+4. `BUG_REGISTER.md`
+5. `UI_PARITY_CONTRACT.md`
+6. `FEATURE_PARITY_MATRIX.md`
+7. `DEBUG_INTEGRATION_DASHBOARD.md`
+8. `TEST_AND_RELEASE_PLAN.md`
+9. `RESEARCH_NOTES.md`
+10. Existing contracts under `docs/mal-compliance/` and `docs/mal-integration/`
+
+The agent must then verify the context against the current remote code, open pull request and exact-head CI before editing. Context files eliminate the need for an owner-written recap, but they do not replace technical verification.
 
 ## External design research boundary
 
