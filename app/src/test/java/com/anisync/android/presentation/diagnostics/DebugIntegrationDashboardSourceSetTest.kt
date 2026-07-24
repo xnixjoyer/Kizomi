@@ -7,7 +7,7 @@ import org.junit.Test
 
 class DebugIntegrationDashboardSourceSetTest {
     @Test
-    fun `dashboard implementation exists only in debug source set`() {
+    fun `dashboard implementation and route stay out of release sources`() {
         val root = repositoryRoot()
         val relativeScreen =
             "com/anisync/android/presentation/diagnostics/DebugIntegrationDashboardScreen.kt"
@@ -20,6 +20,41 @@ class DebugIntegrationDashboardSourceSetTest {
         assertFalse(File(root, "app/src/main/java/$relativeViewModel").exists())
         assertFalse(File(root, "app/src/release/java/$relativeScreen").exists())
         assertFalse(File(root, "app/src/release/java/$relativeViewModel").exists())
+
+        listOf("main", "release").forEach { sourceSet ->
+            val sourceRoot = File(root, "app/src/$sourceSet/java")
+            if (sourceRoot.isDirectory) {
+                val routeReferences = sourceRoot.walkTopDown()
+                    .filter(File::isFile)
+                    .filter { file -> file.extension == "kt" || file.extension == "java" }
+                    .any { file ->
+                        file.readText().contains("DebugIntegrationDashboardScreen") ||
+                            file.readText().contains("DebugIntegrationDashboardViewModel")
+                    }
+                assertFalse("Dashboard route leaked into $sourceSet", routeReferences)
+            }
+        }
+    }
+
+    @Test
+    fun `debug snapshot source contains no provider network client`() {
+        val root = repositoryRoot()
+        val source = File(
+            root,
+            "app/src/debug/java/com/anisync/android/data/diagnostics/" +
+                "DebugIntegrationDiagnosticsSnapshotSource.kt",
+        ).readText()
+
+        listOf(
+            "ApolloClient",
+            "OkHttpClient",
+            "AuthenticatedMalClient",
+            ".execute(",
+            ".query(",
+            ".mutation(",
+        ).forEach { forbidden ->
+            assertFalse("Network symbol found in local snapshot source: $forbidden", source.contains(forbidden))
+        }
     }
 
     private fun repositoryRoot(): File = generateSequence(
