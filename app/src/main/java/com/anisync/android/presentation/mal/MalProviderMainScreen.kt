@@ -29,10 +29,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +42,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.anisync.android.data.mal.account.MalAccountCredentialStore
 import com.anisync.android.data.mal.api.MalApiFailure
@@ -53,6 +55,7 @@ import com.anisync.android.data.mal.api.MalLibraryRepository
 import com.anisync.android.data.mal.api.MalMediaKey
 import com.anisync.android.data.provider.ProviderSessionCoordinator
 import com.anisync.android.domain.tracking.TrackingMediaType
+import com.anisync.android.presentation.navigation.MalNativeDetails
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,23 +66,47 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 
 private enum class MalRootTab { CATALOG, LIBRARY, ACCOUNT }
 
+@Serializable
+private object MalProviderRoot
+
 @Composable
 fun MalProviderMainScreen() {
-    var tab by remember { mutableStateOf(MalRootTab.CATALOG) }
-    var detailsKey by remember { mutableStateOf<MalMediaKey?>(null) }
-
-    detailsKey?.let { key ->
-        androidx.compose.runtime.key(key.stableValue) {
-            MalDetailsScreen(
-                onBackClick = { detailsKey = null },
-                onRelatedClick = { detailsKey = it },
+    val navController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = MalProviderRoot,
+    ) {
+        composable<MalProviderRoot> {
+            MalProviderRootScreen(
+                onMediaClick = { key ->
+                    navController.navigate(
+                        MalNativeDetails(key.mediaType.name, key.malId)
+                    )
+                },
             )
         }
-        return
+        composable<MalNativeDetails> {
+            MalDetailsScreen(
+                onBackClick = { navController.popBackStack() },
+                onRelatedClick = { key ->
+                    navController.navigate(
+                        MalNativeDetails(key.mediaType.name, key.malId)
+                    )
+                },
+            )
+        }
     }
+}
+
+@Composable
+private fun MalProviderRootScreen(
+    onMediaClick: (MalMediaKey) -> Unit,
+) {
+    var tab by rememberSaveable { mutableStateOf(MalRootTab.CATALOG) }
 
     Scaffold(
         bottomBar = {
@@ -108,12 +135,12 @@ fun MalProviderMainScreen() {
         when (tab) {
             MalRootTab.CATALOG -> MalCatalogScreen(
                 onBackClick = {},
-                onMediaClick = { detailsKey = it },
+                onMediaClick = onMediaClick,
                 showBackButton = false,
                 modifier = Modifier.padding(padding),
             )
             MalRootTab.LIBRARY -> MalLibraryScreen(
-                onMediaClick = { detailsKey = it },
+                onMediaClick = onMediaClick,
                 modifier = Modifier.padding(padding),
             )
             MalRootTab.ACCOUNT -> MalProviderAccountScreen(
@@ -281,7 +308,7 @@ private fun MalProviderAccountScreen(
     viewModel: MalProviderAccountViewModel = hiltViewModel(),
 ) {
     val busy by viewModel.busy.collectAsStateWithLifecycle()
-    var confirm by remember { mutableStateOf(false) }
+    var confirm by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = { TopAppBar(title = { Text("Active provider") }) },
