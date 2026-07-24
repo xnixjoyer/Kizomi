@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_calendar_recurring_broadcast_title">Wiederkehrender Sendezeitpunkt</string>
+    <string name="mal_calendar_recurring_broadcast_disclaimer">Die Zeiten sind wiederkehrende Sendedaten des Anbieters und können sich ändern. Genaue Episodenpläne sind nicht verfügbar.</string>
+    <string name="mal_calendar_exact_schedule_unavailable">Genaue Ausstrahlungszeiten einzelner Episoden sind bei diesem Anbieter nicht verfügbar.</string>
+    <string name="mal_calendar_notifications_unavailable">Benachrichtigungen zu Ausstrahlungen sind bei diesem Anbieter nicht verfügbar.</string>
+    <string name="mal_calendar_widget_unconfigured">Melde dich an, um Kalenderdaten anzuzeigen.</string>
+    <string name="mal_calendar_widget_transition">Kalenderdaten sind während des Anbieterwechsels nicht verfügbar.</string>
+    <string name="mal_calendar_widget_no_snapshot">Kalenderdaten wurden noch nicht aktualisiert.</string>
+    <string name="mal_calendar_widget_stale_snapshot">Die Kalenderdaten sind veraltet. Öffne Kizomi, um sie zu aktualisieren.</string>
+</resources>

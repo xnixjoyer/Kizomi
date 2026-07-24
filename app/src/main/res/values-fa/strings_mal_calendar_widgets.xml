@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_calendar_recurring_broadcast_title">زمان پخش دوره‌ای</string>
+    <string name="mal_calendar_recurring_broadcast_disclaimer">زمان‌ها فرادادهٔ دوره‌ای پخشِ ارائه‌دهنده هستند و ممکن است تغییر کنند. برنامهٔ دقیق هر قسمت در دسترس نیست.</string>
+    <string name="mal_calendar_exact_schedule_unavailable">زمان دقیق پخش هر قسمت از این ارائه‌دهنده در دسترس نیست.</string>
+    <string name="mal_calendar_notifications_unavailable">اعلان‌های پخش از این ارائه‌دهنده در دسترس نیست.</string>
+    <string name="mal_calendar_widget_unconfigured">برای نمایش داده‌های تقویم وارد شوید.</string>
+    <string name="mal_calendar_widget_transition">هنگام تغییر ارائه‌دهنده، داده‌های تقویم در دسترس نیست.</string>
+    <string name="mal_calendar_widget_no_snapshot">داده‌های تقویم هنوز به‌روزرسانی نشده‌اند.</string>
+    <string name="mal_calendar_widget_stale_snapshot">داده‌های تقویم قدیمی هستند. برای به‌روزرسانی، Kizomi را باز کنید.</string>
+</resources>

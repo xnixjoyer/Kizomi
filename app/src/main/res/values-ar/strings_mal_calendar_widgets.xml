@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_calendar_recurring_broadcast_title">موعد بث متكرر</string>
+    <string name="mal_calendar_recurring_broadcast_disclaimer">الأوقات هي بيانات بث متكررة من المزوّد وقد تتغير. جداول الحلقات الدقيقة غير متاحة.</string>
+    <string name="mal_calendar_exact_schedule_unavailable">أوقات بث الحلقات الدقيقة غير متاحة من هذا المزوّد.</string>
+    <string name="mal_calendar_notifications_unavailable">إشعارات البث غير متاحة من هذا المزوّد.</string>
+    <string name="mal_calendar_widget_unconfigured">سجّل الدخول لعرض بيانات التقويم.</string>
+    <string name="mal_calendar_widget_transition">بيانات التقويم غير متاحة أثناء تغيير المزوّد.</string>
+    <string name="mal_calendar_widget_no_snapshot">لم يتم تحديث بيانات التقويم بعد.</string>
+    <string name="mal_calendar_widget_stale_snapshot">بيانات التقويم قديمة. افتح Kizomi لتحديثها.</string>
+</resources>

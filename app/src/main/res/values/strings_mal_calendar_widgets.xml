@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_calendar_recurring_broadcast_title">Recurring broadcast slot</string>
+    <string name="mal_calendar_recurring_broadcast_disclaimer">Times are recurring provider broadcast metadata and may change. Exact episode schedules are unavailable.</string>
+    <string name="mal_calendar_exact_schedule_unavailable">Exact episode airing times are not available from this provider.</string>
+    <string name="mal_calendar_notifications_unavailable">Airing notifications are not available from this provider.</string>
+    <string name="mal_calendar_widget_unconfigured">Sign in to show calendar data.</string>
+    <string name="mal_calendar_widget_transition">Calendar data is unavailable while changing provider.</string>
+    <string name="mal_calendar_widget_no_snapshot">Calendar data has not been refreshed yet.</string>
+    <string name="mal_calendar_widget_stale_snapshot">Calendar data is out of date. Open Kizomi to refresh it.</string>
+</resources>

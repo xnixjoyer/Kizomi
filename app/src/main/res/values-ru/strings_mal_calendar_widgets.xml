@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_calendar_recurring_broadcast_title">Повторяющееся время трансляции</string>
+    <string name="mal_calendar_recurring_broadcast_disclaimer">Время основано на повторяющихся данных о трансляции от провайдера и может измениться. Точное расписание по эпизодам недоступно.</string>
+    <string name="mal_calendar_exact_schedule_unavailable">Точное время выхода отдельных эпизодов у этого провайдера недоступно.</string>
+    <string name="mal_calendar_notifications_unavailable">Уведомления о выходе эпизодов у этого провайдера недоступны.</string>
+    <string name="mal_calendar_widget_unconfigured">Войдите, чтобы показать данные календаря.</string>
+    <string name="mal_calendar_widget_transition">Данные календаря недоступны во время смены провайдера.</string>
+    <string name="mal_calendar_widget_no_snapshot">Данные календаря ещё не обновлялись.</string>
+    <string name="mal_calendar_widget_stale_snapshot">Данные календаря устарели. Откройте Kizomi, чтобы обновить их.</string>
+</resources>
