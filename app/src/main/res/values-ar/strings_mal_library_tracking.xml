@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_anime">أنمي</string>
+    <string name="mal_library_manga">مانغا</string>
+    <string name="mal_library_search_hint">البحث في مكتبتك</string>
+    <string name="mal_library_refresh">تحديث</string>
+    <string name="mal_library_retry">إعادة المحاولة</string>
+    <string name="mal_library_edit">تعديل</string>
+    <string name="mal_library_save">حفظ</string>
+    <string name="mal_library_cancel">إلغاء</string>
+    <string name="mal_library_delete">إزالة من القائمة</string>
+    <string name="mal_library_empty">لا توجد إدخالات مطابقة في المكتبة</string>
+    <string name="mal_library_stale">يتم عرض البيانات المحفوظة. حدّث للتحقق من أحدث حالة لدى المزوّد.</string>
+    <string name="mal_library_error">فشل تحديث المكتبة: %1$s</string>
+    <string name="mal_library_ascending">تصاعدي</string>
+    <string name="mal_library_descending">تنازلي</string>
+    <string name="mal_library_layout_grid">شبكة</string>
+    <string name="mal_library_layout_list">قائمة</string>
+    <string name="mal_library_layout_adaptive">متكيّف</string>
+    <string name="mal_library_status_current">قيد المتابعة</string>
+    <string name="mal_library_status_planning">مخطط له</string>
+    <string name="mal_library_status_completed">مكتمل</string>
+    <string name="mal_library_status_dropped">متروك</string>
+    <string name="mal_library_status_paused">متوقف مؤقتًا</string>
+    <string name="mal_library_status_repeating">إعادة المتابعة</string>
+    <string name="mal_library_sort_title">العنوان</string>
+    <string name="mal_library_sort_progress">التقدم</string>
+    <string name="mal_library_sort_score">التقييم</string>
+    <string name="mal_library_sort_updated">آخر تحديث</string>
+    <string name="mal_library_sort_start_date">تاريخ البدء</string>
+    <string name="mal_library_edit_title">تعديل %1$s</string>
+    <string name="mal_library_progress">التقدم</string>
+    <string name="mal_library_volume_progress">تقدم المجلدات</string>
+    <string name="mal_library_score">التقييم (0–100)</string>
+    <string name="mal_library_repeat_count">عدد مرات الإعادة</string>
+    <string name="mal_library_started_at">بدأ في (YYYY-MM-DD)</string>
+    <string name="mal_library_completed_at">اكتمل في (YYYY-MM-DD)</string>
+</resources>
