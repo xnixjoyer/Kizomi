@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_refresh_failed">Não foi possível atualizar a biblioteca. O conteúdo guardado continua visível.</string>
+    <string name="mal_library_edit_state_no_change">Não há alterações para guardar</string>
+    <string name="mal_library_edit_state_validation_failed">Alteração inválida ou não suportada</string>
+    <string name="mal_library_edit_state_enqueue_accepted">Alteração colocada na fila local</string>
+    <string name="mal_library_edit_state_pending">A aguardar o MyAnimeList</string>
+    <string name="mal_library_edit_state_delivered">Enviado; a confirmar o estado do MyAnimeList</string>
+    <string name="mal_library_edit_state_retrying">Falha temporária; nova tentativa agendada</string>
+    <string name="mal_library_edit_state_confirmed">Confirmado pelo MyAnimeList</string>
+    <string name="mal_library_edit_state_confirmed_mismatch">O MyAnimeList confirmou outro valor; é mostrado o estado do fornecedor</string>
+    <string name="mal_library_edit_state_deleted">Removido do MyAnimeList</string>
+    <string name="mal_library_edit_state_failed">Falha ao aplicar a alteração</string>
+    <string name="mal_library_edit_state_rolled_back">Valor confirmado anterior restaurado</string>
+</resources>
