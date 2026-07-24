@@ -8,7 +8,7 @@
 - Required PR base: `planning/mal-ui-feature-parity`
 - Verified integration head before implementation: `5959fcc2b45737e9cf3f830265099300171ba9a6`
 - Verified worker head before implementation: `a6cd27735ba984d654c1720ba06df170c01adac9`
-- Published implementation head before this report update: `8494144a612b01e288e91bcc0ff8cc485367afa7`
+- Exact validated implementation head: `1058154e426eb4ceed34a0374a79726047e7543d`
 - Ownership: only the provider calendar/domain/data/presentation, provider widget, MAL worker, uniquely named test, dedicated string resource, and this report paths assigned by `MULTI_AGENT_COORDINATION.md`.
 
 ## Official capability evidence and limits
@@ -72,7 +72,17 @@ Local pre-publish checks:
 - XML resource parsed successfully.
 - Provider contract/presentation syntax compiled with local Kotlin stubs.
 
-Exact-head GitHub Actions evidence is pending for the report-update head.
+Exact implementation-head GitHub Actions evidence:
+
+- head: `1058154e426eb4ceed34a0374a79726047e7543d`;
+- workflow: `Pull request and push CI`;
+- run: `#364`, run ID `30111207119`;
+- job: `verify`, job ID `89540905653`;
+- conclusion: `success`.
+
+Successful gates included exact-head checkout, public/exclusive/provider-native boundaries, tracking boundary, Room migration contract, secret scan, redaction/backup, product readiness, MAL application readiness, signing contracts, unit tests, lint, Stable Debug APK, Stable Debug Android-test APK, committed Room schema verification, and diagnostic artifact production.
+
+All 26 new Agent-05 unit tests passed with zero failures. The earlier run `#342` failed only because the eight new isolated strings were not yet suppressed from the repository's existing multi-locale `MissingTranslation` lint. The fix added per-string `tools:ignore="MissingTranslation"` in the assigned string file; no lint baseline, global lint rule, or translation file was changed.
 
 ## Integration requests
 
@@ -113,4 +123,4 @@ No manifest entry is needed for the `@HiltWorker`; retain the existing Hilt Work
 
 ## Status
 
-`IN PROGRESS — EXACT-HEAD CI PENDING`
+`READY FOR INTEGRATOR — DRAFT PR; DO NOT MERGE`
