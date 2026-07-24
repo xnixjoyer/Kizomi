@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_refresh_failed">تازه‌سازی کتابخانه ناموفق بود. محتوای ذخیره‌شده همچنان نمایش داده می‌شود.</string>
+    <string name="mal_library_edit_state_no_change">تغییری برای ذخیره وجود ندارد</string>
+    <string name="mal_library_edit_state_validation_failed">تغییر نامعتبر یا پشتیبانی‌نشده</string>
+    <string name="mal_library_edit_state_enqueue_accepted">تغییر به‌صورت محلی در صف قرار گرفت</string>
+    <string name="mal_library_edit_state_pending">در انتظار MyAnimeList</string>
+    <string name="mal_library_edit_state_delivered">ارسال شد؛ وضعیت MyAnimeList در حال تأیید است</string>
+    <string name="mal_library_edit_state_retrying">خطای موقت؛ تلاش دوباره زمان‌بندی شد</string>
+    <string name="mal_library_edit_state_confirmed">توسط MyAnimeList تأیید شد</string>
+    <string name="mal_library_edit_state_confirmed_mismatch">MyAnimeList مقدار دیگری را تأیید کرد؛ وضعیت ارائه‌دهنده نمایش داده می‌شود</string>
+    <string name="mal_library_edit_state_deleted">از MyAnimeList حذف شد</string>
+    <string name="mal_library_edit_state_failed">اعمال تغییر ناموفق بود</string>
+    <string name="mal_library_edit_state_rolled_back">مقدار تأییدشده قبلی بازیابی شد</string>
+</resources>
