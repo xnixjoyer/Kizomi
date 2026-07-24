@@ -28,6 +28,7 @@ import com.anisync.android.R
 import com.anisync.android.data.TitleLanguage
 import com.anisync.android.domain.LibraryEntry
 import com.anisync.android.domain.LibraryStatus
+import com.anisync.android.domain.url
 import com.anisync.android.presentation.adapters.toMediaListItemPresentation
 import com.anisync.android.presentation.components.ProviderMediaListItem
 import com.anisync.android.presentation.model.ProviderMediaIdentity
@@ -47,8 +48,13 @@ fun LibrarySearchResultCard(
     titleLanguage: TitleLanguage,
     modifier: Modifier = Modifier,
 ) {
-    val presentation = remember(entry, mediaType, titleLanguage) {
-        entry.toMediaListItemPresentation(mediaType, titleLanguage)
+    val resolvedCoverUrl = entry.cover.url() ?: entry.coverUrl
+    val presentation = remember(entry, mediaType, titleLanguage, resolvedCoverUrl) {
+        entry.toMediaListItemPresentation(
+            mediaType = mediaType,
+            titleLanguage = titleLanguage,
+            resolvedCoverUrl = resolvedCoverUrl,
+        )
     }
 
     ProviderMediaListItem(
