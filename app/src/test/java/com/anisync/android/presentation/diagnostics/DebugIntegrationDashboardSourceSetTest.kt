@@ -36,31 +36,50 @@ class DebugIntegrationDashboardSourceSetTest {
                             text.contains("DebugIntegrationDashboardViewModel") ||
                             text.contains("diagnostics_screen_title")
                     }
-                assertFalse("Dashboard implementation or visible resource leaked into $sourceSet", leakedReference)
+                assertFalse(
+                    "Dashboard implementation or visible resource leaked into $sourceSet",
+                    leakedReference,
+                )
             }
         }
     }
 
     @Test
-    fun `every supported debug locale contains real translatable dashboard text`() {
+    fun `every supported locale contains real account and debug translations`() {
         val root = repositoryRoot()
         val debugResources = File(root, "app/src/debug/res")
-        val defaultText = File(
+        val mainResources = File(root, "app/src/main/res")
+        val defaultDebug = File(
             debugResources,
             "values/strings_integration_diagnostics.xml",
         ).readText()
+        val defaultAccount = File(
+            mainResources,
+            "values/strings_mal_account_diagnostics.xml",
+        ).readText()
 
-        assertFalse(defaultText.contains("translatable=\"false\""))
+        assertFalse(defaultDebug.contains("translatable=\"false\""))
+        assertFalse(defaultAccount.contains("translatable=\"false\""))
         listOf("ar", "de", "es", "fa", "fr", "peo", "pt", "ru", "ta").forEach { locale ->
-            val translated = File(
+            val translatedDebug = File(
                 debugResources,
                 "values-$locale/strings_integration_diagnostics.xml",
             )
-            assertTrue("Missing debug translation for $locale", translated.isFile)
-            val translatedText = translated.readText()
-            assertTrue(translatedText.contains("name=\"diagnostics_screen_title\""))
-            assertFalse(translatedText.contains("translatable=\"false\""))
-            assertNotEquals("Locale $locale still contains the English fallback file", defaultText, translatedText)
+            val translatedAccount = File(
+                mainResources,
+                "values-$locale/strings_mal_account_diagnostics.xml",
+            )
+            assertTrue("Missing debug translation for $locale", translatedDebug.isFile)
+            assertTrue("Missing account translation for $locale", translatedAccount.isFile)
+
+            val debugText = translatedDebug.readText()
+            val accountText = translatedAccount.readText()
+            assertTrue(debugText.contains("name=\"diagnostics_screen_title\""))
+            assertTrue(accountText.contains("name=\"provider_account_screen_title\""))
+            assertFalse(debugText.contains("translatable=\"false\""))
+            assertFalse(accountText.contains("translatable=\"false\""))
+            assertNotEquals("Debug locale $locale is still the English file", defaultDebug, debugText)
+            assertNotEquals("Account locale $locale is still the English file", defaultAccount, accountText)
         }
     }
 
@@ -76,10 +95,13 @@ class DebugIntegrationDashboardSourceSetTest {
         listOf(
             "ApolloClient",
             "OkHttpClient",
+            "Retrofit",
             "AuthenticatedMalClient",
+            "MalApiService",
             ".execute(",
             ".query(",
             ".mutation(",
+            ".enqueue(",
         ).forEach { forbidden ->
             assertFalse("Network symbol found in local snapshot source: $forbidden", source.contains(forbidden))
         }
@@ -88,6 +110,34 @@ class DebugIntegrationDashboardSourceSetTest {
             source.contains("pendingOAuthTransaction = DiagnosticAvailability.UNKNOWN"),
         )
         assertFalse(source.contains("pendingOAuthTransaction = DiagnosticAvailability.AVAILABLE"))
+    }
+
+    @Test
+    fun `diagnostics implementation contains no direct raw logging path`() {
+        val root = repositoryRoot()
+        val diagnosticsFiles = listOf(
+            File(root, "app/src/main/java/com/anisync/android/data/diagnostics"),
+            File(root, "app/src/main/java/com/anisync/android/presentation/diagnostics"),
+            File(root, "app/src/debug/java/com/anisync/android/data/diagnostics"),
+            File(root, "app/src/debug/java/com/anisync/android/presentation/diagnostics"),
+        ).flatMap { directory ->
+            if (directory.isDirectory) {
+                directory.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+            } else {
+                emptyList()
+            }
+        }
+
+        listOf("Log.", "Timber.", "println(", "print(").forEach { forbidden ->
+            val offender = diagnosticsFiles.firstOrNull { it.readText().contains(forbidden) }
+            assertFalse("Raw logging symbol $forbidden found in ${offender?.path}", offender != null)
+        }
+        val logFormatter = File(
+            root,
+            "app/src/main/java/com/anisync/android/presentation/diagnostics/DiagnosticRedactor.kt",
+        ).readText()
+        assertTrue(logFormatter.contains("object SanitizedDiagnosticLogFormatter"))
+        assertTrue(logFormatter.contains("SanitizedDiagnosticExporter.format(snapshot)"))
     }
 
     private fun repositoryRoot(): File = generateSequence(
