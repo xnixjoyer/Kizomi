@@ -82,8 +82,7 @@ class MalStartupAndNavigationContractTest {
         ).readText()
 
         assertTrue(
-            shell.count { false } == 0 &&
-                shell.contains("if (activeProvider != ActiveProvider.ANILIST_ONLY) return@LaunchedEffect"),
+            shell.contains("if (activeProvider != ActiveProvider.ANILIST_ONLY) return@LaunchedEffect"),
         )
         assertTrue(viewModel.contains("provider.activeProvider != ActiveProvider.ANILIST_ONLY"))
         assertTrue(viewModel.contains("!provider.providerTrafficAllowed"))
