@@ -1,108 +1,122 @@
-# Canonical continuation and handoff protocol
+# Canonical continuation and multi-agent handoff protocol
 
-## Stable entry point for the owner
+## Stable entry points
 
-The only prompt the owner should normally copy is:
+The owner uses:
 
-`docs/mal-parity/NEXT_AI_PROMPT.md`
+- Integrator: `docs/mal-parity/NEXT_AI_PROMPT.md`
+- Workers: the exact files under `docs/mal-parity/worker-prompts/`
 
-Always copy the complete current contents of that file. Do not select only a section and do not use an archived prompt as the normal starting point.
+The owner must never give two chats the same worker prompt.
 
-`NEXT_AI_PROMPT.md` is the canonical latest handoff. It must be rewritten in place as the project changes, so its path never changes even when branches, pull requests, heads, completed work and immediate priorities do.
+## Canonical writer
 
-## What is and is not automatic
+Only the Integrator may rewrite:
 
-GitHub does not update this prompt by itself. The coding agent that performs the work is required to update it through the GitHub plugin before pausing or finishing. An agent may claim a handoff is current only after the updated context commit exists on the remote work branch.
+- `NEXT_AI_PROMPT.md`
+- `EXECUTION_STATE.md`
+- `BUG_REGISTER.md`
+- `FEATURE_PARITY_MATRIX.md`
+- `MULTI_AGENT_COORDINATION.md`
 
-The instruction is therefore part of the work contract, not a background GitHub automation. If an agent loses write access or cannot publish the handoff commit, it must say so explicitly and provide the exact replacement content; it must not claim that the repository prompt is current.
+Workers update only their exclusive report under `agent-reports/`.
 
-## Required startup procedure for every new agent
+A worker must not “help” by fixing canonical context.
 
-Before changing code, the agent must:
+## What is automatic
 
-1. verify the latest `main` head, active work branch, open pull request, pull-request head and exact-head checks;
-2. read every current file in `docs/mal-parity/`, beginning with this protocol and `NEXT_AI_PROMPT.md`;
-3. read the active compliance/integration contracts and the implementation files named by the canonical prompt;
-4. compare the context claims with current code, tests and CI instead of trusting stale prose blindly;
-5. update `EXECUTION_STATE.md` with the verified current state and the first concrete task.
+Nothing is updated by GitHub in the background.
 
-The context folder is the navigation and continuity source of truth. Current remote code, reproducible tests, exact-head CI and current official provider documentation remain the evidence source of truth.
+Every agent must publish its own required report/context commit and verify that it exists on the correct remote branch. A chat response alone is not a handoff.
 
-## Continuous checkpoint rule
+## Integrator startup
 
-After every meaningful implementation slice, and immediately when the remaining context/token budget may become low, update at least:
+Before editing, the Integrator must:
 
-- `EXECUTION_STATE.md`;
-- `BUG_REGISTER.md`;
-- `FEATURE_PARITY_MATRIX.md`;
-- relevant test, workflow, artifact and acceptance evidence;
-- `NEXT_AI_PROMPT.md` when the next starting point, repository state or completed work has changed.
+1. verify `main`, integration branch, PR #5, worker PRs and exact-head checks;
+2. read all canonical context and worker reports;
+3. compare every claim with current code/tests/CI;
+4. update the merge queue and first concrete integration task;
+5. preserve PR #5 as Draft.
 
-Do not wait until the final message to record a long session. A replacement agent must be able to continue from the last published checkpoint even if the previous session ends unexpectedly.
+## Worker startup
 
-## Mandatory handoff procedure before any pause or stop
+Before editing, a worker must:
 
-Before intentionally stopping, asking the owner to start another agent, or declaring a milestone complete, the active agent must perform all of the following:
+1. verify its exact assigned branch;
+2. confirm it is not on `main` or `planning/mal-ui-feature-parity`;
+3. verify its Draft PR base is `planning/mal-ui-feature-parity`;
+4. read `MULTI_AGENT_COORDINATION.md` and its exact prompt;
+5. inspect other open worker PRs for scope collision;
+6. write its verified scope and first task to its exclusive report;
+7. stop if any branch/base/ownership condition is wrong.
 
-1. Re-fetch the current remote branch and pull-request state.
-2. Record the exact `main` head, work head, pull request, workflow run/job IDs and current conclusions.
-3. Update the execution state, bug register, feature matrix and evidence references.
-4. Archive the pre-update canonical prompt according to `prompt-history/README.md`.
-5. Fully rewrite `docs/mal-parity/NEXT_AI_PROMPT.md` in place.
-6. Remove completed immediate tasks from the new prompt or move them into a concise verified-completed section.
-7. Put the next executable task first and make it specific enough that a new agent can begin without asking the owner for a recap.
-8. Commit and publish all context changes to the active work branch.
-9. Re-fetch the remote head and confirm that the handoff commit is actually present.
-10. Treat all earlier CI evidence as stale if the handoff commit changed the head, and inspect the new exact-head run where the repository rules require it.
+## Continuous checkpointing
 
-The final chat response is secondary. The repository handoff is the durable deliverable.
+### Integrator
 
-## Required contents of the rewritten canonical prompt
+After every central commit or worker merge:
 
-Every rewritten `NEXT_AI_PROMPT.md` must remain standalone and include:
+- update canonical heads, runs and merge queue;
+- update parity/bug status with evidence;
+- archive and rewrite the canonical Integrator prompt when the next task changes;
+- verify remote publication and exact-head CI.
 
-- repository and active branch;
-- current `main` and work heads;
-- current pull request number and draft/ready status;
-- exact-head CI state and evidence identifiers;
-- non-negotiable Git, provider-isolation, security and privacy rules;
-- concise verified architecture and defect state;
-- what was completed since the previous handoff;
-- the exact first task for the next agent;
-- ordered remaining milestones and their exit gates;
-- files that must be read before editing;
-- tests and workflows that must be run;
-- external owner/device/provider actions that cannot be performed by the agent;
-- this context-maintenance and prompt-rewrite requirement.
+### Worker
 
-It must not depend on the previous chat, hidden reasoning, an archived prompt or the owner's memory.
+After every meaningful slice:
+
+- update only its report;
+- record branch/head, changed files, tests and CI;
+- record reserved-file requests;
+- keep its Draft PR description current;
+- never edit canonical files.
+
+## Pause or completion
+
+### Integrator
+
+Before pausing:
+
+1. re-fetch all PRs/heads/checks;
+2. update canonical context;
+3. archive the prior canonical prompt;
+4. rewrite `NEXT_AI_PROMPT.md`;
+5. publish and verify the handoff commit;
+6. inspect the new exact-head run.
+
+### Worker
+
+Before pausing:
+
+1. re-fetch its branch/PR/CI;
+2. update its exclusive report;
+3. state `BLOCKED`, `IN PROGRESS` or `READY FOR INTEGRATOR REVIEW`;
+4. publish and verify the report commit;
+5. do not rewrite the worker prompt or canonical prompt.
 
 ## Prompt archive
 
-Previous canonical prompts are stored only for audit and recovery under:
+Only the Integrator archives canonical prompts under:
 
 `docs/mal-parity/prompt-history/`
 
-The archive uses zero-padded sequential names:
+Worker prompts are stable assignment contracts and change only when the Integrator intentionally changes scope.
 
-- `NEXT_AI_PROMPT_0001.md`
-- `NEXT_AI_PROMPT_0002.md`
-- `NEXT_AI_PROMPT_0003.md`
+## Evidence rule
 
-Before replacing the canonical prompt, determine the highest existing archive number and write the previous complete prompt to the next number. Never tell the owner to find the highest archive during normal use; the owner always uses `NEXT_AI_PROMPT.md`.
+Unmerged worker work is not integrated evidence.
 
-Archived prompts are historical evidence and may be stale. They are not part of the normal mandatory reading path unless a regression or audit requires them.
+A feature becomes canonical only after:
+
+1. worker exact-head CI is green;
+2. Integrator scope/security/API review passes;
+3. owner merges the reviewed worker PR with **Create a merge commit**;
+4. integration exact-head CI is green;
+5. canonical context is updated.
 
 ## Research rule
 
-A new agent does not need the owner to commission a separate preliminary research task before it can start. The canonical prompt and context folder provide the project objective, verified starting state, architecture boundaries, work sequence and tests.
+Agents perform targeted verification themselves. The owner does not need to request a separate research prompt.
 
-The agent must still perform targeted verification itself when necessary, especially for:
-
-- current remote heads, pull requests and CI;
-- implementation details that changed after the handoff;
-- current official MyAnimeList API behavior, agreements or limits;
-- external feature ideas whose support has not yet been proven;
-- security, Android or library behavior that may have changed.
-
-This verification is part of implementation and must not be pushed back to the owner as a request for another general prompt.
+Official MAL behavior, endpoints, fields and limits require current official sources. Public third-party clients may inform UX expectations only.

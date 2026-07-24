@@ -2,101 +2,103 @@
 
 ## Purpose
 
-This folder is the durable source of truth for MyAnimeList integration and shared Kizomi presentation work. The target is one coherent application: the active provider changes data access and available capabilities, not Kizomi's visual identity, adaptive shell, navigation model or neutral settings experience.
+This folder is the durable source of truth for MyAnimeList stability, shared Kizomi presentation and coordinated parallel implementation.
 
-Planning baseline on `main`:
+The target remains one coherent app: the active provider changes data access and capabilities, not Kizomi's visual identity, adaptive shell, navigation model or neutral settings experience.
 
-`59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
+## Current verified code checkpoint
 
-The repository already contains a single-active-provider state machine, provider-bound OAuth/storage/data deletion contracts and a GitHub-only MAL-client APK workflow. Nothing in this folder replaces or weakens those contracts.
+- `main` planning baseline: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
+- Integration branch: `planning/mal-ui-feature-parity`
+- Draft PR: `#5 – MAL stability and shared Kizomi UI parity`
+- Green Phase-3 checkpoint: `3c290be9a27665f49cd734e621b38856b736807d`
+- CI run ID / number: `30101279625` / `243`
+- Result: `success`
 
-## Stable prompt location for the owner
+Completed at that checkpoint:
 
-Always copy the complete current contents of:
+- Phase 1 MAL session/details stability;
+- Phase 2 common Kizomi app shell;
+- first Phase 3 typed provider-neutral identity/card slice.
+
+## Parallel operating model
+
+The project now uses one Integrator and five isolated workers.
+
+Read:
+
+`docs/mal-parity/MULTI_AGENT_COORDINATION.md`
+
+Only the Integrator writes PR #5 and canonical context. Workers use dedicated branches, Draft PRs, file ownership and exclusive reports.
+
+## Prompt locations
+
+### Integrator
+
+The stable canonical Integrator prompt is always:
 
 `docs/mal-parity/NEXT_AI_PROMPT.md`
 
-That path is permanent. Each working agent must rewrite it in place with a standalone current continuation prompt before a pause or handoff. The owner does not need a separate recap, research prompt or newest archive selection.
+It is also mirrored as:
 
-Older snapshots under `prompt-history/` are audit/recovery material only and may be stale. Binding rewrite/archive rules are in `HANDOFF_PROTOCOL.md`.
+`docs/mal-parity/worker-prompts/AGENT_01_INTEGRATOR.md`
 
-## Current verified implementation status
+### Workers
 
-### Phase 1 — stability foundation
+Use the exact matching file under:
 
-Implemented and automated-test green:
+`docs/mal-parity/worker-prompts/`
 
-- deterministic MAL account restoration before UI readiness;
-- active/expired and fail-closed invalid credential states;
-- cold-start/staged callback completion;
-- typed, process-restorable MAL details routing;
-- recoverable invalid route state instead of constructor crash.
+Never give two chats the same worker prompt. Never give the Integrator prompt to a worker.
 
-Exact implementation evidence:
+## Source of truth hierarchy
 
-- code head `686e95e7eecdb3b30bc8a0d455981668329751c6`;
-- run `30095988062` / number `211`;
-- 416 Stable Debug unit tests;
-- independently verified APK SHA-256 `cc96ccdffa3740be685c5b2a3e0e98e3b2e910e604f391a09b0934a2680fa596`.
+1. current remote code;
+2. reproducible tests and exact-head CI;
+3. current official provider documentation;
+4. canonical context maintained by the Integrator;
+5. worker reports for unintegrated work;
+6. chat messages only as temporary convenience.
 
-### Phase 2 — shared app shell
+A worker report is not integrated product truth until the owner merges its reviewed PR into the integration branch and integration CI is green.
 
-Implemented and automated-test green:
+## Required reading for the Integrator
 
-- one common `MainScreen` compact bottom bar, wide rail and adaptive scaffold;
-- provider-aware root capability projection without mutating durable preferences;
-- MAL roots limited to Library, Discover and Profile;
-- provider-native MAL graph plus typed details;
-- no Feed/Forum/AniList root composition in MAL mode;
-- AniList-only deep-link, cross-account, Discover-launch and notification-badge effects gated to active AniList;
-- old `MalProviderMainScreen` reduced to a compatibility delegate to `MainScreen()` with no alternate navigation UI.
-
-Exact implementation evidence:
-
-- code head `5bd9aa79340f4fe0e0c3f40155a448d86f3a621d`;
-- run `30098259776` / number `225`;
-- 424 Stable Debug unit tests;
-- independently verified APK SHA-256 `536b6b792ccfb92c221ff2ff3e426f090e3815f7a44a18ca6ffa1980a1ad645a`.
-
-Later commits require new exact-head CI. Real approved-client/device, process, network and visual acceptance remains mandatory.
-
-## Current implementation priority
-
-Phase 3 is active: introduce provider-neutral, typed presentation contracts and adapters, then migrate one reusable card/list primitive end to end before expanding into shared Discover, Details, Library and Account/Settings.
-
-Rules:
-
-- provider-native IDs remain typed and non-interchangeable;
-- shared composables import no MAL transport DTOs or AniList GraphQL response types;
-- provider adapters own transformations;
-- proven OAuth, token, repository and tracking boundaries are preserved;
-- unsupported capability never contacts the inactive provider.
-
-## Product direction
-
-- One shared Kizomi shell and design system.
-- One shared Discover, Library, Media Details, Account and Settings experience for equivalent capabilities.
-- Provider-neutral presentation models/use cases above provider-specific repositories.
-- MAL-native calendar, widget and background implementations where officially documented.
-- Safe unavailable states instead of provider fallback.
-- No account/list transfer between providers.
-- Debug-only sanitized integration dashboard; no internal diagnostics in release.
-
-## Reading order for a new implementation agent
-
-1. `HANDOFF_PROTOCOL.md`
-2. `NEXT_AI_PROMPT.md`
-3. `EXECUTION_STATE.md`
-4. `BUG_REGISTER.md`
-5. `UI_PARITY_CONTRACT.md`
+1. `MULTI_AGENT_COORDINATION.md`
+2. `HANDOFF_PROTOCOL.md`
+3. `NEXT_AI_PROMPT.md`
+4. `EXECUTION_STATE.md`
+5. `BUG_REGISTER.md`
 6. `FEATURE_PARITY_MATRIX.md`
-7. `DEBUG_INTEGRATION_DASHBOARD.md`
-8. `TEST_AND_RELEASE_PLAN.md`
-9. `RESEARCH_NOTES.md`
-10. active contracts under `docs/mal-compliance/` and `docs/mal-integration/`
+7. `UI_PARITY_CONTRACT.md`
+8. `DEBUG_INTEGRATION_DASHBOARD.md`
+9. `TEST_AND_RELEASE_PLAN.md`
+10. all worker reports and prompts
+11. active MAL compliance/integration contracts
 
-Then verify all context against current remote heads, Draft PR #5, changed files and exact-head CI before editing. Context removes the need for an owner-written recap but never replaces source/test verification.
+## Required reading for workers
+
+Workers follow only:
+
+1. `MULTI_AGENT_COORDINATION.md`
+2. their exact worker prompt
+3. the specific contracts and source files listed in that prompt
+
+Workers must not update canonical context.
+
+## Product invariants
+
+- exactly one active provider;
+- no provider fallback;
+- no cross-provider data transfer;
+- one shared Kizomi app shell;
+- typed provider identities;
+- provider-specific repositories below neutral presentation contracts;
+- no transport DTOs in shared UI;
+- no scraping or private endpoints;
+- debug diagnostics are redacted and excluded from release;
+- PR #5 remains Draft until the complete implementation is ready.
 
 ## External research boundary
 
-MoeList and DailyAL may inform public feature expectations only. Do not copy source, assets, branding, layouts or text, and do not infer MAL API support from another client. Kizomi's existing AniList-era interface is the visual/interaction source of truth, while every proposed request must be verified against current official MAL documentation.
+MoeList and DailyAL may inform feature expectations only. Do not copy source, assets, branding, exact layouts or text. Kizomi's existing interface remains the visual source of truth. Every MAL request/field must be verified against current official MAL documentation.
