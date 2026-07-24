@@ -19,19 +19,18 @@ import com.anisync.android.domain.tracking.TrackingProviderRequest
 import com.anisync.android.domain.tracking.TrackingStatus
 import com.anisync.android.domain.tracking.toMalIntegerScore
 import com.anisync.android.domain.tracking.toMalStatus
+import java.time.Instant
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
-import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Singleton
 
 private const val MAL_API_BASE_URL = "https://api.myanimelist.net/v2/"
 
@@ -39,8 +38,7 @@ data class MalTrackingCapability(
     val mediaType: TrackingMediaType,
     val supportedFields: Set<TrackingField>,
 ) {
-    fun unsupported(requested: Set<TrackingField>): Set<TrackingField> =
-        requested - supportedFields
+    fun unsupported(requested: Set<TrackingField>): Set<TrackingField> = requested - supportedFields
 }
 
 /** Explicit fail-closed field matrix for MAL v2 list writes. */
@@ -74,9 +72,8 @@ internal class MalTrackingRequestFactory(
         clientId: String,
     ): Request {
         val draft = request.command.draft
-        val path = statusPath(draft.mediaType, request.providerMediaId)
         val builder = Request.Builder()
-            .url(baseUrl.newBuilder().addPathSegments(path).build())
+            .url(baseUrl.newBuilder().addPathSegments(statusPath(draft.mediaType, request.providerMediaId)).build())
             .header("Accept", "application/json")
             .header("X-MAL-CLIENT-ID", clientId)
         if (draft.deleteIntent) return builder.delete().build()
@@ -86,6 +83,10 @@ internal class MalTrackingRequestFactory(
         val body = FormBody.Builder().apply {
             if (TrackingField.STATUS in fields) {
                 add("status", requireNotNull(desired.status).toMalStatus(draft.mediaType))
+                add(
+                    if (draft.mediaType == TrackingMediaType.ANIME) "is_rewatching" else "is_rereading",
+                    (desired.status == TrackingStatus.REPEATING).toString(),
+                )
             }
             if (TrackingField.PROGRESS in fields) {
                 add(
@@ -98,19 +99,13 @@ internal class MalTrackingRequestFactory(
                 )
             }
             if (TrackingField.PROGRESS_SECONDARY in fields) {
-                add("num_volumes_read", (desired.progressSecondary ?: 0).toString())
-            }
-            if (TrackingField.STATUS in fields || TrackingField.REPEAT_COUNT in fields) {
-                add(
-                    if (draft.mediaType == TrackingMediaType.ANIME) {
-                        "is_rewatching"
-                    } else {
-                        "is_rereading"
-                    },
-                    (desired.status == TrackingStatus.REPEATING).toString(),
-                )
+                add("num_volumes_read", requireNotNull(desired.progressSecondary).toString())
             }
             if (TrackingField.REPEAT_COUNT in fields) {
+                add(
+                    if (draft.mediaType == TrackingMediaType.ANIME) "is_rewatching" else "is_rereading",
+                    (desired.status == TrackingStatus.REPEATING).toString(),
+                )
                 add(
                     if (draft.mediaType == TrackingMediaType.ANIME) {
                         "num_times_rewatched"
@@ -194,6 +189,7 @@ class MalTrackingProviderAdapter internal constructor(
         if (unsupported.isNotEmpty()) {
             return TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.UNSUPPORTED_FIELD)
         }
+
         return try {
             val write = executeAuthenticated(request.providerAccountId) {
                 requests.write(request, publicClientId)
@@ -201,7 +197,14 @@ class MalTrackingProviderAdapter internal constructor(
             when (write) {
                 is MalAuthenticatedResult.Failure -> write.toTrackingFailure()
                 is MalAuthenticatedResult.Success -> {
-                    write.response.httpFailureOrNull()?.let { return it }
+                    val response = write.response
+                    val ambiguousDeleteAbsence = request.command.draft.deleteIntent &&
+                        response.statusCode == 404
+                    if (!ambiguousDeleteAbsence) {
+                        response.httpFailureOrNull()?.let { return it }
+                    }
+                    // MAL documents DELETE 404 as ambiguous after retries. Always read back the list
+                    // state before deciding whether the delete failed or the item is already absent.
                     reconcile(request, publicClientId)
                 }
             }
@@ -237,6 +240,7 @@ class MalTrackingProviderAdapter internal constructor(
         if (wire.id != request.providerMediaId) {
             return TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.INVALID_RESPONSE)
         }
+
         if (request.command.draft.deleteIntent) {
             if (wire.listStatus != null) {
                 return TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.INVALID_RESPONSE)
@@ -250,6 +254,7 @@ class MalTrackingProviderAdapter internal constructor(
                 )
             )
         }
+
         val state = wire.listStatus?.toDesiredState(request.command.draft.mediaType)
             ?: return TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.INVALID_RESPONSE)
         return TrackingDeliveryResult.Success(
@@ -273,7 +278,10 @@ class MalTrackingProviderAdapter internal constructor(
     )
 
     @Serializable
-    private data class WirePicture(val medium: String? = null, val large: String? = null)
+    private data class WirePicture(
+        val medium: String? = null,
+        val large: String? = null,
+    )
 
     @Serializable
     private data class WireListStatus(
@@ -301,7 +309,7 @@ class MalTrackingProviderAdapter internal constructor(
                 },
                 progress = if (mediaType == TrackingMediaType.ANIME) episodes ?: 0 else chapters ?: 0,
                 progressSecondary = volumes.takeIf { mediaType == TrackingMediaType.MANGA },
-                score100 = score?.also { require(it in 0..10) }?.takeIf { it > 0 }?.times(10.0),
+                score100 = score?.toKizomiPresentationScore(),
                 repeatCount = if (mediaType == TrackingMediaType.ANIME) {
                     rewatchCount ?: 0
                 } else {
@@ -319,15 +327,23 @@ class MalTrackingProviderAdapter internal constructor(
     }
 }
 
+/** MAL score 0 means unscored; 1..10 maps explicitly to Kizomi's canonical 0..100 scale. */
+fun Int.toKizomiPresentationScore(): Double? {
+    require(this in 0..10) { "MAL score must be in 0..10" }
+    return takeIf { it > 0 }?.times(10.0)
+}
+
 private fun String.toTrackingStatus(mediaType: TrackingMediaType): TrackingStatus = when (this) {
     "watching" -> TrackingStatus.CURRENT.also { require(mediaType == TrackingMediaType.ANIME) }
     "reading" -> TrackingStatus.CURRENT.also { require(mediaType == TrackingMediaType.MANGA) }
     "plan_to_watch" -> TrackingStatus.PLANNING.also {
         require(mediaType == TrackingMediaType.ANIME)
     }
+
     "plan_to_read" -> TrackingStatus.PLANNING.also {
         require(mediaType == TrackingMediaType.MANGA)
     }
+
     "completed" -> TrackingStatus.COMPLETED
     "dropped" -> TrackingStatus.DROPPED
     "on_hold" -> TrackingStatus.PAUSED
@@ -340,21 +356,26 @@ private fun MalAuthenticatedResponse.httpFailureOrNull(): TrackingDeliveryResult
         TrackingFailureKind.UNAUTHORIZED,
         statusCode,
     )
+
     statusCode == 429 -> TrackingDeliveryResult.RetryableFailure(
         TrackingFailureKind.RATE_LIMITED,
         statusCode,
         headers["Retry-After"]?.trim()?.toLongOrNull()?.coerceAtLeast(0L)?.times(1_000L),
     )
+
     statusCode in 500..599 -> TrackingDeliveryResult.RetryableFailure(
         TrackingFailureKind.TRANSIENT_SERVER,
         statusCode,
     )
+
     statusCode == 404 -> TrackingDeliveryResult.TerminalFailure(
         TrackingFailureKind.MISSING_IDENTITY,
         statusCode,
     )
+
     statusCode == 400 || statusCode == 409 || statusCode == 422 ->
         TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.VALIDATION, statusCode)
+
     else -> TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.PERMANENT, statusCode)
 }
 
@@ -363,16 +384,20 @@ private fun MalAuthenticatedResult.Failure.toTrackingFailure(): TrackingDelivery
         MalRefreshFailureReason.RATE_LIMITED -> TrackingDeliveryResult.RetryableFailure(
             TrackingFailureKind.RATE_LIMITED
         )
+
         MalRefreshFailureReason.SERVER_ERROR -> TrackingDeliveryResult.RetryableFailure(
             TrackingFailureKind.TRANSIENT_SERVER
         )
+
         MalRefreshFailureReason.TIMEOUT -> TrackingDeliveryResult.RetryableFailure(
             TrackingFailureKind.TIMEOUT
         )
+
         MalRefreshFailureReason.TRANSPORT,
         MalRefreshFailureReason.CANCELLED -> TrackingDeliveryResult.RetryableFailure(
             TrackingFailureKind.TRANSPORT
         )
+
         MalRefreshFailureReason.REFRESH_TOKEN_MISSING,
         MalRefreshFailureReason.TOKEN_MISSING,
         MalRefreshFailureReason.RELOGIN_REQUIRED,
@@ -380,29 +405,37 @@ private fun MalAuthenticatedResult.Failure.toTrackingFailure(): TrackingDelivery
         MalRefreshFailureReason.CONFIGURATION_UNAVAILABLE -> TrackingDeliveryResult.TerminalFailure(
             TrackingFailureKind.NOT_AUTHENTICATED
         )
+
         MalRefreshFailureReason.ACCOUNT_NOT_FOUND,
         MalRefreshFailureReason.ACCOUNT_SESSION_CHANGED -> TrackingDeliveryResult.TerminalFailure(
             TrackingFailureKind.MISSING_ACCOUNT
         )
+
         MalRefreshFailureReason.MALFORMED_RESPONSE -> TrackingDeliveryResult.TerminalFailure(
             TrackingFailureKind.INVALID_RESPONSE
         )
+
         MalRefreshFailureReason.PERSISTENCE_FAILED,
         MalRefreshFailureReason.PERMANENT_HTTP_ERROR -> TrackingDeliveryResult.TerminalFailure(
             TrackingFailureKind.PERMANENT
         )
+
         null -> when (reason) {
             MalAuthenticatedFailureReason.ACCOUNT_NOT_FOUND ->
                 TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.MISSING_ACCOUNT)
+
             MalAuthenticatedFailureReason.TOKEN_UNAVAILABLE,
             MalAuthenticatedFailureReason.RELOGIN_REQUIRED ->
                 TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.NOT_AUTHENTICATED)
+
             MalAuthenticatedFailureReason.REFRESH_FAILED,
             MalAuthenticatedFailureReason.TRANSPORT,
             MalAuthenticatedFailureReason.CANCELLED ->
                 TrackingDeliveryResult.RetryableFailure(TrackingFailureKind.TRANSPORT)
+
             MalAuthenticatedFailureReason.OFFLINE ->
                 TrackingDeliveryResult.RetryableFailure(TrackingFailureKind.OFFLINE)
+
             MalAuthenticatedFailureReason.TIMEOUT ->
                 TrackingDeliveryResult.RetryableFailure(TrackingFailureKind.TIMEOUT)
         }
