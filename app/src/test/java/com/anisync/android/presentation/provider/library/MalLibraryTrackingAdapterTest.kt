@@ -19,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -225,8 +226,9 @@ class MalLibraryTrackingAdapterTest {
         assertEquals(1, captured.size)
         assertEquals(setOf(TrackingField.DELETE), captured.single().fields)
         assertTrue(captured.single().deleteIntent)
-        assertTrue(events.await()[0] is MalLibraryEditLifecycle.Delivered)
-        val confirmed = events.await()[1] as MalLibraryEditLifecycle.ProviderConfirmed
+        val lifecycle = events.await()
+        assertTrue(lifecycle[0] is MalLibraryEditLifecycle.Delivered)
+        val confirmed = lifecycle[1] as MalLibraryEditLifecycle.ProviderConfirmed
         assertTrue(confirmed.deleted)
         assertTrue(confirmed.matchesRequestedState)
     }
@@ -276,7 +278,7 @@ class MalLibraryTrackingAdapterTest {
         assertTrue(invalidDateRejected)
     }
 
-    private suspend fun terminalLifecycle(
+    private suspend fun TestScope.terminalLifecycle(
         reason: TrackingFailureKind,
         state: TrackingTargetState,
     ): List<MalLibraryEditLifecycle> {
