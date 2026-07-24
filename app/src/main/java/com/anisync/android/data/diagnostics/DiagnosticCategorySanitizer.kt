@@ -4,9 +4,22 @@ object DiagnosticCategorySanitizer {
     const val REDACTED = "<redacted>"
     const val UNKNOWN = "unknown"
 
-    private val categoryPattern = Regex("[a-z0-9]+(?:_[a-z0-9]+)*")
+    private val compoundCategoryPattern = Regex("[a-z0-9]+(?:_[a-z0-9]+)+")
     private val httpClassPattern = Regex("[1-5]xx")
     private val metadataPattern = Regex("[A-Za-z0-9./_+:-]{1,48}")
+    private val safeAtomicCategories = setOf(
+        "success",
+        "failure",
+        "cancelled",
+        "pending",
+        "completed",
+        "available",
+        "unavailable",
+        "absent",
+        "unknown",
+        "none",
+        "idle",
+    )
 
     private val forbiddenMarkers = listOf(
         "access_token",
@@ -36,16 +49,20 @@ object DiagnosticCategorySanitizer {
     )
 
     /**
-     * Accepts only low-cardinality operation names such as `library_read` or HTTP classes such as
-     * `4xx`. Free-form text is deliberately rejected so private titles/content cannot become a
-     * diagnostic category merely because they contain no obvious secret marker.
+     * Accepts only low-cardinality compound operation names such as `library_read`, a small set of
+     * explicit atomic result categories, or HTTP classes such as `4xx`. Opaque single-token values
+     * are rejected even when they contain no marker text.
      */
     fun sanitize(value: String?): String = sanitizeCategory(value)
 
     fun sanitizeCategory(value: String?): String {
         val normalized = normalize(value) ?: return UNKNOWN
         if (containsSensitiveShape(normalized)) return REDACTED
-        return if (categoryPattern.matches(normalized) || httpClassPattern.matches(normalized)) {
+        return if (
+            compoundCategoryPattern.matches(normalized) ||
+            httpClassPattern.matches(normalized) ||
+            normalized in safeAtomicCategories
+        ) {
             normalized
         } else {
             REDACTED
@@ -53,8 +70,8 @@ object DiagnosticCategorySanitizer {
     }
 
     /**
-     * Accepts short structural metadata only: build types, versions, enum-like values, redirect
-     * components without query/fragment data, and ISO timestamps. Opaque token/ID-shaped strings,
+     * Accepts short structural metadata only: build types, versions, enum-like values and redirect
+     * components without query/fragment data. Long opaque base64/base64url/token/identifier shapes,
      * URLs, usernames, payloads and human-readable titles are rejected.
      */
     fun sanitizeMetadata(value: String?): String {
@@ -64,7 +81,7 @@ object DiagnosticCategorySanitizer {
         if (normalized.any { it in charArrayOf('?', '#', '&', '=', '@', '{', '}', '[', ']', '"', '\'') }) {
             return REDACTED
         }
-        if (normalized.length >= 18 && normalized.all(Char::isLetterOrDigit)) return REDACTED
+        if (normalized.length >= 20 && '/' !in normalized && ':' !in normalized) return REDACTED
         return if (metadataPattern.matches(normalized)) normalized else REDACTED
     }
 
