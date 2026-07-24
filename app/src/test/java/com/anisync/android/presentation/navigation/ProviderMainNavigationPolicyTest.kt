@@ -96,7 +96,7 @@ class ProviderMainNavigationPolicyTest {
     }
 
     @Test
-    fun `AniList keeps its configured supported roots and start`() {
+    fun `AniList preserves configured roots and appends any supported registry root omitted by old preferences`() {
         val visible = setOf(
             MainNavigationDestination.LIBRARY.key,
             MainNavigationDestination.DISCOVER.key,
@@ -111,7 +111,11 @@ class ProviderMainNavigationPolicyTest {
             requestedStartKey = MainNavigationDestination.FORUM.key,
         )
 
-        assertEquals(configuredOrder, resolved.orderedKeys)
+        assertEquals(configuredOrder, resolved.orderedKeys.take(configuredOrder.size))
+        assertEquals(
+            supportedMainDestinationKeys(ActiveProvider.ANILIST_ONLY),
+            resolved.orderedKeys.toSet(),
+        )
         assertEquals(visible, resolved.visibleKeys)
         assertEquals(MainNavigationDestination.FORUM.key, resolved.startKey)
     }
