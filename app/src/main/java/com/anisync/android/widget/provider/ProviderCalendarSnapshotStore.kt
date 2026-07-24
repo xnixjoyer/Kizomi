@@ -125,6 +125,7 @@ class FileProviderCalendarSnapshotStore internal constructor(
         val episodeNumber: Int? = null,
         val isOnList: Boolean,
         val precision: String,
+        val sourceTimeZoneId: String? = null,
     ) {
         fun toDomain(): ProviderCalendarEntry? {
             val providerValue = runCatching { ActiveProvider.valueOf(provider) }.getOrNull() ?: return null
@@ -143,6 +144,7 @@ class FileProviderCalendarSnapshotStore internal constructor(
                     episodeNumber = episodeNumber,
                     isOnList = isOnList,
                     precision = precisionValue,
+                    sourceTimeZoneId = sourceTimeZoneId,
                 )
             }.getOrNull()
         }
@@ -158,6 +160,7 @@ class FileProviderCalendarSnapshotStore internal constructor(
                 episodeNumber = entry.episodeNumber,
                 isOnList = entry.isOnList,
                 precision = entry.precision.name,
+                sourceTimeZoneId = entry.sourceTimeZoneId,
             )
         }
     }
