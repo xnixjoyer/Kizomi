@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_account_screen_title">Konto und Anbieter</string>
+    <string name="provider_account_section_summary">Aktives Konto</string>
+    <string name="provider_account_section_data">Kontodaten</string>
+    <string name="provider_account_anilist">AniList</string>
+    <string name="provider_account_myanimelist">MyAnimeList</string>
+    <string name="provider_account_not_configured">Kein Anbieter eingerichtet</string>
+    <string name="provider_account_record_present">Ein lokaler Kontodatensatz ist vorhanden. Kennungen und Profilinhalte werden ausgeblendet.</string>
+    <string name="provider_account_record_absent">Kein aktiver lokaler Kontodatensatz verfügbar.</string>
+    <string name="provider_account_expiry">Gespeicherter Sitzungsablauf: %1$s</string>
+    <string name="provider_account_status_content_description">Anbieter %1$s, Sitzung %2$s</string>
+
+    <string name="provider_account_session_not_configured">Nicht eingerichtet</string>
+    <string name="provider_account_session_transitioning">Anbieterwechsel läuft</string>
+    <string name="provider_account_session_connected">Verbunden</string>
+    <string name="provider_account_session_expiring">Verbunden; Ablauf steht bevor</string>
+    <string name="provider_account_session_missing">Sitzung fehlt; erneut anmelden</string>
+    <string name="provider_account_session_expired">Sitzung abgelaufen; erneut anmelden</string>
+    <string name="provider_account_session_corrupt">Sitzungsspeicher nicht lesbar; erneut anmelden</string>
+    <string name="provider_account_session_keystore_reset">Sicherer Speicher wurde zurückgesetzt; erneut anmelden</string>
+    <string name="provider_account_session_unknown">Sitzungsstatus unbekannt</string>
+
+    <string name="provider_account_disconnect_delete_title">Trennen und lokale Kontodaten löschen</string>
+    <string name="provider_account_disconnect_delete_summary">Löscht Anmeldedaten, Anbieter-Caches, Warteschlangen, Zuordnungen, ausstehende Arbeiten, Erweiterungsstatus und steuerbare lokale Exporte. Die Remote-Liste wird nicht geändert.</string>
+    <string name="provider_account_change_provider_title">Anbieter wechseln</string>
+    <string name="provider_account_change_provider_summary">Verwendet dieselbe vollständige lokale Bereinigung, kehrt zur Anbieterauswahl zurück und kopiert niemals Daten zwischen Anbietern.</string>
+    <string name="provider_account_revoke_mal_consent_title">Gespeicherte MyAnimeList-Einwilligung widerrufen</string>
+    <string name="provider_account_revoke_mal_consent_summary">Entfernt nur den lokal gespeicherten Einwilligungsnachweis. Bei einer späteren MyAnimeList-Anmeldung ist die Einwilligung erneut erforderlich.</string>
+    <string name="provider_account_shared_settings_notice">Darstellung, Sprache, Barrierefreiheit, Speicher- und Update-Einstellungen bleiben in der gemeinsamen Kizomi-Einstellungshierarchie und sind nicht anbieterspezifisch.</string>
+    <string name="provider_account_local_action_failed">Der lokale Kontovorgang konnte nicht abgeschlossen werden. Es wurde kein anderer Anbieter kontaktiert.</string>
+    <string name="provider_account_local_state_unavailable">Der lokale Kontostatus konnte nicht sicher gelesen werden.</string>
+
+    <string name="provider_account_change_dialog_title">Lokale Daten löschen und Anbieter wechseln?</string>
+    <string name="provider_account_delete_dialog_title">Trennen und lokale Daten löschen?</string>
+    <string name="provider_account_delete_dialog_message">Das aktuelle Konto wird getrennt. Anmeldedaten, kontogebundene Caches, Warteschlangen, Zuordnungen, ausstehende Arbeiten, Kalender-Erweiterungsstatus, steuerbare Bild-Cache-Einträge und lokale Exporte werden gelöscht. Es wird nichts zu einem anderen Anbieter kopiert und kein Eintrag der Remote-Liste geändert.</string>
+    <string name="provider_account_delete_dialog_confirm">Lokale Daten löschen</string>
+    <string name="provider_account_dialog_cancel">Abbrechen</string>
+</resources>
