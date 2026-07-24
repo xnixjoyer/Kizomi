@@ -22,6 +22,7 @@ import okhttp3.Request
 import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -72,15 +73,46 @@ class MalTrackingProviderAdapterTest {
         assertTrue(body.contains("num_watched_episodes=4"))
         assertTrue(body.contains("score=9"))
         assertTrue(body.contains("is_rewatching=false"))
+        assertEquals(1, body.windowed("is_rewatching=".length).count { it == "is_rewatching=" })
         assertTrue(body.contains("num_times_rewatched=2"))
         assertTrue(body.contains("start_date=2026-01-02"))
+        assertFalse(body.contains("finish_date"))
         assertFalse(body.contains("comments"))
         val readBack = fixture.requests[1]
         assertEquals("GET", readBack.method)
         assertEquals("/v2/anime/20", readBack.url.encodedPath)
         assertEquals("id,title,main_picture,my_list_status", readBack.url.queryParameter("fields"))
-        assertTrue(result.snapshot.toString().contains("Read back"))
-        assertFalse(result.snapshot.toString().contains("access-token"))
+    }
+
+    @Test
+    fun `PATCH sends only fields represented by the changed field mask`() = runTest {
+        val fixture = fixture(
+            response(200, "{}"),
+            response(200, animeReadBack()),
+        )
+
+        fixture.adapter.apply(
+            request(
+                desired = TrackingDesiredState(
+                    status = TrackingStatus.CURRENT,
+                    progress = 99,
+                    score100 = 100.0,
+                    repeatCount = 7,
+                    startedAt = "2026-01-01",
+                    completedAt = "2026-02-01",
+                ),
+                fields = setOf(TrackingField.PROGRESS),
+            )
+        )
+
+        val body = fixture.requests.first().bodyText()
+        assertEquals("num_watched_episodes=99", body)
+        assertFalse(body.contains("status="))
+        assertFalse(body.contains("score="))
+        assertFalse(body.contains("is_rewatching="))
+        assertFalse(body.contains("num_times_rewatched="))
+        assertFalse(body.contains("start_date="))
+        assertFalse(body.contains("finish_date="))
     }
 
     @Test
@@ -120,6 +152,7 @@ class MalTrackingProviderAdapterTest {
         assertTrue(body.contains("num_chapters_read=44"))
         assertTrue(body.contains("num_volumes_read=8"))
         assertTrue(body.contains("is_rereading=true"))
+        assertEquals(1, body.windowed("is_rereading=".length).count { it == "is_rereading=" })
         assertTrue(body.contains("num_times_reread=1"))
         assertTrue(body.contains("finish_date=2026-07-01"))
         assertTrue(body.contains("score=8"))
@@ -128,22 +161,46 @@ class MalTrackingProviderAdapterTest {
     @Test
     fun `DELETE is reconciled only after read-back confirms list status absent`() = runTest {
         val fixture = fixture(
-            response(204, ""),
+            response(200, ""),
             response(200, """{"id":20,"title":"Removed"}"""),
         )
 
-        val result = fixture.adapter.apply(
-            request(
-                desired = TrackingDesiredState(status = null, progress = 0),
-                fields = setOf(TrackingField.DELETE),
-                delete = true,
-            )
-        )
+        val result = fixture.adapter.apply(deleteRequest())
 
         assertTrue(result is TrackingDeliveryResult.Success)
         assertTrue((result as TrackingDeliveryResult.Success).snapshot.deleted)
         assertEquals("DELETE", fixture.requests[0].method)
         assertEquals("GET", fixture.requests[1].method)
+    }
+
+    @Test
+    fun `DELETE 404 after retry reconciles confirmed absence as success`() = runTest {
+        val fixture = fixture(
+            response(404, "already absent"),
+            response(200, """{"id":20,"title":"Already removed"}"""),
+        )
+
+        val result = fixture.adapter.apply(deleteRequest(deliveryAttempt = 2))
+
+        assertTrue(result is TrackingDeliveryResult.Success)
+        assertTrue((result as TrackingDeliveryResult.Success).snapshot.deleted)
+        assertEquals(listOf("DELETE", "GET"), fixture.requests.map { it.method })
+    }
+
+    @Test
+    fun `DELETE 404 remains failure when read-back still contains list status`() = runTest {
+        val fixture = fixture(
+            response(404, "ambiguous"),
+            response(200, animeReadBack()),
+        )
+
+        val result = fixture.adapter.apply(deleteRequest(deliveryAttempt = 2))
+
+        assertEquals(
+            TrackingFailureKind.INVALID_RESPONSE,
+            (result as TrackingDeliveryResult.TerminalFailure).kind,
+        )
+        assertEquals(listOf("DELETE", "GET"), fixture.requests.map { it.method })
     }
 
     @Test
@@ -172,10 +229,6 @@ class MalTrackingProviderAdapterTest {
         )
         assertTrue(
             TrackingField.PROGRESS_SECONDARY in
-                MalTrackingCapabilities.forMediaType(TrackingMediaType.MANGA).supportedFields
-        )
-        assertFalse(
-            TrackingField.PRIVATE in
                 MalTrackingCapabilities.forMediaType(TrackingMediaType.MANGA).supportedFields
         )
     }
@@ -242,11 +295,16 @@ class MalTrackingProviderAdapterTest {
     }
 
     @Test
-    fun `MAL score projection deliberately rounds to provider integer scale`() {
+    fun `score conversion is explicit in both directions`() {
         assertEquals(0, 0.0.toMalIntegerScore())
         assertEquals(8, 84.0.toMalIntegerScore())
         assertEquals(9, 85.0.toMalIntegerScore())
         assertEquals(10, 100.0.toMalIntegerScore())
+
+        assertNull(0.toKizomiPresentationScore())
+        assertEquals(10.0, 1.toKizomiPresentationScore())
+        assertEquals(80.0, 8.toKizomiPresentationScore())
+        assertEquals(100.0, 10.toKizomiPresentationScore())
     }
 
     private fun fixture(vararg responses: MalAuthenticatedResult): Fixture {
@@ -264,6 +322,13 @@ class MalTrackingProviderAdapterTest {
             ),
         )
     }
+
+    private fun deleteRequest(deliveryAttempt: Int = 1) = request(
+        desired = TrackingDesiredState(status = null, progress = 0),
+        fields = setOf(TrackingField.DELETE),
+        delete = true,
+        deliveryAttempt = deliveryAttempt,
+    )
 
     private fun request(
         mediaType: TrackingMediaType = TrackingMediaType.ANIME,

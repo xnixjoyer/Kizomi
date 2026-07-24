@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_anime">அனிமே</string>
+    <string name="mal_library_manga">மாங்கா</string>
+    <string name="mal_library_search_hint">உங்கள் நூலகத்தில் தேடுங்கள்</string>
+    <string name="mal_library_refresh">புதுப்பி</string>
+    <string name="mal_library_retry">மீண்டும் முயற்சி</string>
+    <string name="mal_library_edit">திருத்து</string>
+    <string name="mal_library_save">சேமி</string>
+    <string name="mal_library_cancel">ரத்துசெய்</string>
+    <string name="mal_library_delete">பட்டியலிலிருந்து அகற்று</string>
+    <string name="mal_library_empty">பொருந்தும் நூலகப் பதிவுகள் இல்லை</string>
+    <string name="mal_library_stale">சேமித்த தரவு காட்டப்படுகிறது. வழங்குநரின் சமீபத்திய நிலையைச் சரிபார்க்க புதுப்பிக்கவும்.</string>
+    <string name="mal_library_error">நூலகத்தைப் புதுப்பிக்க முடியவில்லை: %1$s</string>
+    <string name="mal_library_ascending">ஏறுவரிசை</string>
+    <string name="mal_library_descending">இறங்குவரிசை</string>
+    <string name="mal_library_layout_grid">கட்டம்</string>
+    <string name="mal_library_layout_list">பட்டியல்</string>
+    <string name="mal_library_layout_adaptive">தகவமைவு</string>
+    <string name="mal_library_status_current">தற்போது</string>
+    <string name="mal_library_status_planning">திட்டமிடப்பட்டது</string>
+    <string name="mal_library_status_completed">முடிந்தது</string>
+    <string name="mal_library_status_dropped">கைவிடப்பட்டது</string>
+    <string name="mal_library_status_paused">இடைநிறுத்தப்பட்டது</string>
+    <string name="mal_library_status_repeating">மீண்டும் பார்க்கப்படுகிறது</string>
+    <string name="mal_library_sort_title">தலைப்பு</string>
+    <string name="mal_library_sort_progress">முன்னேற்றம்</string>
+    <string name="mal_library_sort_score">மதிப்பெண்</string>
+    <string name="mal_library_sort_updated">கடைசியாகப் புதுப்பிக்கப்பட்டது</string>
+    <string name="mal_library_sort_start_date">தொடக்க தேதி</string>
+    <string name="mal_library_edit_title">%1$s ஐத் திருத்து</string>
+    <string name="mal_library_progress">முன்னேற்றம்</string>
+    <string name="mal_library_volume_progress">தொகுதி முன்னேற்றம்</string>
+    <string name="mal_library_score">மதிப்பெண் (0–100)</string>
+    <string name="mal_library_repeat_count">மீள்பார்வை எண்ணிக்கை</string>
+    <string name="mal_library_started_at">தொடங்கியது (YYYY-MM-DD)</string>
+    <string name="mal_library_completed_at">முடிந்தது (YYYY-MM-DD)</string>
+</resources>

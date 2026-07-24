@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_anime">Anime</string>
+    <string name="mal_library_manga">Mangá</string>
+    <string name="mal_library_search_hint">Pesquisar na sua biblioteca</string>
+    <string name="mal_library_refresh">Atualizar</string>
+    <string name="mal_library_retry">Tentar novamente</string>
+    <string name="mal_library_edit">Editar</string>
+    <string name="mal_library_save">Guardar</string>
+    <string name="mal_library_cancel">Cancelar</string>
+    <string name="mal_library_delete">Remover da lista</string>
+    <string name="mal_library_empty">Nenhuma entrada correspondente na biblioteca</string>
+    <string name="mal_library_stale">A mostrar dados guardados. Atualize para verificar o estado mais recente do fornecedor.</string>
+    <string name="mal_library_error">Falha ao atualizar a biblioteca: %1$s</string>
+    <string name="mal_library_ascending">Ascendente</string>
+    <string name="mal_library_descending">Descendente</string>
+    <string name="mal_library_layout_grid">Grelha</string>
+    <string name="mal_library_layout_list">Lista</string>
+    <string name="mal_library_layout_adaptive">Adaptativo</string>
+    <string name="mal_library_status_current">Em curso</string>
+    <string name="mal_library_status_planning">Planeado</string>
+    <string name="mal_library_status_completed">Concluído</string>
+    <string name="mal_library_status_dropped">Abandonado</string>
+    <string name="mal_library_status_paused">Em pausa</string>
+    <string name="mal_library_status_repeating">A repetir</string>
+    <string name="mal_library_sort_title">Título</string>
+    <string name="mal_library_sort_progress">Progresso</string>
+    <string name="mal_library_sort_score">Pontuação</string>
+    <string name="mal_library_sort_updated">Última atualização</string>
+    <string name="mal_library_sort_start_date">Data de início</string>
+    <string name="mal_library_edit_title">Editar %1$s</string>
+    <string name="mal_library_progress">Progresso</string>
+    <string name="mal_library_volume_progress">Progresso dos volumes</string>
+    <string name="mal_library_score">Pontuação (0–100)</string>
+    <string name="mal_library_repeat_count">Número de repetições</string>
+    <string name="mal_library_started_at">Iniciado (AAAA-MM-DD)</string>
+    <string name="mal_library_completed_at">Concluído (AAAA-MM-DD)</string>
+</resources>

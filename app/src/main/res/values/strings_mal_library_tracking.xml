@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_anime">Anime</string>
+    <string name="mal_library_manga">Manga</string>
+    <string name="mal_library_search_hint">Search your library</string>
+    <string name="mal_library_refresh">Refresh</string>
+    <string name="mal_library_retry">Retry</string>
+    <string name="mal_library_edit">Edit</string>
+    <string name="mal_library_save">Save</string>
+    <string name="mal_library_cancel">Cancel</string>
+    <string name="mal_library_delete">Remove from list</string>
+    <string name="mal_library_empty">No matching library entries</string>
+    <string name="mal_library_stale">Showing saved data. Refresh to verify the latest provider state.</string>
+    <string name="mal_library_error">Library update failed: %1$s</string>
+    <string name="mal_library_ascending">Ascending</string>
+    <string name="mal_library_descending">Descending</string>
+    <string name="mal_library_layout_grid">Grid</string>
+    <string name="mal_library_layout_list">List</string>
+    <string name="mal_library_layout_adaptive">Adaptive</string>
+    <string name="mal_library_status_current">Current</string>
+    <string name="mal_library_status_planning">Planning</string>
+    <string name="mal_library_status_completed">Completed</string>
+    <string name="mal_library_status_dropped">Dropped</string>
+    <string name="mal_library_status_paused">Paused</string>
+    <string name="mal_library_status_repeating">Repeating</string>
+    <string name="mal_library_sort_title">Title</string>
+    <string name="mal_library_sort_progress">Progress</string>
+    <string name="mal_library_sort_score">Score</string>
+    <string name="mal_library_sort_updated">Last updated</string>
+    <string name="mal_library_sort_start_date">Start date</string>
+    <string name="mal_library_edit_title">Edit %1$s</string>
+    <string name="mal_library_progress">Progress</string>
+    <string name="mal_library_volume_progress">Volume progress</string>
+    <string name="mal_library_score">Score (0–100)</string>
+    <string name="mal_library_repeat_count">Repeat count</string>
+    <string name="mal_library_started_at">Started (YYYY-MM-DD)</string>
+    <string name="mal_library_completed_at">Completed (YYYY-MM-DD)</string>
+</resources>

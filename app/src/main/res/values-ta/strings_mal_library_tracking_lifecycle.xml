@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_refresh_failed">நூலகத்தைப் புதுப்பிக்க முடியவில்லை. சேமிக்கப்பட்ட உள்ளடக்கம் தொடர்ந்து காட்டப்படும்.</string>
+    <string name="mal_library_edit_state_no_change">சேமிக்க மாற்றங்கள் இல்லை</string>
+    <string name="mal_library_edit_state_validation_failed">தவறான அல்லது ஆதரிக்கப்படாத மாற்றம்</string>
+    <string name="mal_library_edit_state_enqueue_accepted">மாற்றம் உள்ளூரில் வரிசைப்படுத்தப்பட்டது</string>
+    <string name="mal_library_edit_state_pending">MyAnimeList பதிலை எதிர்பார்க்கிறது</string>
+    <string name="mal_library_edit_state_delivered">அனுப்பப்பட்டது; MyAnimeList நிலை உறுதிப்படுத்தப்படுகிறது</string>
+    <string name="mal_library_edit_state_retrying">தற்காலிக பிழை; மீண்டும் முயற்சி திட்டமிடப்பட்டது</string>
+    <string name="mal_library_edit_state_confirmed">MyAnimeList மூலம் உறுதிப்படுத்தப்பட்டது</string>
+    <string name="mal_library_edit_state_confirmed_mismatch">MyAnimeList வேறு மதிப்பை உறுதிப்படுத்தியது; வழங்குநர் நிலை காட்டப்படுகிறது</string>
+    <string name="mal_library_edit_state_deleted">MyAnimeList இலிருந்து நீக்கப்பட்டது</string>
+    <string name="mal_library_edit_state_failed">மாற்றத்தைச் செயல்படுத்த முடியவில்லை</string>
+    <string name="mal_library_edit_state_rolled_back">முந்தைய உறுதிப்படுத்தப்பட்ட மதிப்பு மீட்டமைக்கப்பட்டது</string>
+</resources>

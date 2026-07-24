@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_refresh_failed">تعذر تحديث المكتبة. يظل المحتوى المحفوظ ظاهرًا.</string>
+    <string name="mal_library_edit_state_no_change">لا توجد تغييرات للحفظ</string>
+    <string name="mal_library_edit_state_validation_failed">تغيير غير صالح أو غير مدعوم</string>
+    <string name="mal_library_edit_state_enqueue_accepted">تمت إضافة التغيير إلى قائمة الانتظار محليًا</string>
+    <string name="mal_library_edit_state_pending">بانتظار MyAnimeList</string>
+    <string name="mal_library_edit_state_delivered">تم الإرسال؛ جارٍ تأكيد حالة MyAnimeList</string>
+    <string name="mal_library_edit_state_retrying">خطأ مؤقت؛ تمت جدولة إعادة المحاولة</string>
+    <string name="mal_library_edit_state_confirmed">تم التأكيد بواسطة MyAnimeList</string>
+    <string name="mal_library_edit_state_confirmed_mismatch">أكد MyAnimeList قيمة مختلفة؛ يتم عرض حالة المزوّد</string>
+    <string name="mal_library_edit_state_deleted">تمت الإزالة من MyAnimeList</string>
+    <string name="mal_library_edit_state_failed">فشل تطبيق التغيير</string>
+    <string name="mal_library_edit_state_rolled_back">تمت استعادة القيمة المؤكدة السابقة</string>
+</resources>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_anime">Аниме</string>
+    <string name="mal_library_manga">Манга</string>
+    <string name="mal_library_search_hint">Поиск в библиотеке</string>
+    <string name="mal_library_refresh">Обновить</string>
+    <string name="mal_library_retry">Повторить</string>
+    <string name="mal_library_edit">Изменить</string>
+    <string name="mal_library_save">Сохранить</string>
+    <string name="mal_library_cancel">Отмена</string>
+    <string name="mal_library_delete">Удалить из списка</string>
+    <string name="mal_library_empty">Подходящих записей в библиотеке нет</string>
+    <string name="mal_library_stale">Показаны сохранённые данные. Обновите, чтобы проверить актуальное состояние провайдера.</string>
+    <string name="mal_library_error">Не удалось обновить библиотеку: %1$s</string>
+    <string name="mal_library_ascending">По возрастанию</string>
+    <string name="mal_library_descending">По убыванию</string>
+    <string name="mal_library_layout_grid">Сетка</string>
+    <string name="mal_library_layout_list">Список</string>
+    <string name="mal_library_layout_adaptive">Адаптивный</string>
+    <string name="mal_library_status_current">В процессе</string>
+    <string name="mal_library_status_planning">Запланировано</string>
+    <string name="mal_library_status_completed">Завершено</string>
+    <string name="mal_library_status_dropped">Брошено</string>
+    <string name="mal_library_status_paused">Приостановлено</string>
+    <string name="mal_library_status_repeating">Повторяется</string>
+    <string name="mal_library_sort_title">Название</string>
+    <string name="mal_library_sort_progress">Прогресс</string>
+    <string name="mal_library_sort_score">Оценка</string>
+    <string name="mal_library_sort_updated">Последнее обновление</string>
+    <string name="mal_library_sort_start_date">Дата начала</string>
+    <string name="mal_library_edit_title">Изменить %1$s</string>
+    <string name="mal_library_progress">Прогресс</string>
+    <string name="mal_library_volume_progress">Прогресс томов</string>
+    <string name="mal_library_score">Оценка (0–100)</string>
+    <string name="mal_library_repeat_count">Количество повторов</string>
+    <string name="mal_library_started_at">Начато (ГГГГ-ММ-ДД)</string>
+    <string name="mal_library_completed_at">Завершено (ГГГГ-ММ-ДД)</string>
+</resources>

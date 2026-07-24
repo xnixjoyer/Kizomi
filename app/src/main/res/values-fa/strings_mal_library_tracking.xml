@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_anime">انیمه</string>
+    <string name="mal_library_manga">مانگا</string>
+    <string name="mal_library_search_hint">جست‌وجو در کتابخانه</string>
+    <string name="mal_library_refresh">تازه‌سازی</string>
+    <string name="mal_library_retry">تلاش دوباره</string>
+    <string name="mal_library_edit">ویرایش</string>
+    <string name="mal_library_save">ذخیره</string>
+    <string name="mal_library_cancel">لغو</string>
+    <string name="mal_library_delete">حذف از فهرست</string>
+    <string name="mal_library_empty">مورد منطبقی در کتابخانه نیست</string>
+    <string name="mal_library_stale">داده‌های ذخیره‌شده نمایش داده می‌شوند. برای بررسی تازه‌ترین وضعیت ارائه‌دهنده، تازه‌سازی کنید.</string>
+    <string name="mal_library_error">به‌روزرسانی کتابخانه ناموفق بود: %1$s</string>
+    <string name="mal_library_ascending">صعودی</string>
+    <string name="mal_library_descending">نزولی</string>
+    <string name="mal_library_layout_grid">شبکه‌ای</string>
+    <string name="mal_library_layout_list">فهرست</string>
+    <string name="mal_library_layout_adaptive">تطبیقی</string>
+    <string name="mal_library_status_current">در حال پیگیری</string>
+    <string name="mal_library_status_planning">برنامه‌ریزی‌شده</string>
+    <string name="mal_library_status_completed">تکمیل‌شده</string>
+    <string name="mal_library_status_dropped">رهاشده</string>
+    <string name="mal_library_status_paused">متوقف‌شده</string>
+    <string name="mal_library_status_repeating">تکرار</string>
+    <string name="mal_library_sort_title">عنوان</string>
+    <string name="mal_library_sort_progress">پیشرفت</string>
+    <string name="mal_library_sort_score">امتیاز</string>
+    <string name="mal_library_sort_updated">آخرین به‌روزرسانی</string>
+    <string name="mal_library_sort_start_date">تاریخ شروع</string>
+    <string name="mal_library_edit_title">ویرایش %1$s</string>
+    <string name="mal_library_progress">پیشرفت</string>
+    <string name="mal_library_volume_progress">پیشرفت جلدها</string>
+    <string name="mal_library_score">امتیاز (0–100)</string>
+    <string name="mal_library_repeat_count">تعداد تکرار</string>
+    <string name="mal_library_started_at">شروع (YYYY-MM-DD)</string>
+    <string name="mal_library_completed_at">پایان (YYYY-MM-DD)</string>
+</resources>
