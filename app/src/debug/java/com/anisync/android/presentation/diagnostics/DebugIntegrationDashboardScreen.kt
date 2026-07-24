@@ -98,9 +98,7 @@ private fun DashboardContents(
     expandedSections: Set<DiagnosticsDashboardSection>,
     onToggleSection: (DiagnosticsDashboardSection) -> Unit,
 ) {
-    val none = stringResource(R.string.diagnostics_value_none)
     val unknown = stringResource(R.string.diagnostics_value_unknown)
-    val never = stringResource(R.string.diagnostics_value_never)
 
     DashboardSection(
         title = stringResource(R.string.diagnostics_section_build_source),
@@ -112,31 +110,35 @@ private fun DashboardContents(
             stringResource(R.string.diagnostics_label_version),
             stringResource(
                 R.string.diagnostics_value_version,
-                snapshot.build.versionName,
+                DiagnosticPresentationBoundary.metadata(snapshot.build.versionName),
                 snapshot.build.versionCode,
             ),
         )
-        StatusRow(stringResource(R.string.diagnostics_label_build_type), snapshot.build.buildType)
+        StatusRow(
+            stringResource(R.string.diagnostics_label_build_type),
+            DiagnosticPresentationBoundary.metadata(snapshot.build.buildType),
+        )
         StatusRow(
             stringResource(R.string.diagnostics_label_source_revision),
             snapshot.build.sourceRevision
+                ?.let(DiagnosticPresentationBoundary::metadata)
                 ?: stringResource(R.string.diagnostics_value_not_embedded),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_oauth_environment),
-            snapshot.build.oauthEnvironment,
+            DiagnosticPresentationBoundary.metadata(snapshot.build.oauthEnvironment),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_redirect_scheme),
-            snapshot.build.redirectScheme,
+            DiagnosticPresentationBoundary.metadata(snapshot.build.redirectScheme),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_redirect_host),
-            snapshot.build.redirectHost,
+            DiagnosticPresentationBoundary.metadata(snapshot.build.redirectHost),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_redirect_path),
-            snapshot.build.redirectPath,
+            DiagnosticPresentationBoundary.metadata(snapshot.build.redirectPath),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_client_id_present),
@@ -184,15 +186,17 @@ private fun DashboardContents(
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_restoration),
-            formatEpoch(snapshot.session.lastSuccessfulRestoreEpochMillis, never),
+            formatEpoch(snapshot.session.lastSuccessfulRestoreEpochMillis, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_refresh_outcome),
-            snapshot.session.lastRefreshOutcome ?: none,
+            snapshot.session.lastRefreshOutcome
+                ?.let(DiagnosticPresentationBoundary::category)
+                ?: unknown,
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_refresh),
-            formatEpoch(snapshot.session.lastRefreshEpochMillis, never),
+            formatEpoch(snapshot.session.lastRefreshEpochMillis, unknown),
         )
     }
 
@@ -204,27 +208,29 @@ private fun DashboardContents(
     ) {
         StatusRow(
             stringResource(R.string.diagnostics_label_active_provider_requests),
-            snapshot.runtime.activeProviderRequestCount.toString(),
+            formatMetric(snapshot.runtime.activeProviderRequestCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_blocked_inactive_requests),
-            snapshot.runtime.blockedInactiveProviderRequestCount.toString(),
+            formatMetric(snapshot.runtime.blockedInactiveProviderRequestCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_active_workers),
-            snapshot.runtime.activeWorkerCount.toString(),
+            formatMetric(snapshot.runtime.activeWorkerCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_provider_bound_widgets),
-            snapshot.runtime.providerBoundWidgetCount.toString(),
+            formatMetric(snapshot.runtime.providerBoundWidgetCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_network_kill_switch),
-            snapshot.runtime.networkKillSwitchEnabled.toString(),
+            snapshot.runtime.networkKillSwitchEnabled?.toString() ?: unknown,
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_provider_change),
-            snapshot.runtime.lastProviderChangeResult ?: none,
+            snapshot.runtime.lastProviderChangeResult
+                ?.let(DiagnosticPresentationBoundary::category)
+                ?: unknown,
         )
     }
 
@@ -236,51 +242,57 @@ private fun DashboardContents(
     ) {
         StatusRow(
             stringResource(R.string.diagnostics_label_last_request_category),
-            snapshot.runtime.lastSuccessfulRequestCategory ?: none,
+            snapshot.runtime.lastSuccessfulRequestCategory
+                ?.let(DiagnosticPresentationBoundary::category)
+                ?: unknown,
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_request),
-            formatEpoch(snapshot.runtime.lastSuccessfulRequestEpochMillis, never),
+            formatEpoch(snapshot.runtime.lastSuccessfulRequestEpochMillis, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_failure_category),
-            snapshot.runtime.lastFailureCategory ?: none,
+            snapshot.runtime.lastFailureCategory
+                ?.let(DiagnosticPresentationBoundary::category)
+                ?: unknown,
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_failure_http_class),
-            snapshot.runtime.lastFailureHttpClass ?: none,
+            snapshot.runtime.lastFailureHttpClass
+                ?.let(DiagnosticPresentationBoundary::category)
+                ?: unknown,
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_failure),
-            formatEpoch(snapshot.runtime.lastFailureEpochMillis, never),
+            formatEpoch(snapshot.runtime.lastFailureEpochMillis, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_cache_hits),
-            snapshot.runtime.cacheHitCount.toString(),
+            formatMetric(snapshot.runtime.cacheHitCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_cache_misses),
-            snapshot.runtime.cacheMissCount.toString(),
+            formatMetric(snapshot.runtime.cacheMissCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_coalesced_requests),
-            snapshot.runtime.coalescedRequestCount.toString(),
+            formatMetric(snapshot.runtime.coalescedRequestCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_retries),
-            snapshot.runtime.retryCount.toString(),
+            formatMetric(snapshot.runtime.retryCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_writes),
-            snapshot.runtime.writeCount.toString(),
+            formatMetric(snapshot.runtime.writeCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_pending_tracking_commands),
-            snapshot.runtime.pendingTrackingCommandCount.toString(),
+            formatMetric(snapshot.runtime.pendingTrackingCommandCount, unknown),
         )
         StatusRow(
             stringResource(R.string.diagnostics_label_last_write_read_back),
-            formatEpoch(snapshot.runtime.lastSuccessfulWriteReadBackEpochMillis, never),
+            formatEpoch(snapshot.runtime.lastSuccessfulWriteReadBackEpochMillis, unknown),
         )
     }
 
@@ -290,7 +302,9 @@ private fun DashboardContents(
         expanded = DiagnosticsDashboardSection.FEATURE_COVERAGE in expandedSections,
         onToggle = onToggleSection,
     ) {
-        snapshot.parity.forEach { item -> StatusRow(item.key, item.status.name) }
+        snapshot.parity.forEach { item ->
+            StatusRow(DiagnosticPresentationBoundary.category(item.key), item.status.name)
+        }
     }
 
     val pass = stringResource(R.string.diagnostics_value_pass)
@@ -303,14 +317,22 @@ private fun DashboardContents(
     ) {
         snapshot.checklist.forEach { item ->
             val value = buildString {
-                append(if (item.passed) pass else pending)
-                item.detail?.let { append(" — ").append(it) }
+                append(
+                    when (item.passed) {
+                        true -> pass
+                        false -> pending
+                        null -> unknown
+                    },
+                )
+                item.detail?.let {
+                    append(" — ").append(DiagnosticPresentationBoundary.category(it))
+                }
             }
-            StatusRow(item.key, value)
+            StatusRow(DiagnosticPresentationBoundary.category(item.key), value)
         }
         StatusRow(
             stringResource(R.string.diagnostics_label_snapshot_captured),
-            formatEpoch(snapshot.capturedAtEpochMillis, never),
+            formatEpoch(snapshot.capturedAtEpochMillis, unknown),
         )
     }
 }
@@ -356,35 +378,36 @@ private fun DashboardSection(
 
 @Composable
 private fun StatusRow(label: String, value: String) {
-    val safeLabel = DiagnosticRedactor.sanitizeCategory(label)
-    val safeValue = DiagnosticRedactor.sanitizeCategory(value)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .semantics {
                 contentDescription = DiagnosticsStatusSemantics.contentDescription(
-                    safeLabel,
-                    safeValue,
+                    label = label,
+                    value = value,
+                    valueIsAlreadySafe = true,
                 )
             }
             .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = safeLabel,
+            text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = safeValue,
+            text = value,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
     }
 }
 
-private fun formatEpoch(epochMillis: Long?, never: String): String = epochMillis
+private fun formatMetric(value: Long?, unknown: String): String = value?.toString() ?: unknown
+
+private fun formatEpoch(epochMillis: Long?, unknown: String): String = epochMillis
     ?.takeIf { it > 0L }
     ?.let { DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(it)) }
-    ?: never
+    ?: unknown
