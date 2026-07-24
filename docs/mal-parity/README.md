@@ -2,42 +2,85 @@
 
 ## Purpose
 
-This folder is the source of truth for the next MyAnimeList integration stage. The target is one coherent Kizomi experience: the active provider changes data capabilities and network implementation, not the visual identity, app shell, navigation model or general settings experience.
+This folder is the durable source of truth for MyAnimeList integration and shared Kizomi presentation work. The target is one coherent application: the active provider changes data access and available capabilities, not Kizomi's visual identity, adaptive shell, navigation model or neutral settings experience.
 
-This planning baseline was created from `main` at:
+Planning baseline on `main`:
 
 `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 
-The baseline already contains the single-active-provider architecture and the GitHub-only MAL client APK workflow. This folder does not replace those security and provider-boundary contracts.
+The repository already contains a single-active-provider state machine, provider-bound OAuth/storage/data deletion contracts and a GitHub-only MAL-client APK workflow. Nothing in this folder replaces or weakens those contracts.
 
 ## Stable prompt location for the owner
 
-The owner should always copy the complete current contents of:
+Always copy the complete current contents of:
 
 `docs/mal-parity/NEXT_AI_PROMPT.md`
 
-That path is permanent. Each working agent must overwrite the file with the latest standalone continuation prompt before a pause or handoff. The owner does not need to ask the chat for another prompt and does not need to select the newest numbered archive.
+That path is permanent. Each working agent must rewrite it in place with a standalone current continuation prompt before a pause or handoff. The owner does not need a separate recap, research prompt or newest archive selection.
 
-Older prompt snapshots are stored under `prompt-history/` only for audit and recovery. They may be stale and are not the normal starting point.
+Older snapshots under `prompt-history/` are audit/recovery material only and may be stale. Binding rewrite/archive rules are in `HANDOFF_PROTOCOL.md`.
 
-The binding update and archive rules are in `HANDOFF_PROTOCOL.md`.
+## Current verified implementation status
 
-## Verified current findings
+### Phase 1 — stability foundation
 
-1. The current MAL interface is not a debug-only placeholder. `MainActivity` routes a connected MAL session to the production composable `MalProviderMainScreen`, which owns a separate Discover/Library/Account shell.
-2. Opening a MAL media item crashes because `MalDetailsViewModel` requires `mediaType` and `mediaId` from `SavedStateHandle`, while `MalProviderMainScreen` opens the details composable through local Compose state rather than a navigation route that supplies those arguments.
-3. A persisted MAL account can return to onboarding after process restart because `MalAuthRepository` initializes its in-memory state as `Disconnected`. Normal startup invokes `resumePendingLogin()`, which does nothing when no OAuth transaction is pending, instead of loading the active stored account through `refreshState()`.
-4. MAL catalogue and library requests are already capable of returning useful real data. The next stage should preserve correct repository, OAuth, token and API work while replacing the separate presentation path.
+Implemented and automated-test green:
+
+- deterministic MAL account restoration before UI readiness;
+- active/expired and fail-closed invalid credential states;
+- cold-start/staged callback completion;
+- typed, process-restorable MAL details routing;
+- recoverable invalid route state instead of constructor crash.
+
+Exact implementation evidence:
+
+- code head `686e95e7eecdb3b30bc8a0d455981668329751c6`;
+- run `30095988062` / number `211`;
+- 416 Stable Debug unit tests;
+- independently verified APK SHA-256 `cc96ccdffa3740be685c5b2a3e0e98e3b2e910e604f391a09b0934a2680fa596`.
+
+### Phase 2 — shared app shell
+
+Implemented and automated-test green:
+
+- one common `MainScreen` compact bottom bar, wide rail and adaptive scaffold;
+- provider-aware root capability projection without mutating durable preferences;
+- MAL roots limited to Library, Discover and Profile;
+- provider-native MAL graph plus typed details;
+- no Feed/Forum/AniList root composition in MAL mode;
+- AniList-only deep-link, cross-account, Discover-launch and notification-badge effects gated to active AniList;
+- old `MalProviderMainScreen` reduced to a compatibility delegate to `MainScreen()` with no alternate navigation UI.
+
+Exact implementation evidence:
+
+- code head `5bd9aa79340f4fe0e0c3f40155a448d86f3a621d`;
+- run `30098259776` / number `225`;
+- 424 Stable Debug unit tests;
+- independently verified APK SHA-256 `536b6b792ccfb92c221ff2ff3e426f090e3815f7a44a18ca6ffa1980a1ad645a`.
+
+Later commits require new exact-head CI. Real approved-client/device, process, network and visual acceptance remains mandatory.
+
+## Current implementation priority
+
+Phase 3 is active: introduce provider-neutral, typed presentation contracts and adapters, then migrate one reusable card/list primitive end to end before expanding into shared Discover, Details, Library and Account/Settings.
+
+Rules:
+
+- provider-native IDs remain typed and non-interchangeable;
+- shared composables import no MAL transport DTOs or AniList GraphQL response types;
+- provider adapters own transformations;
+- proven OAuth, token, repository and tracking boundaries are preserved;
+- unsupported capability never contacts the inactive provider.
 
 ## Product direction
 
-- One shared Kizomi app shell and design system.
-- One shared Discover, Library, Media Details, Account and Settings experience.
-- Provider-neutral UI models and use cases.
-- Provider-specific repositories and capability adapters below the presentation layer.
-- A function that is unavailable from the active provider is hidden or shown as unavailable; another provider is never contacted as a fallback.
-- No transfer of account data between providers.
-- Debug builds expose a sanitized integration dashboard. Release builds do not expose internal diagnostics.
+- One shared Kizomi shell and design system.
+- One shared Discover, Library, Media Details, Account and Settings experience for equivalent capabilities.
+- Provider-neutral presentation models/use cases above provider-specific repositories.
+- MAL-native calendar, widget and background implementations where officially documented.
+- Safe unavailable states instead of provider fallback.
+- No account/list transfer between providers.
+- Debug-only sanitized integration dashboard; no internal diagnostics in release.
 
 ## Reading order for a new implementation agent
 
@@ -50,17 +93,10 @@ The binding update and archive rules are in `HANDOFF_PROTOCOL.md`.
 7. `DEBUG_INTEGRATION_DASHBOARD.md`
 8. `TEST_AND_RELEASE_PLAN.md`
 9. `RESEARCH_NOTES.md`
-10. Existing contracts under `docs/mal-compliance/` and `docs/mal-integration/`
+10. active contracts under `docs/mal-compliance/` and `docs/mal-integration/`
 
-The agent must then verify the context against the current remote code, open pull request and exact-head CI before editing. Context files eliminate the need for an owner-written recap, but they do not replace technical verification.
+Then verify all context against current remote heads, Draft PR #5, changed files and exact-head CI before editing. Context removes the need for an owner-written recap but never replaces source/test verification.
 
-## External design research boundary
+## External research boundary
 
-MoeList and DailyAL may be studied for public feature ideas, information architecture and user expectations. Do not copy source, branding, layouts, artwork or text. Kizomi's existing AniList interface remains the primary visual and interaction reference.
-
-Useful public references:
-
-- `https://github.com/axiel7/MoeList`
-- `https://github.com/JICA98/DailyAL`
-
-Any proposed MAL request must still be verified against the current official MyAnimeList API documentation before implementation.
+MoeList and DailyAL may inform public feature expectations only. Do not copy source, assets, branding, layouts or text, and do not infer MAL API support from another client. Kizomi's existing AniList-era interface is the visual/interaction source of truth, while every proposed request must be verified against current official MAL documentation.
