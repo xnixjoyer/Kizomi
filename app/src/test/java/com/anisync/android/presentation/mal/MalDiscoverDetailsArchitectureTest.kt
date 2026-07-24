@@ -9,12 +9,16 @@ class MalDiscoverDetailsArchitectureTest {
     @Test
     fun `shared discover and details composables import no provider transport DTO`() {
         val root = repositoryRoot()
-        val sharedRoot = File(
-            root,
-            "app/src/main/java/com/anisync/android/presentation/provider",
+        val sharedDirectories = listOf(
+            "app/src/main/java/com/anisync/android/presentation/provider/discover",
+            "app/src/main/java/com/anisync/android/presentation/provider/details",
         )
-        val source = sharedRoot.walkTopDown()
-            .filter { it.isFile && it.extension == "kt" }
+        val source = sharedDirectories
+            .flatMap { path ->
+                File(root, path).walkTopDown()
+                    .filter { it.isFile && it.extension == "kt" }
+                    .toList()
+            }
             .joinToString("\n") { it.readText() }
 
         assertFalse(source.contains("data.mal.api"))
