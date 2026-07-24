@@ -2,6 +2,7 @@ package com.anisync.android.data.mal.calendar
 
 import com.anisync.android.data.mal.oauth.MalAuthenticatedResponse
 import com.anisync.android.data.mal.oauth.MalAuthenticatedResult
+import com.anisync.android.domain.calendar.provider.ProviderCalendarCapability
 import com.anisync.android.domain.calendar.provider.ProviderCalendarLoadResult
 import com.anisync.android.domain.calendar.provider.ProviderCalendarNotice
 import com.anisync.android.domain.calendar.provider.ProviderCalendarPrecision
@@ -14,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -42,8 +44,10 @@ class MalCalendarRepositoryTest {
 
         assertEquals(42L, entry.providerMediaId)
         assertEquals(ProviderCalendarPrecision.RECURRING_BROADCAST_SLOT, entry.precision)
+        assertEquals(MalCalendarRepository.BROADCAST_SOURCE_ZONE.id, entry.sourceTimeZoneId)
         assertNull(entry.episodeNumber)
         assertTrue(entry.isOnList)
+        assertTrue(ProviderCalendarCapability.RECURRING_BROADCAST_SLOTS in content.capabilities)
         assertTrue(ProviderCalendarNotice.EXACT_EPISODE_SCHEDULE_UNAVAILABLE in content.notices)
         assertTrue(ProviderCalendarNotice.AIRING_NOTIFICATIONS_UNAVAILABLE in content.notices)
     }
@@ -64,6 +68,24 @@ class MalCalendarRepositoryTest {
         first.await()
         second.await()
         repository.load(malSession(), query, forceRefresh = true)
+
+        assertEquals(2, calls)
+    }
+
+    @Test
+    fun `stale repository cache performs a new seasonal request`() = runTest {
+        var now = 10_000L
+        var calls = 0
+        val repository = MalCalendarRepository(api {
+            calls++
+            success(page(day = "friday", time = "23:30"))
+        }) { now }
+
+        repository.load(malSession(), weekQuery())
+        now += 6L * 60L * 60L * 1_000L - 1L
+        repository.load(malSession(), weekQuery())
+        now += 2L
+        repository.load(malSession(), weekQuery())
 
         assertEquals(2, calls)
     }
@@ -91,15 +113,50 @@ class MalCalendarRepositoryTest {
     }
 
     @Test
-    fun `missing broadcast data yields empty content and never falls back`() = runTest {
+    fun `missing broadcast data is explicit degraded content and never falls back`() = runTest {
         val repository = MalCalendarRepository(api {
             success(page(day = null, time = null))
         }) { 10_000L }
 
-        val result = repository.load(malSession(), weekQuery())
+        val content = repository.load(malSession(), weekQuery()) as ProviderCalendarLoadResult.Content
 
-        assertTrue(result is ProviderCalendarLoadResult.Content)
-        assertTrue((result as ProviderCalendarLoadResult.Content).entries.isEmpty())
+        assertTrue(content.entries.isEmpty())
+        assertTrue(ProviderCalendarNotice.BROADCAST_METADATA_UNAVAILABLE in content.notices)
+        assertFalse(ProviderCalendarCapability.RECURRING_BROADCAST_SLOTS in content.capabilities)
+    }
+
+    @Test
+    fun `partial broadcast metadata is explicit and never synthesizes a slot`() = runTest {
+        val repository = MalCalendarRepository(api {
+            success(page(day = "monday", time = null))
+        }) { 10_000L }
+
+        val content = repository.load(malSession(), weekQuery()) as ProviderCalendarLoadResult.Content
+
+        assertTrue(content.entries.isEmpty())
+        assertTrue(ProviderCalendarNotice.BROADCAST_METADATA_UNAVAILABLE in content.notices)
+        assertTrue(ProviderCalendarNotice.PARTIAL_BROADCAST_METADATA in content.notices)
+        assertFalse(ProviderCalendarCapability.RECURRING_BROADCAST_SLOTS in content.capabilities)
+    }
+
+    @Test
+    fun `calendar range above sixty two days is rejected before provider traffic`() = runTest {
+        var calls = 0
+        val repository = MalCalendarRepository(api {
+            calls++
+            success(page(day = "friday", time = "23:30"))
+        }) { 10_000L }
+        val start = weekQuery().startEpochSeconds
+        val query = ProviderCalendarQuery(
+            startEpochSeconds = start,
+            endEpochSeconds = start + 63L * 24L * 60L * 60L,
+            zoneId = "UTC",
+        )
+
+        val result = repository.load(malSession(), query)
+
+        assertTrue(result is ProviderCalendarLoadResult.Failure)
+        assertEquals(0, calls)
     }
 
     private fun malSession() = ProviderCalendarSession(
@@ -134,16 +191,19 @@ class MalCalendarRepositoryTest {
     )
 
     private fun page(day: String?, time: String?): String {
-        val broadcast = if (day == null || time == null) {
+        val broadcastFields = buildList {
+            if (day != null) add("\"day_of_the_week\":\"$day\"")
+            if (time != null) add("\"start_time\":\"$time\"")
+        }
+        val broadcast = if (broadcastFields.isEmpty()) {
             "null"
         } else {
-            "{\"day_of_the_week\":\"$day\",\"start_time\":\"$time\"}"
+            broadcastFields.joinToString(prefix = "{", postfix = "}")
         }
         return """
             {"data":[{"node":{
               "id":42,"title":"Native title","main_picture":{"large":"https://image"},
-              "start_date":"2026-07-01","end_date":"2026-09-30","status":"currently_airing",
-              "media_type":"tv","num_episodes":12,"broadcast":$broadcast,
+              "start_date":"2026-07-01","end_date":"2026-09-30","broadcast":$broadcast,
               "my_list_status":{"status":"watching"}
             }}],"paging":{}}
         """.trimIndent()
