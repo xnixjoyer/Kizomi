@@ -7,21 +7,39 @@
 - P2: major feature is unusable or inconsistent with the shared product.
 - P3: visual, localization or polish defect without loss of a core path.
 
+## Phase 1 automated evidence
+
+The first stability implementation is published on code head:
+
+`686e95e7eecdb3b30bc8a0d455981668329751c6`
+
+Exact-head GitHub evidence:
+
+- workflow: `Pull request and push CI`;
+- run ID / number: `30095988062` / `211`;
+- job ID: `89490116463`;
+- result: `success`;
+- Stable Debug unit tests: `416`;
+- diagnostic artifact: `Kizomi-686e95e7eecdb3b30bc8a0d455981668329751c6-run211-diagnostic-apk`;
+- independently verified APK SHA-256: `cc96ccdffa3740be685c5b2a3e0e98e3b2e910e604f391a09b0934a2680fa596`.
+
+The artifact ZIP and contained APK were independently downloaded and hashed. Documentation commits after that code head require a new exact-head run before the current branch head is considered green.
+
 ## MAL-001 — media details crash
 
 Priority: P1  
-Status: verified root cause; not fixed.
+Status: fixed in code and automated evidence; real-device acceptance pending.
 
-### User reproduction
+### User reproduction before the fix
 
 1. Sign in with MyAnimeList.
 2. Open Discover.
 3. Tap any visible anime or manga card.
 4. The crash-report screen appears and details do not open.
 
-### Evidence
+### Original evidence
 
-The submitted trace reports:
+The submitted trace reported:
 
 `java.lang.IllegalStateException: Required value was null`
 
@@ -29,35 +47,39 @@ at:
 
 `MalDetailsViewModel.<init>(MalCatalogViewModels.kt:355)`
 
-The ViewModel currently executes:
+The separate MAL shell called `MalDetailsScreen` from local Compose selection state instead of entering the typed `MalNativeDetails` destination. The ViewModel then required route data that had never been placed in its `SavedStateHandle`.
 
-- `requireNotNull(savedStateHandle.get<String>("mediaType"))`
-- `requireNotNull(savedStateHandle.get<Long>("mediaId"))`
+### Implemented correction
 
-The separate MAL shell calls `MalDetailsScreen` from local Compose selection state. It does not enter the typed `MalNativeDetails` navigation destination that provides those saved-state arguments.
+- The production MAL shell now owns a Navigation Compose back stack.
+- Catalogue, Library and related-media cards navigate through `MalNativeDetails(mediaType, malId)`.
+- `MalDetailsViewModel` validates route values through a nullable typed parser instead of constructor-time null assertions.
+- Missing, malformed and non-positive media identities produce a recoverable `INVALID_MEDIA_IDENTITY` state.
+- Invalid route state does not start repository observation or network refresh.
+- Navigation Compose and `SavedStateHandle` preserve the typed identity through recreation.
 
-### Required correction
+### Automated regression evidence
 
-- Use a real typed navigation route for MAL details, preferably replaced later by a shared provider-neutral media route.
-- Validate route arguments before ViewModel construction or create a recoverable invalid-argument state.
-- Preserve media identity through process recreation and related-item navigation.
-- Do not add default fake IDs or silently open another item.
+- `MalDetailsRouteTest` covers anime, manga, missing type, malformed type, missing ID and non-positive IDs.
+- `MalStartupAndNavigationContractTest` prevents a return to local `detailsKey` routing and requires the typed production destination.
+- Existing catalogue, details repository, provider-boundary and Stable Debug suites remain green.
 
-### Required regression tests
+### Remaining closure evidence
 
-- Anime card opens details.
-- Manga card opens details.
-- Related-media card opens the correct details.
-- Back returns to the same catalogue/library scroll state.
-- Process recreation on the details screen restores the same item.
-- Missing/invalid argument shows a safe error state and never crashes.
+The issue remains device-acceptance pending until the GitHub-built APK proves:
+
+- anime and manga cards open details;
+- related/recommended cards open the correct item;
+- backgrounding, activity recreation and process recreation preserve the same item;
+- back returns to the expected source tab and state;
+- a controlled malformed route displays safe user-visible copy and never crashes.
 
 ## MAL-002 — valid login appears lost after restart
 
 Priority: P1  
-Status: verified startup-state defect; persistence backend still requires device verification.
+Status: fixed in code and automated evidence; persistent vault/device acceptance pending.
 
-### User reproduction
+### User reproduction before the fix
 
 1. Complete MAL OAuth successfully.
 2. Confirm catalogue and library load.
@@ -65,49 +87,57 @@ Status: verified startup-state defect; persistence backend still requires device
 4. Relaunch it.
 5. Provider onboarding appears and asks for login again.
 
-### Verified code path
+### Original verified code path
 
-- `MalAuthRepository` initializes `_state` as `Disconnected`.
-- `refreshState()` is the method that reads the pending OAuth session and, when none exists, reads `activeAccount()` and emits `Connected`.
-- Normal activity startup calls `providerCoordinator.initialize()` and `malAuthRepository.resumePendingLogin()`.
-- `resumePendingLogin()` returns `null` when no OAuth transaction is pending and does not load the persisted active account.
-- The root UI renders MAL only when `malAuthState is MalAuthState.Connected`; any other state falls back to onboarding.
+- `MalAuthRepository` initialized `_state` as `Disconnected`.
+- `refreshState()` was the operation that read the stored active account and emitted `Connected`.
+- Normal activity startup called `providerCoordinator.initialize()` and launched `malAuthRepository.resumePendingLogin()` independently.
+- `resumePendingLogin()` returned `null` when no OAuth transaction was pending and did not load the persisted active account.
+- `_providerStartupReady` could open before MAL restoration completed.
+- The root UI rendered MAL only for `MalAuthState.Connected`; all other states fell back to onboarding.
 
-This explains the restart symptom even when the account row and token vault remain intact.
+### Implemented correction
 
-### Required correction
+- `resumePendingLogin()` now invokes persistent-state restoration when no OAuth transaction exists.
+- Active and expired accounts restore as `Connected`.
+- Missing, corrupt and keystore-reset credential states remain fail-closed as `ReLoginRequired`.
+- Session-store initialization reset remains an explicit `SESSION_STORE_FAILED` error.
+- `MainActivity` now awaits provider reconciliation, cold-start callback completion or stored-account restoration before setting the UI readiness gate.
+- A successfully restored staged callback completes the pending `MAL_ONLY` provider transition before content is rendered.
+- Startup no longer launches MAL restoration as fire-and-forget work.
 
-- Create one deterministic MAL startup restoration operation.
-- Restore the account state after provider/account/vault reconciliation.
-- Keep the splash/loading gate active until restoration finishes.
-- Call `refreshState()` when there is no staged OAuth callback.
-- Distinguish valid connected, expired-but-refreshable, re-login-required, configuration-missing and credential-corrupt states.
-- Do not reset the active provider merely because restoration is still running.
+### Automated regression evidence
 
-### Required regression tests
+- `MalAuthRepositoryTest` covers active, expired, missing, corrupt and keystore-reset states after repository recreation.
+- The same suite preserves pending-callback continuation and replay rejection.
+- `MalStartupAndNavigationContractTest` requires provider initialization and MAL restoration to precede `_providerStartupReady`.
+- Provider state-machine, account, vault-redaction and single-provider boundary tests remain green.
 
-- Active token survives ViewModel/activity recreation.
-- Active token survives full process recreation.
-- Expired token remains connected and refreshes on demand.
-- Missing token yields an explicit re-login state.
-- Corrupt vault entry yields an explicit re-login state.
-- Pending callback resumes safely.
-- Startup never briefly displays onboarding before a valid MAL session is restored.
+### Remaining closure evidence
+
+The issue remains device-acceptance pending until the approved MAL client and GitHub-built APK prove:
+
+- force-stop and relaunch at least three times without repeated login;
+- reboot and relaunch without repeated login while credentials remain valid;
+- expired-but-refreshable credentials remain connected and refresh on demand;
+- credential loss, corruption or keystore reset requests re-login without exposing content or crashing;
+- no transient onboarding frame appears during restoration.
 
 ## MAL-003 — separate MAL product shell
 
 Priority: P2  
-Status: confirmed production architecture.
+Status: open; Phase 2 is the next executable implementation.
 
 ### Current behavior
 
-The MAL path has its own `MalProviderMainScreen`, bottom navigation, labels, catalogue cards, library cards and account page. This path is selected by `MainActivity` for a connected MAL session. Debug signing does not cause this alternate UI.
+`MainActivity` still routes a connected MAL session to `MalProviderMainScreen`. Phase 1 replaced its unsafe local details switch with typed navigation, but the screen still owns a separate Discover/Library/Account shell and separate bottom navigation.
 
 ### Required correction
 
-- Route MAL through the existing Kizomi app shell.
-- Reuse shared Discover, Library, Details, Account and Settings components.
-- Keep provider-specific implementation below the shared presentation contract.
+- Route MAL through the existing Kizomi `MainScreen` adaptive scaffold.
+- Reuse one bottom navigation, one wide rail, one saved-tab model and one settings hierarchy.
+- Filter unsupported destinations through an explicit provider capability policy.
+- Render MAL-backed root destinations without composing or invoking AniList-only Feed, Forum, profile-data, worker or network paths.
 - Remove the alternate shell only after equivalent routes and tests exist.
 
 ## MAL-004 — incomplete visual and interaction parity
@@ -120,16 +150,16 @@ Observed gaps include:
 - separate navigation hierarchy;
 - hard-coded English product labels;
 - inconsistent card proportions and information density;
-- truncated titles without the richer Kizomi details flow;
 - reduced filtering, sorting and list-edit affordances;
 - isolated account/settings experience;
 - no shared adaptive list-detail behavior.
 
-The parity matrix defines the intended replacement order.
+The details crash is no longer the blocker for visual migration. The parity matrix defines the replacement order.
 
 ## MAL-005 — insufficient in-app diagnostics
 
-Priority: P2 for development efficiency; P3 for user-facing product.
+Priority: P2 for development efficiency; P3 for user-facing product.  
+Status: open.
 
 The debug APK does not provide a single safe overview of provider state, OAuth configuration presence, account restoration, capabilities, request health, cache state and acceptance progress.
 
@@ -140,4 +170,5 @@ Required solution: the debug-only dashboard contract in `DEBUG_INTEGRATION_DASHB
 - Never paste access tokens, refresh tokens, authorization codes, PKCE verifier/state, full callback URLs or raw account payloads into this register.
 - Crash reports must redact sensitive values.
 - Device screenshots must not reveal personal account information before publication.
-- Closing a bug requires a test reference, exact commit head and successful CI run.
+- Automated code closure requires a test reference, exact commit head and successful CI run.
+- Account/device-dependent closure additionally requires acceptance with the exact GitHub-built APK.
