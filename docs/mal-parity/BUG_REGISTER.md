@@ -2,128 +2,204 @@
 
 ## Severity definitions
 
-- P0: data loss, credential exposure or security-boundary failure.
-- P1: core path crashes or valid users cannot remain signed in.
-- P2: major feature is unusable or inconsistent with the shared product.
-- P3: visual, localization or polish defect without loss of a core path.
+- P0: credential exposure, destructive data loss or provider-security boundary failure.
+- P1: core path crash, valid session loss, cross-provider write/traffic or integration-process violation.
+- P2: major feature unusable, false success, unsafe architecture or materially misleading diagnostics.
+- P3: localization, accessibility, visual or polish defect without core-path loss.
 
 ## Current automated baseline
 
-- main: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
+- `main`: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 - integration branch: `planning/mal-ui-feature-parity`
 - Draft PR: #5
-- exact green coordination head: `41ff9f05888b1318c702199bcd8b0d4f6694fcff`
-- workflow run ID / number: `30106544534` / `250`
-- verify job: `89525244135`
+- last published exact-green head before this canonical refresh: `5d56b6fc6ea1ea2902e4e6abc3192d6378a3b3c4`
+- workflow run ID / number: `30123370413` / `417`
 - result: `success`
 
-Historical implementation and APK evidence is retained in `EXECUTION_STATE.md`. Every later commit needs a new exact-head run.
+Every canonical commit after that head requires its own exact-head workflow.
 
-## MAL-001 — media details crash
+## MAL-001 — media-details crash
 
 Priority: P1  
-Status: fixed in code and automated evidence; real-device acceptance pending.
+Status: fixed in integrated code; device acceptance pending.
 
-Implemented:
+Integrated protections:
 
-- typed `MalNativeDetails(mediaType, malId)` routing;
-- recoverable invalid-route state;
-- no repository or network work for invalid identity;
-- process-restorable route identity.
+- typed `MalNativeDetails(mediaType, malId)` route;
+- recoverable invalid identity;
+- no repository/network work for malformed routes;
+- process-restorable identity.
 
-Remaining acceptance:
-
-- anime, manga, related and recommended entry points;
-- activity/process recreation and back state;
-- controlled malformed-route copy.
+Remaining: real-device anime/manga/related/recommended navigation and process recreation.
 
 ## MAL-002 — valid login appears lost after restart
 
 Priority: P1  
-Status: fixed in code and automated evidence; device acceptance pending.
+Status: fixed in integrated code; device/reboot acceptance pending.
 
-Implemented:
+Integrated protections:
 
-- restore persistent account state when no OAuth transaction is pending;
+- persistent account restore;
 - restore-before-readiness startup ordering;
-- fail-closed invalid credential behavior;
-- cold-start and resumed callback handling.
-
-Remaining acceptance:
-
-- approved-client force-stop/relaunch and reboot;
-- expired credential refresh;
-- credential reset/loss behavior;
-- no transient onboarding.
+- fail-closed invalid vault/session behavior;
+- cold-start and resumed OAuth callback handling.
 
 ## MAL-003 — separate MAL product shell
 
 Priority: P2  
-Status: fixed in architecture and automated evidence; visual/device/network acceptance pending.
+Status: fixed in integrated architecture; final UI/network acceptance pending.
 
-Implemented:
+Integrated protections:
 
-- one shared `MainScreen` scaffold;
-- capability-filtered roots without preference mutation;
-- MAL Library, Discover and Profile roots only;
-- inactive-provider roots and side effects excluded;
-- compatibility-only former MAL shell.
+- one shared `MainScreen`;
+- capability-filtered roots;
+- inactive-provider side effects excluded;
+- old MAL shell is compatibility delegation only.
 
-Remaining acceptance:
-
-- compact/wide/foldable visual comparison;
-- unsupported saved-tab fallback;
-- runtime inactive-provider isolation;
-- shell and tab restoration.
-
-## MAL-004 — incomplete visual and interaction parity
+## MAL-004 — incomplete feature and visual parity
 
 Priority: P2  
-Status: open; split into isolated Draft worker PRs.
+Status: open; isolated worker implementations remain unmerged.
 
-Verified progress:
+Current queue:
 
-- sealed provider-neutral AniList and MyAnimeList identities;
-- first shared list/search card and adapters;
-- no raw provider-ID interchange in the shared callback;
-- exact code-slice CI green.
+- #6 Discover/Details;
+- #7 Library/Tracking;
+- #8 Account/Settings/Diagnostics;
+- #9 Calendar/Widgets/Background;
+- #10 final QA/API audit.
 
-Assigned workstreams:
+No row closes until owner merge and green exact-head integration CI.
 
-- #6 Discover and Details;
-- #7 Library and Tracking;
-- #8 Account, Settings and Diagnostics;
-- #9 Calendar, Widgets and Background;
-- #10 QA, API Research and Parity Audit.
-
-A worker result is not integrated until Integrator review, owner merge and green exact-head integration CI.
-
-## MAL-005 — insufficient in-app diagnostics
+## MAL-005 — insufficient safe diagnostics
 
 Priority: P2 development / P3 product  
-Status: open; assigned to Draft PR #8.
+Status: worker implementation substantially improved; unmerged.
 
-Required result: debug-only, zero-network-on-open, sanitized integration status with tests.
+Worker-level proof now includes:
+
+- debug-only source layout and real locale resources;
+- local-only snapshot source;
+- realistic fixture-bearing redaction and actual copy-path tests;
+- nullable unknown values for uninstrumented metrics;
+- truthful unknown inactive-provider traffic state;
+- conservative parity defaults.
+
+Remaining Integrator gates:
+
+- safe producer hooks at existing boundaries;
+- debug-only route bridge;
+- packaged release APK/class/route exclusion;
+- final integrated zero-network evidence.
 
 ## MAL-006 — parallel-agent scope collision
 
 Priority: P1 process/architecture  
-Status: controlled by `MULTI_AGENT_COORDINATION.md`; continuously monitored.
+Status: actively controlled; current violation exists in PR #7.
 
-Controls:
+Current violation:
 
-- only Integrator writes to PR #5 and canonical context;
-- workers use isolated branches and Draft PRs targeting the integration branch;
-- exclusive ownership and exclusive reports;
-- reserved central files remain worker read-only;
-- no worker merge, approval, auto-merge, rebase or force-push;
-- owner merges one authorized worker PR at a time using Create a merge commit;
-- green integration CI is required between merges.
+- PR #7 includes worker changes to Integrator-owned `app/src/main/java/com/anisync/android/data/tracking/MalTrackingProviderAdapter.kt`.
 
-Any out-of-scope worker change must be removed before integration review.
+Required disposition:
+
+- worker must add a normal corrective commit restoring the integration-base version;
+- DELETE-404 handling remains an Integrator implementation task;
+- PR #7 is ineligible until the complete changed-file list contains only owned files.
+
+## MAL-007 — catalogue request boundary broader than accepted source
+
+Priority: P2 architecture/provider contract  
+Status: open; Integrator-owned.
+
+Findings:
+
+- one shared catalogue field union can send manga-only fields to anime and anime-only fields to manga;
+- ranking factory accepts broad regex-valid values beyond source-confirmed media-specific enums;
+- list read boundary accepts arbitrary nonblank status strings beyond source-confirmed enums.
+
+Required fix:
+
+- split anime/manga selectable field sets;
+- use source-confirmed ranking and list-status allowlists;
+- retain conservative limits and strict paging origin/path/field validation;
+- add central request-factory tests.
+
+## MAL-008 — DELETE 404 can be false failure after prior success
+
+Priority: P2 correctness  
+Status: open; Integrator-owned.
+
+Accepted source states:
+
+- DELETE 200 means deleted;
+- DELETE 404 means already absent;
+- retries may encounter ambiguous prior success.
+
+Current central behavior maps every 404 immediately to terminal `MISSING_IDENTITY` before delete absence reconciliation.
+
+Required fix:
+
+- for delete intent, continue through controlled read-back/absence confirmation;
+- emit confirmed deletion when list state is absent;
+- preserve terminal failure only when absence cannot be safely established;
+- test first-attempt 200, retry 404/already absent, read-back list-status-present and transport/retry paths.
+
+## MAL-009 — unsupported date mutation fields
+
+Priority: P2 provider contract  
+Status: open pending accepted source evidence or capability removal.
+
+The accepted PATCH field inventory does not list `start_date` or `finish_date`, while current central transport and PR #7 expose them.
+
+Required disposition:
+
+- hide/capability-gate date editing and prevent those fields from reaching active PATCH requests unless matching accepted current official evidence is added;
+- keep date parsing safe for read-only display;
+- update worker and central tests.
+
+## MAL-010 — Discover/Details localization bypass
+
+Priority: P3  
+Status: being corrected in PR #6; not closed.
+
+Progress: real locale files are being added and root suppression removed.
+
+Remaining at last reviewed moving head:
+
+- complete every supported repository locale, including `values-peo`;
+- update the worker report to the Round-04 source evidence;
+- freeze one exact green final SHA.
+
+## MAL-011 — Calendar/widget localization bypass
+
+Priority: P3  
+Status: being corrected in PR #9; not closed.
+
+Progress: real locale files and tests are being added.
+
+Remaining:
+
+- verify complete supported locale inventory with no suppression;
+- refresh report to source-confirmed Seasonal/sort/broadcast decisions;
+- freeze one exact green final SHA.
+
+## MAL-012 — unintegrated recurring broadcast interpretation
+
+Priority: P2 UX/capability  
+Status: worker implementation exists; final wiring/acceptance pending.
+
+Contract:
+
+- source-confirmed nullable top-level anime `broadcast` metadata;
+- application projection is inferred recurring `Asia/Tokyo` metadata only;
+- `episodeNumber` must remain null;
+- exact episode schedule and notifications remain unavailable;
+- degraded/may-change copy is mandatory;
+- no inactive-provider or AniList fallback.
 
 ## Evidence rules
 
-- Automated closure requires a test reference, exact commit and successful exact-head CI.
-- Worker CI is not integration evidence.
-- Account, device, network and visual closure additionally requires acceptance with the exact GitHub-built APK.
+Automated closure requires exact code/test references and successful exact-head integration CI. Worker CI is not integration evidence. Device, network, visual and release closure additionally requires acceptance using the exact GitHub-built artifact.
+
+Current merge decision: **authorize no worker merge**.
