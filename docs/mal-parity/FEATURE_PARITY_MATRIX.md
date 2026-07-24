@@ -3,27 +3,31 @@
 ## Status legend
 
 - `READY`: provider implementation exists and is suitable for shared UI integration.
-- `PARTIAL`: useful implementation exists but needs missing behavior, tests or shared presentation.
+- `PARTIAL`: useful implementation exists but needs missing behavior, tests, real-device evidence or shared presentation.
 - `BLOCKED`: official provider capability/evidence is missing.
 - `NOT APPLICABLE`: provider does not offer an equivalent concept and Kizomi must not emulate it through another provider.
 
 This matrix is a planning contract, not a claim that every row is already implemented.
 
+## Phase 1 evidence baseline
+
+The typed MAL details route and deterministic stored-session restoration are implemented on code head `686e95e7eecdb3b30bc8a0d455981668329751c6`. Exact-head run `30095988062` / number `211` passed with 416 Stable Debug unit tests, lint, APK, AndroidTest APK and all provider/security gates. Real-account and process-kill acceptance remains required before session/details rows can be treated as fully released.
+
 | Area | Shared Kizomi target | MAL baseline | Required work |
 |---|---|---:|---|
 | First run | Shared provider onboarding | READY | Preserve current choice and consent flow while applying shared styling/localization. |
-| OAuth login | Browser PKCE login | READY | Add restart/session restoration tests and explicit startup states. |
-| Session persistence | Relaunch remains connected | PARTIAL | Invoke persistent-state restoration and test process recreation. |
+| OAuth login | Browser PKCE login | READY | Existing callback, replay and staged-continuation tests are green; complete real-client/device acceptance. |
+| Session persistence | Relaunch remains connected | PARTIAL | Automated active/expired/missing/corrupt restoration and startup-order tests are green; prove force-stop, reboot and vault behavior on the exact APK. |
 | Account deletion | Shared destructive disconnect/delete | READY | Add device acceptance and sanitized dashboard evidence. |
-| App shell | One Kizomi scaffold/navigation | PARTIAL | Replace separate MAL shell with shared `MainScreen`. |
+| App shell | One Kizomi scaffold/navigation | PARTIAL | Phase 2 must route MAL through `MainScreen`, filter unsupported roots and remove the separate shell. |
 | Discover home | Existing Kizomi sections/cards | PARTIAL | Adapt rankings, popular and seasonal data to shared sections. |
 | Search | Shared search field/results | PARTIAL | Add shared filters, paging, cancellation and error recovery. |
 | Seasonal browsing | Shared seasonal experience | PARTIAL | Feed documented MAL seasonal requests into Kizomi UI. |
 | Ranking/charts | Shared charts sections | READY | Replace MAL-specific cards with shared components. |
-| Anime details | Shared media details screen | PARTIAL | Fix route crash, map fields and add capability sections. |
-| Manga details | Shared media details screen | PARTIAL | Same route/model contract with manga-specific fields. |
-| Relations | Shared relations component | PARTIAL | Verify fields and map typed related-media identities. |
-| Recommendations | Shared recommendation component | PARTIAL | Verify official availability and pagination. |
+| Anime details | Shared media details screen | PARTIAL | Typed crash-free routing is green; map MAL fields into the shared Kizomi details hierarchy and complete device recreation acceptance. |
+| Manga details | Shared media details screen | PARTIAL | Typed crash-free routing is green; complete shared manga mapping and device recreation acceptance. |
+| Relations | Shared relations component | PARTIAL | Typed related-media navigation is implemented; reuse the shared component and prove correct-item navigation on device. |
+| Recommendations | Shared recommendation component | PARTIAL | Verify official availability/paging and reuse shared presentation. |
 | Characters/staff | Shared grids and detail entry points | BLOCKED | Implement only fields and routes verified in current official documentation. |
 | Reviews | Shared review section | BLOCKED | Do not add until official API capability is verified. |
 | Statistics | Shared statistics components | PARTIAL | Map documented ranking/score/list distribution fields. |
@@ -41,17 +45,17 @@ This matrix is a planning contract, not a claim that every row is already implem
 | Notes | Shared optional control | BLOCKED | Do not expose if official MAL support is unavailable. |
 | Profile summary | Shared Account/Profile UI | PARTIAL | Load official self-profile fields and useful list statistics. |
 | Social feed | Shared destination only when supported | NOT APPLICABLE | Hide in MAL mode unless a documented official capability is introduced. |
-| Forums | Shared destination only when supported | BLOCKED | DailyAL demonstrates user demand, but Kizomi may use only officially permitted provider access. |
+| Forums | Shared destination only when supported | BLOCKED | Public clients show user demand, but Kizomi may use only officially permitted provider access. |
 | Notifications/messages | Shared destination only when supported | BLOCKED | Do not imitate or scrape website features. |
 | Calendar | Shared calendar design | PARTIAL | Create MAL-native schedule data only from documented provider data. |
 | Widgets | Shared widget designs | PARTIAL | Add MAL-backed data sources and lifecycle tests. |
 | Background refresh | Capability-aware workers | PARTIAL | Add bounded MAL-native work without enabling AniList traffic. |
-| Theme/appearance | Existing Kizomi settings | READY | Route MAL through shared shell so settings naturally apply. |
+| Theme/appearance | Existing Kizomi settings | READY | Route MAL through the shared shell so neutral preferences apply naturally. |
 | Language | Shared localization | PARTIAL | Remove hard-coded MAL UI strings. |
-| Tablet/foldable | Existing adaptive layouts | PARTIAL | Reuse shared list-detail and navigation rail. |
+| Tablet/foldable | Existing adaptive layouts | PARTIAL | Reuse the shared list-detail scaffold and wide navigation rail. |
 | Accessibility | Shared standards | PARTIAL | Add content descriptions, focus order, touch targets and contrast checks. |
 | Offline/cache | Shared resilient states | PARTIAL | Define TTL, stale-content labels and provider-bound cache cleanup. |
-| Debug dashboard | Sanitized integration view | NOT APPLICABLE | Implement new debug-only destination from its contract. |
+| Debug dashboard | Sanitized integration view | NOT APPLICABLE | Implement the new debug-only destination from its contract. |
 
 ## Feature inspiration from public MAL clients
 
