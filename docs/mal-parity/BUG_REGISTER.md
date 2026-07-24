@@ -12,8 +12,9 @@
 - `main`: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 - integration branch: `planning/mal-ui-feature-parity`
 - Draft PR: #5
-- last published exact-green head before this canonical refresh: `5d56b6fc6ea1ea2902e4e6abc3192d6378a3b3c4`
-- workflow run ID / number: `30123370413` / `417`
+- exact-green canonical head before this audit-consumption commit: `85d87505b51db539986eb86d8f0dfd01e4327357`
+- workflow run ID / number: `30125841225` / `491`
+- verify job: `89589067856`
 - result: `success`
 
 Every canonical commit after that head requires its own exact-head workflow.
@@ -85,8 +86,9 @@ Worker-level proof now includes:
 - truthful unknown inactive-provider traffic state;
 - conservative parity defaults.
 
-Remaining Integrator gates:
+Remaining:
 
+- close realistic opaque PKCE/state/client/account shape leaks caught by Run #485;
 - safe producer hooks at existing boundaries;
 - debug-only route bridge;
 - packaged release APK/class/route exclusion;
@@ -95,17 +97,18 @@ Remaining Integrator gates:
 ## MAL-006 — parallel-agent scope collision
 
 Priority: P1 process/architecture  
-Status: actively controlled; current violation exists in PR #7.
+Status: actively controlled; current violations exist.
 
-Current violation:
+Current violations:
 
-- PR #7 includes worker changes to Integrator-owned `app/src/main/java/com/anisync/android/data/tracking/MalTrackingProviderAdapter.kt`.
+- PR #6 modifies existing shared `values-fa/strings.xml` and `values-peo/strings.xml` instead of dedicated worker resource files;
+- PR #7 includes Integrator-owned `MalTrackingProviderAdapter.kt` and `MalTrackingProviderAdapterTest.kt`.
 
 Required disposition:
 
-- worker must add a normal corrective commit restoring the integration-base version;
-- DELETE-404 handling remains an Integrator implementation task;
-- PR #7 is ineligible until the complete changed-file list contains only owned files.
+- workers must add normal corrective commits restoring integration-base content;
+- shared/central files must disappear from each complete PR changed-file list;
+- PRs are ineligible while any reserved file remains.
 
 ## MAL-007 — catalogue request boundary broader than accepted source
 
@@ -158,31 +161,29 @@ Required disposition:
 - keep date parsing safe for read-only display;
 - update worker and central tests.
 
-## MAL-010 — Discover/Details localization bypass
+## MAL-010 — Discover/Details localization ownership and completeness
 
-Priority: P3  
+Priority: P1 process / P3 localization  
 Status: being corrected in PR #6; not closed.
 
 Progress: real locale files are being added and root suppression removed.
 
-Remaining at last reviewed moving head:
+Current defect:
 
-- complete every supported repository locale, including `values-peo`;
-- update the worker report to the Round-04 source evidence;
-- freeze one exact green final SHA.
+- Persian/Old-Persian strings were moved into existing shared `strings.xml` files, creating a worker-ownership collision.
 
-## MAL-011 — Calendar/widget localization bypass
+Required:
+
+- restore shared locale files;
+- use dedicated `strings_mal_discover_details.xml` files for every supported locale;
+- refresh report and freeze one exact-green final SHA.
+
+## MAL-011 — Calendar/widget localization
 
 Priority: P3  
 Status: being corrected in PR #9; not closed.
 
-Progress: real locale files and tests are being added.
-
-Remaining:
-
-- verify complete supported locale inventory with no suppression;
-- refresh report to source-confirmed Seasonal/sort/broadcast decisions;
-- freeze one exact green final SHA.
+Run #482 proved all tests/builds but failed exactly eight `values-peo` MissingTranslation errors. The missing dedicated Old-Persian file has since been added; final report and exact-head green CI remain required.
 
 ## MAL-012 — unintegrated recurring broadcast interpretation
 
@@ -198,8 +199,61 @@ Contract:
 - degraded/may-change copy is mandatory;
 - no inactive-provider or AniList fallback.
 
+## MAL-013 — running legacy AniList airing worker lacks execution-time provider gate
+
+Priority: P1 provider isolation race  
+Status: open; Integrator-owned.
+
+Repository-confirmed:
+
+- central scheduling starts AniList airing work only for `ANILIST_ONLY` and cancels it otherwise;
+- `AiringScheduleWorker.doWork()` does not re-check authoritative provider/traffic permission before its Apollo query.
+
+Failure scenario:
+
+- provider switch occurs while a previously scheduled/running worker survives cancellation long enough to execute an inactive-provider request.
+
+Required fix:
+
+- add fail-closed execution-time provider/traffic authorization before network access;
+- add a provider-switch-during-running-worker test;
+- preserve structured cancellation and no fallback.
+
+## MAL-014 — Settings exposes both provider-account routes
+
+Priority: P2 product/architecture  
+Status: open; Integrator-owned after PR #8 integration.
+
+Current central Settings renders separate AniList and MyAnimeList account categories despite exactly one active provider.
+
+Required fix:
+
+- replace both with one provider-neutral Account destination;
+- derive active-provider/session content from the authoritative runtime state;
+- expose inactive-provider change only through the explicit destructive provider-switch flow;
+- never expose an inactive-provider account action.
+
+## MAL-015 — MAL calendar extension identity and metadata not integration-grade
+
+Priority: P2 integration / P3 localization  
+Status: open in PR #9/Integrator handoff.
+
+Current worker extension uses generic ID/settings namespace `calendar.provider.native.broadcast` and hard-coded English metadata. It is not registered yet, so no present collision exists.
+
+Required disposition before registration:
+
+- use a stable MAL/provider-scoped extension ID and settings namespace;
+- use resource-backed localized title/description/setting metadata;
+- preserve exactly one MAL extension registration and per-extension lifecycle isolation.
+
 ## Evidence rules
 
 Automated closure requires exact code/test references and successful exact-head integration CI. Worker CI is not integration evidence. Device, network, visual and release closure additionally requires acceptance using the exact GitHub-built artifact.
+
+Advisory audit evidence:
+
+- PR #11 head `a8a9d3b798d8e84ba8d71cde93d9a6fe41474af5`;
+- run `30125909197` / `493`, success;
+- report ends `READY FOR INTEGRATOR REVIEW`.
 
 Current merge decision: **authorize no worker merge**.
