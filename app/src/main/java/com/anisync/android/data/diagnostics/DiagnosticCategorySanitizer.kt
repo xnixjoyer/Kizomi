@@ -72,7 +72,7 @@ object DiagnosticCategorySanitizer {
     /**
      * Accepts short structural metadata only: build types, versions, enum-like values and redirect
      * components without query/fragment data. Long opaque base64/base64url/token/identifier shapes,
-     * URLs, usernames, payloads and human-readable titles are rejected.
+     * full numeric identifiers, URLs, usernames, payloads and human-readable titles are rejected.
      */
     fun sanitizeMetadata(value: String?): String {
         val normalized = normalize(value) ?: return UNKNOWN
@@ -81,6 +81,7 @@ object DiagnosticCategorySanitizer {
         if (normalized.any { it in charArrayOf('?', '#', '&', '=', '@', '{', '}', '[', ']', '"', '\'') }) {
             return REDACTED
         }
+        if (normalized.length >= 12 && normalized.all(Char::isDigit)) return REDACTED
         if (normalized.length >= 20 && '/' !in normalized && ':' !in normalized) return REDACTED
         return if (metadataPattern.matches(normalized)) normalized else REDACTED
     }
