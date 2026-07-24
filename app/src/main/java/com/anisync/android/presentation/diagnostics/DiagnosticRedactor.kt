@@ -1,5 +1,6 @@
 package com.anisync.android.presentation.diagnostics
 
+import com.anisync.android.data.diagnostics.DiagnosticCategorySanitizer
 import com.anisync.android.data.diagnostics.IntegrationDiagnosticsSnapshot
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -20,47 +21,14 @@ enum class SensitiveDiagnosticValueClass {
 }
 
 object DiagnosticRedactor {
-    const val REDACTED = "<redacted>"
-    private const val UNKNOWN = "unknown"
-    private val forbiddenMarkers = listOf(
-        "access_token",
-        "refresh_token",
-        "authorization_code",
-        "authorization: bearer",
-        "bearer ",
-        "pkce",
-        "verifier",
-        "challenge",
-        "client_id",
-        "account_id",
-        "userid",
-        "user_id",
-        "username",
-        "raw_response",
-        "response_body",
-        "state=",
-        "code=",
-    )
+    const val REDACTED = DiagnosticCategorySanitizer.REDACTED
 
     fun redact(
         @Suppress("UNUSED_PARAMETER") value: String?,
         @Suppress("UNUSED_PARAMETER") valueClass: SensitiveDiagnosticValueClass,
     ): String = REDACTED
 
-    fun sanitizeCategory(value: String?): String {
-        val normalized = value
-            ?.trim()
-            ?.replace(Regex("\\s+"), " ")
-            ?.take(80)
-            .orEmpty()
-        if (normalized.isBlank()) return UNKNOWN
-        val lower = normalized.lowercase()
-        if ("://" in lower || forbiddenMarkers.any { marker -> marker in lower }) return REDACTED
-        if (normalized.length > 48 && normalized.none { character -> character.isWhitespace() }) {
-            return REDACTED
-        }
-        return normalized.replace(Regex("[^A-Za-z0-9 _.-]"), "_")
-    }
+    fun sanitizeCategory(value: String?): String = DiagnosticCategorySanitizer.sanitize(value)
 }
 
 object SanitizedDiagnosticExporter {
