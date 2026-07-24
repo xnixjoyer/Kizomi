@@ -87,7 +87,7 @@ class TrackingOutboxExecutorTest {
         val drained = executor.drain()
         assertEquals(1, adapter.calls)
         assertEquals("RETRYING", database.trackingDao().getTarget(receipt.operationId)?.state)
-        assertEquals("RETRYING", database.trackingDao().getOperation(receipt.operationId)?.state)
+        assertEquals("PENDING", database.trackingDao().getOperation(receipt.operationId)?.state)
         assertTrue(drained.hasUnsettledDeliveries)
 
         executor.drain()

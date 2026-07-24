@@ -198,7 +198,9 @@ class TrackingCommandService internal constructor(
     ): TrackingCommandTarget? = TrackingRouteResolver().resolve(
         activeProvider = provider,
         accounts = TrackingAccountSelection(
-            aniListAccountId = activeAniListAccountId(),
+            aniListAccountId = if (provider == ActiveProvider.ANILIST_ONLY) {
+                activeAniListAccountId()
+            } else null,
             myAnimeListAccountId = if (provider == ActiveProvider.MAL_ONLY) {
                 activeMalAccountId()
             } else null,
