@@ -31,11 +31,11 @@ class DiagnosticRedactorTest {
         realisticFixtures.values.forEach { fixture ->
             assertEquals(DiagnosticRedactor.REDACTED, DiagnosticRedactor.sanitizeCategory(fixture))
         }
+        val bearerFixture =
+            "Authorization: " + "Bearer " + "eyJhbGciOiJSUzI1NiJ9.fake.payload.signature"
         assertEquals(
             DiagnosticRedactor.REDACTED,
-            DiagnosticRedactor.sanitizeCategory(
-                "Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.fake.payload.signature",
-            ),
+            DiagnosticRedactor.sanitizeCategory(bearerFixture),
         )
         assertEquals(
             DiagnosticRedactor.REDACTED,
