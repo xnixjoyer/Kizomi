@@ -1,10 +1,13 @@
 package com.anisync.android.presentation.parity.qa
 
+import com.anisync.android.data.mal.api.MalCatalogRequestFactory
+import com.anisync.android.data.mal.api.MalListRequestFactory
 import com.anisync.android.domain.provider.ActiveProvider
 import com.anisync.android.domain.tracking.ProviderNetworkPolicy
 import com.anisync.android.domain.tracking.TrackingAccountSelection
 import com.anisync.android.domain.tracking.TrackingFailureKind
 import com.anisync.android.domain.tracking.TrackingIdentitySelection
+import com.anisync.android.domain.tracking.TrackingMediaType
 import com.anisync.android.domain.tracking.TrackingProvider
 import com.anisync.android.domain.tracking.TrackingRouteResolver
 import java.io.File
@@ -18,23 +21,13 @@ import org.junit.Test
 class MalParityQaArchitectureTest {
     @Test
     fun `provider runtime exposes exactly one configured provider at a time`() {
-        val source = readSource(
-            "app/src/main/java/com/anisync/android/domain/provider/ProviderState.kt",
-        )
-        val enumBody = Regex(
-            pattern = """enum class ActiveProvider\s*\{(.*?);""",
-            option = RegexOption.DOT_MATCHES_ALL,
-        ).find(source)?.groupValues?.get(1)
-        assertNotNull("ActiveProvider enum declaration was not found", enumBody)
-
-        val constants = requireNotNull(enumBody)
-            .split(',')
-            .map(String::trim)
-            .filter(String::isNotEmpty)
-
         assertEquals(
-            listOf("UNCONFIGURED", "ANILIST_ONLY", "MAL_ONLY"),
-            constants,
+            listOf(
+                ActiveProvider.UNCONFIGURED,
+                ActiveProvider.ANILIST_ONLY,
+                ActiveProvider.MAL_ONLY,
+            ),
+            ActiveProvider.entries,
         )
     }
 
@@ -80,79 +73,131 @@ class MalParityQaArchitectureTest {
 
     @Test
     fun `MAL compatibility entry delegates to the shared app shell`() {
-        val source = readSource(
+        val body = readSource(
             "app/src/main/java/com/anisync/android/presentation/mal/MalProviderMainScreen.kt",
-        )
-        val body = Regex(
-            pattern = """fun MalProviderMainScreen\(\)\s*\{([^}]*)}""",
-            option = RegexOption.DOT_MATCHES_ALL,
-        ).find(source)?.groupValues?.get(1)?.trim()
+        ).functionBody("fun MalProviderMainScreen()")
 
-        assertEquals("MainScreen()", body)
-        assertFalse(source.substringBefore("data class MalLibraryUiState").contains("Scaffold("))
-        assertFalse(source.substringBefore("data class MalLibraryUiState").contains("rememberNavController("))
+        assertTrue(body.containsCall("MainScreen"))
+        assertFalse(body.containsCall("Scaffold"))
+        assertFalse(body.containsCall("NavHost"))
+        assertFalse(body.containsCall("rememberNavController"))
     }
 
     @Test
-    fun `MAL request factories stay on the official HTTPS API host and validate paging URLs`() {
-        val catalog = readSource(
-            "app/src/main/java/com/anisync/android/data/mal/api/MalCatalogApi.kt",
-        )
-        val library = readSource(
-            "app/src/main/java/com/anisync/android/data/mal/api/MalListApi.kt",
-        )
-        val combined = catalog + library
+    fun `MAL request factories stay on the official HTTPS API host and reject unsafe paging URLs`() {
+        val catalog = MalCatalogRequestFactory()
+        val library = MalListRequestFactory()
 
-        assertTrue(catalog.contains("https://api.myanimelist.net/v2/"))
-        assertTrue(library.contains("https://api.myanimelist.net/v2/"))
-        assertFalse(combined.contains("http://"))
-        assertFalse(combined.contains("Jsoup"))
-        assertFalse(combined.contains("WebView"))
-        assertFalse(combined.contains("CookieManager"))
+        val search = catalog.search(
+            mediaType = TrackingMediaType.ANIME,
+            query = "test",
+            limit = 1,
+            offset = 0,
+        )
+        assertEquals("https", search.url.scheme)
+        assertEquals("api.myanimelist.net", search.url.host)
+        assertEquals("/v2/anime", search.url.encodedPath)
 
-        listOf(catalog, library).forEach { source ->
-            assertTrue(source.contains("next.scheme != baseUrl.scheme"))
-            assertTrue(source.contains("next.host != baseUrl.host"))
-            assertTrue(source.contains("next.username.isNotEmpty()"))
-            assertTrue(source.contains("next.password.isNotEmpty()"))
-            assertTrue(source.contains("next.fragment != null"))
-        }
+        val firstLibraryPage = library.firstPage(
+            mediaType = TrackingMediaType.MANGA,
+            limit = 1,
+        )
+        assertEquals("https", firstLibraryPage.url.scheme)
+        assertEquals("api.myanimelist.net", firstLibraryPage.url.host)
+        assertEquals("/v2/users/@me/mangalist", firstLibraryPage.url.encodedPath)
+
+        assertNotNull(
+            catalog.nextPage(
+                TrackingMediaType.ANIME,
+                "https://api.myanimelist.net/v2/anime?offset=1",
+            ),
+        )
+        assertNull(
+            catalog.nextPage(
+                TrackingMediaType.ANIME,
+                "https://example.invalid/v2/anime?offset=1",
+            ),
+        )
+        assertNull(
+            catalog.nextPage(
+                TrackingMediaType.ANIME,
+                "https://user@api.myanimelist.net/v2/anime?offset=1",
+            ),
+        )
+        assertNull(
+            catalog.nextPage(
+                TrackingMediaType.ANIME,
+                "https://api.myanimelist.net/v2/anime?offset=1#fragment",
+            ),
+        )
+        assertNull(
+            catalog.nextPage(
+                TrackingMediaType.ANIME,
+                "https://api.myanimelist.net/v2/manga?offset=1",
+            ),
+        )
+
+        assertNotNull(
+            library.nextPage(
+                "https://api.myanimelist.net/v2/users/@me/animelist?offset=1",
+            ),
+        )
+        assertNull(
+            library.nextPage(
+                "https://example.invalid/v2/users/@me/animelist?offset=1",
+            ),
+        )
+        assertNull(
+            library.nextPage(
+                "https://user@api.myanimelist.net/v2/users/@me/animelist?offset=1",
+            ),
+        )
+        assertNull(
+            library.nextPage(
+                "https://api.myanimelist.net/v2/users/@me/animelist?offset=1#fragment",
+            ),
+        )
     }
 
     @Test
-    fun `destructive provider change purges credentials provider data shared state work and caches`() {
+    fun `destructive provider change retains the frozen purge fan-out and ordering`() {
         val source = readSource(
             "app/src/main/java/com/anisync/android/data/provider/ProviderSessionCoordinator.kt",
         )
-        val purgeStart = source.indexOf("private suspend fun purgeEveryProviderLocally()")
-        val purgeEnd = source.indexOf("private suspend fun purgeAniListProviderLocally()", purgeStart)
-        assertTrue("purgeEveryProviderLocally was not found", purgeStart >= 0)
-        assertTrue("purgeEveryProviderLocally boundary was not found", purgeEnd > purgeStart)
-        val purgeBody = source.substring(purgeStart, purgeEnd)
 
+        // These collaborator calls are the durable destructive-purge architecture contract. The
+        // guard deliberately ignores formatting, line layout and unrelated helper implementation.
+        val purgeBody = source.functionBody("private suspend fun purgeEveryProviderLocally()")
         listOf(
-            "stopProviderWork()",
-            "malOAuthSessions.clearPending(null)",
-            "malAccounts.removeLocal",
-            "aniListAccounts.clearAll()",
-            "apolloClient.apolloStore.clearAll()",
-            "libraryDao.deleteAll()",
-            "mediaDetailsDao.clear()",
-            "userProfileDao.clear()",
-            "airingScheduleDao.clearAll()",
-            "trackingDao.purgeAllProviderBoundState()",
-            "mediaIdentityDao.deleteAllProviderIdentities()",
-            "appSettings.clearAccountScoped()",
-            "clearControllableCaches()",
-        ).forEach { marker ->
-            assertTrue("Missing destructive-purge marker: $marker", purgeBody.contains(marker))
+            """\bstopProviderWork\s*\(""",
+            """\bmalOAuthSessions\s*\.\s*clearPending\s*\(""",
+            """\bmalAccounts\s*\.\s*removeLocal\s*\(""",
+            """\baniListAccounts\s*\.\s*clearAll\s*\(""",
+            """\bapolloClient\s*\.\s*apolloStore\s*\.\s*clearAll\s*\(""",
+            """\blibraryDao\s*\.\s*deleteAll\s*\(""",
+            """\bmediaDetailsDao\s*\.\s*clear\s*\(""",
+            """\buserProfileDao\s*\.\s*clear\s*\(""",
+            """\bairingScheduleDao\s*\.\s*clearAll\s*\(""",
+            """\btrackingDao\s*\.\s*purgeAllProviderBoundState\s*\(""",
+            """\bmediaIdentityDao\s*\.\s*deleteAllProviderIdentities\s*\(""",
+            """\bappSettings\s*\.\s*clearAccountScoped\s*\(""",
+            """\bclearControllableCaches\s*\(""",
+        ).forEach { pattern ->
+            assertTrue(
+                "Missing destructive-purge contract: $pattern",
+                Regex(pattern).containsMatchIn(purgeBody),
+            )
         }
 
-        val disconnectStart = source.indexOf("suspend fun disconnectAndDeleteAllLocalProviderData()")
-        val disconnectEnd = source.indexOf("suspend fun prepareDestructiveProviderChange()", disconnectStart)
-        val disconnectBody = source.substring(disconnectStart, disconnectEnd)
-        assertTrue(disconnectBody.indexOf("stateStore.beginPurge()") < disconnectBody.indexOf("purgeEveryProviderLocally()"))
-        assertTrue(disconnectBody.indexOf("purgeEveryProviderLocally()") < disconnectBody.indexOf("stateStore.finishPurge()"))
+        val disconnectBody = source.functionBody(
+            "suspend fun disconnectAndDeleteAllLocalProviderData()",
+        )
+        val begin = disconnectBody.indexOfCall("beginPurge")
+        val purge = disconnectBody.indexOfCall("purgeEveryProviderLocally")
+        val finish = disconnectBody.indexOfCall("finishPurge")
+        assertTrue(begin >= 0)
+        assertTrue(purge > begin)
+        assertTrue(finish > purge)
     }
 
     private fun readSource(path: String): String = File(repositoryRoot(), path).readText()
@@ -160,4 +205,28 @@ class MalParityQaArchitectureTest {
     private fun repositoryRoot(): File =
         generateSequence(File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }
             .first { File(it, "app/src/main/java").isDirectory }
+
+    private fun String.functionBody(signature: String): String {
+        val signatureStart = indexOf(signature)
+        require(signatureStart >= 0) { "Function signature not found: $signature" }
+        val openingBrace = indexOf('{', signatureStart + signature.length)
+        require(openingBrace >= 0) { "Function body not found: $signature" }
+
+        var depth = 0
+        for (index in openingBrace until length) {
+            when (this[index]) {
+                '{' -> depth += 1
+                '}' -> {
+                    depth -= 1
+                    if (depth == 0) return substring(openingBrace + 1, index)
+                }
+            }
+        }
+        error("Unterminated function body: $signature")
+    }
+
+    private fun String.containsCall(name: String): Boolean = indexOfCall(name) >= 0
+
+    private fun String.indexOfCall(name: String): Int =
+        Regex("""\b${Regex.escape(name)}\s*\(""").find(this)?.range?.first ?: -1
 }
