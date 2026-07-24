@@ -19,7 +19,9 @@ object DiagnosticsParityRegistry {
     fun defaultItems(): List<DiagnosticParityItem> = listOf(
         DiagnosticParityItem(
             key = "authentication_session",
-            status = DiagnosticParityStatus.IMPLEMENTED_AND_TESTED,
+            // OAuth Bearer and X-MAL-CLIENT-ID are source-confirmed, but end-to-end route/device
+            // acceptance and Integrator wiring are not complete on this isolated worker branch.
+            status = DiagnosticParityStatus.IN_PROGRESS,
         ),
         DiagnosticParityItem(
             key = "discover_search",
@@ -55,7 +57,7 @@ object DiagnosticsParityRegistry {
         configurationPresent: Boolean,
         redirectConfigured: Boolean,
         accountRestored: Boolean,
-        blockedInactiveRequestCount: Long,
+        blockedInactiveRequestCount: Long?,
     ): List<DiagnosticChecklistItem> = listOf(
         DiagnosticChecklistItem("mal_configuration_present", configurationPresent),
         DiagnosticChecklistItem("oauth_redirect_registered", redirectConfigured),
@@ -66,8 +68,18 @@ object DiagnosticsParityRegistry {
         DiagnosticChecklistItem("tracking_write_read_back", false, "device_verification_pending"),
         DiagnosticChecklistItem("provider_deletion_returns_to_onboarding", false, "device_verification_pending"),
         DiagnosticChecklistItem(
-            "inactive_provider_request_count_zero",
-            blockedInactiveRequestCount == 0L,
+            key = "blocked_inactive_attempt_counter_available",
+            passed = blockedInactiveRequestCount != null,
+            detail = if (blockedInactiveRequestCount == null) {
+                "instrumentation_unavailable"
+            } else {
+                "counter_available"
+            },
+        ),
+        DiagnosticChecklistItem(
+            key = "inactive_provider_traffic_zero",
+            passed = null,
+            detail = "unavailable_without_boundary_instrumentation",
         ),
         DiagnosticChecklistItem("shared_ui_migration", false, "in_progress"),
     )
