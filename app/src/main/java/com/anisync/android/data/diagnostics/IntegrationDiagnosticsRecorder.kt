@@ -1,21 +1,22 @@
 package com.anisync.android.data.diagnostics
 
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class IntegrationDiagnosticsRecorder @Inject constructor() {
-    private val activeProviderRequests = AtomicReference<Long?>(null)
-    private val blockedInactiveProviderRequests = AtomicReference<Long?>(null)
-    private val activeWorkers = AtomicReference<Long?>(null)
-    private val providerBoundWidgets = AtomicReference<Long?>(null)
-    private val cacheHits = AtomicReference<Long?>(null)
-    private val cacheMisses = AtomicReference<Long?>(null)
-    private val coalescedRequests = AtomicReference<Long?>(null)
-    private val retries = AtomicReference<Long?>(null)
-    private val writes = AtomicReference<Long?>(null)
-    private val pendingTrackingCommands = AtomicReference<Long?>(null)
+    private val activeProviderRequests = unknownCounter()
+    private val blockedInactiveProviderRequests = unknownCounter()
+    private val activeWorkers = unknownCounter()
+    private val providerBoundWidgets = unknownCounter()
+    private val cacheHits = unknownCounter()
+    private val cacheMisses = unknownCounter()
+    private val coalescedRequests = unknownCounter()
+    private val retries = unknownCounter()
+    private val writes = unknownCounter()
+    private val pendingTrackingCommands = unknownCounter()
     private val networkKillSwitch = AtomicReference<Boolean?>(null)
     private val lastSuccessfulRequest = AtomicReference<DiagnosticEvent?>(null)
     private val lastFailure = AtomicReference<DiagnosticFailureEvent?>(null)
@@ -113,17 +114,17 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
         val success = lastSuccessfulRequest.get()
         val failure = lastFailure.get()
         return DiagnosticsRuntimeMetrics(
-            activeProviderRequestCount = activeProviderRequests.get(),
-            blockedInactiveProviderRequestCount = blockedInactiveProviderRequests.get(),
-            activeWorkerCount = activeWorkers.get(),
-            providerBoundWidgetCount = providerBoundWidgets.get(),
+            activeProviderRequestCount = known(activeProviderRequests),
+            blockedInactiveProviderRequestCount = known(blockedInactiveProviderRequests),
+            activeWorkerCount = known(activeWorkers),
+            providerBoundWidgetCount = known(providerBoundWidgets),
             networkKillSwitchEnabled = networkKillSwitch.get(),
-            cacheHitCount = cacheHits.get(),
-            cacheMissCount = cacheMisses.get(),
-            coalescedRequestCount = coalescedRequests.get(),
-            retryCount = retries.get(),
-            writeCount = writes.get(),
-            pendingTrackingCommandCount = pendingTrackingCommands.get(),
+            cacheHitCount = known(cacheHits),
+            cacheMissCount = known(cacheMisses),
+            coalescedRequestCount = known(coalescedRequests),
+            retryCount = known(retries),
+            writeCount = known(writes),
+            pendingTrackingCommandCount = known(pendingTrackingCommands),
             lastSuccessfulRequestCategory = success?.category,
             lastSuccessfulRequestEpochMillis = success?.epochMillis,
             lastFailureCategory = failure?.category,
@@ -140,12 +141,12 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
         it.category to it.epochMillis
     }
 
-    private fun increment(counter: AtomicReference<Long?>) {
-        while (true) {
-            val current = counter.get()
-            if (counter.compareAndSet(current, (current ?: 0L) + 1L)) return
-        }
+    private fun increment(counter: AtomicLong) {
+        counter.updateAndGet { current -> if (current == UNKNOWN_COUNTER) 1L else current + 1L }
     }
+
+    private fun known(counter: AtomicLong): Long? =
+        counter.get().takeUnless { it == UNKNOWN_COUNTER }
 
     private data class DiagnosticEvent(
         val category: String,
@@ -157,4 +158,10 @@ class IntegrationDiagnosticsRecorder @Inject constructor() {
         val httpClass: String?,
         val epochMillis: Long,
     )
+
+    private companion object {
+        const val UNKNOWN_COUNTER = -1L
+
+        fun unknownCounter(): AtomicLong = AtomicLong(UNKNOWN_COUNTER)
+    }
 }
