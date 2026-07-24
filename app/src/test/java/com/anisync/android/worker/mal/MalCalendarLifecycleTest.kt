@@ -1,5 +1,7 @@
 package com.anisync.android.worker.mal
 
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import com.anisync.android.domain.calendar.CalendarCapability
 import com.anisync.android.domain.calendar.CalendarExtension
 import com.anisync.android.domain.calendar.CalendarExtensionAvailability
@@ -50,7 +52,7 @@ class MalCalendarLifecycleTest {
             snapshotStore = store,
         )
 
-        controller.onProviderChanged(ActiveProvider.MAL_ONLY)
+        controller.onAccountChanged(ActiveProvider.MAL_ONLY)
 
         assertEquals(1, memoryPurges)
         assertNull(store.snapshot)
@@ -83,6 +85,51 @@ class MalCalendarLifecycleTest {
     }
 
     @Test
+    fun `duplicate scheduling uses stable unique names and KEEP policies`() {
+        assertTrue(MalCalendarRefreshWorker.PERIODIC_WORK_NAME.isNotBlank())
+        assertTrue(MalCalendarRefreshWorker.IMMEDIATE_WORK_NAME.isNotBlank())
+        assertTrue(MalCalendarRefreshWorker.PERIODIC_WORK_NAME != MalCalendarRefreshWorker.IMMEDIATE_WORK_NAME)
+        assertEquals(ExistingPeriodicWorkPolicy.KEEP, MAL_PERIODIC_DUPLICATE_POLICY)
+        assertEquals(ExistingWorkPolicy.KEEP, MAL_IMMEDIATE_DUPLICATE_POLICY)
+    }
+
+    @Test
+    fun `logout cancels work and purges memory and snapshot through extension registry`() = runTest {
+        val scheduler = RecordingScheduler()
+        val store = MemorySnapshotStore(snapshot())
+        var memoryPurges = 0
+        val extension = MalCalendarExtension(
+            MalCalendarLifecycleController(scheduler, { memoryPurges++ }, store)
+        )
+        val registry = registry(extension, enabled = true)
+
+        val report = registry.onLogout(CalendarExtensionContext(ActiveProvider.MAL_ONLY, "account"))
+
+        assertTrue(extension.extensionId in report.successfulExtensionIds)
+        assertEquals(1, scheduler.cancelCalls)
+        assertEquals(1, memoryPurges)
+        assertNull(store.snapshot)
+    }
+
+    @Test
+    fun `purge cancels work and removes all account bound calendar state`() = runTest {
+        val scheduler = RecordingScheduler()
+        val store = MemorySnapshotStore(snapshot())
+        var memoryPurges = 0
+        val extension = MalCalendarExtension(
+            MalCalendarLifecycleController(scheduler, { memoryPurges++ }, store)
+        )
+        val registry = registry(extension, enabled = false)
+
+        val report = registry.onPurge(CalendarExtensionContext(ActiveProvider.MAL_ONLY, "account"))
+
+        assertTrue(extension.extensionId in report.successfulExtensionIds)
+        assertEquals(1, scheduler.cancelCalls)
+        assertEquals(1, memoryPurges)
+        assertNull(store.snapshot)
+    }
+
+    @Test
     fun `extension failure is isolated by neutral registry`() = runTest {
         val failingScheduler = RecordingScheduler(failOnCancel = true)
         val controller = MalCalendarLifecycleController(
@@ -105,6 +152,15 @@ class MalCalendarLifecycleTest {
         assertTrue(healthy.extensionId in report.successfulExtensionIds)
         assertEquals(1, healthy.purgeCalls)
     }
+
+    private fun registry(
+        extension: MalCalendarExtension,
+        enabled: Boolean,
+    ) = CalendarExtensionRegistry(
+        setOf(extension),
+        MemoryEnablementStore(if (enabled) setOf(extension.extensionId) else emptySet()),
+        MemorySettingsStore(),
+    )
 
     private fun snapshot() = ProviderCalendarSnapshot(
         provider = ActiveProvider.MAL_ONLY,
