@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="provider_account_screen_title">Account and provider</string>
+    <string name="provider_account_section_summary">Active account</string>
+    <string name="provider_account_section_data">Account data</string>
+    <string name="provider_account_anilist">AniList</string>
+    <string name="provider_account_myanimelist">MyAnimeList</string>
+    <string name="provider_account_not_configured">No provider configured</string>
+    <string name="provider_account_record_present">A local account record is present. Identifiers and profile content are hidden.</string>
+    <string name="provider_account_record_absent">No active local account record is available.</string>
+    <string name="provider_account_expiry">Stored session expiry: %1$s</string>
+    <string name="provider_account_status_content_description">Provider %1$s, session %2$s</string>
+    <string name="provider_account_session_not_configured">Not configured</string>
+    <string name="provider_account_session_transitioning">Provider transition in progress</string>
+    <string name="provider_account_session_connected">Connected</string>
+    <string name="provider_account_session_expiring">Connected; expiry is approaching</string>
+    <string name="provider_account_session_missing">Session is missing; sign in again</string>
+    <string name="provider_account_session_expired">Session expired; sign in again</string>
+    <string name="provider_account_session_corrupt">Session storage is unreadable; sign in again</string>
+    <string name="provider_account_session_keystore_reset">Secure storage was reset; sign in again</string>
+    <string name="provider_account_session_unknown">Session state is unknown</string>
+    <string name="provider_account_disconnect_delete_title">Disconnect and delete local account data</string>
+    <string name="provider_account_disconnect_delete_summary">Deletes credentials, provider caches, queues, mappings, pending work, extension state and controllable local exports. It does not modify the remote list.</string>
+    <string name="provider_account_change_provider_title">Change provider</string>
+    <string name="provider_account_change_provider_summary">Uses the same complete local purge, returns to provider selection and never copies data between providers.</string>
+    <string name="provider_account_revoke_mal_consent_title">Revoke stored MyAnimeList consent</string>
+    <string name="provider_account_revoke_mal_consent_summary">Removes only the locally stored consent record. A future MyAnimeList sign-in requires consent again.</string>
+    <string name="provider_account_shared_settings_notice">Appearance, language, accessibility, storage and update preferences remain in the shared Kizomi settings hierarchy and are not provider-specific.</string>
+    <string name="provider_account_local_action_failed">The local account operation could not be completed. No alternate provider was contacted.</string>
+    <string name="provider_account_local_state_unavailable">The local account state could not be read safely.</string>
+    <string name="provider_account_change_dialog_title">Delete local data and change provider?</string>
+    <string name="provider_account_delete_dialog_title">Disconnect and delete local data?</string>
+    <string name="provider_account_delete_dialog_message">The current account is disconnected. Credentials, account-bound caches, queues, mappings, pending work, calendar-extension state, controllable image cache entries and local exports are deleted. Nothing is copied to another provider and no remote list entry is changed.</string>
+    <string name="provider_account_delete_dialog_confirm">Delete local data</string>
+    <string name="provider_account_dialog_cancel">Cancel</string>
+</resources>
