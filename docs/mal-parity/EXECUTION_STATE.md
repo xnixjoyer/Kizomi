@@ -12,6 +12,41 @@
 
 Correctness comes before visual migration. The first implementation PR must make the existing MAL path restart-safe and crash-free, with regression tests. Shared UI work begins only after that foundation is green.
 
+## Implementation cycle 1 — verified Phase 1 slice
+
+Remote state verified before implementation:
+
+- exact `main` head: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`;
+- exact working head before this cycle: `3f409ee5f4ef59a96cf21f916424c1116cf4e884`;
+- Draft PR: `#5 – MAL stability and shared Kizomi UI parity`;
+- baseline exact-head workflow: `Pull request and push CI`, run `30091835533` / run number `200`, result `success`.
+
+Current source findings:
+
+1. `MalProviderMainScreen` stores the selected `MalMediaKey` in local Compose state and calls `MalDetailsScreen` directly. This bypasses the existing typed `MalNativeDetails(mediaType, malId)` destination in `AniSyncNavHost`, so Hilt creates `MalDetailsViewModel` without the required saved-state route arguments.
+2. `MalDetailsViewModel` constructs `MalMediaKey` with constructor-time `checkNotNull` and `TrackingMediaType.valueOf`. Missing, malformed or non-positive route data therefore terminates ViewModel creation instead of producing recoverable UI state.
+3. `ProviderSessionCoordinator.initialize()` correctly reconciles persistent provider/account state before traffic, but normal activity startup then launches `MalAuthRepository.resumePendingLogin()` without awaiting it. When no OAuth transaction exists, that operation returns `null` and never restores the persisted active MAL account.
+4. `_providerStartupReady` is set before the separately launched MAL restoration completes. The root UI can therefore render onboarding while a valid stored MAL account still has the repository's initial `Disconnected` state.
+5. `MalAuthRepository.refreshState()` already provides the required fail-closed restoration semantics: active and expired accounts become `Connected`, missing credentials become `ReLoginRequired`, pending callbacks are resumed and session-store reset becomes an explicit error.
+
+Concrete Phase 1 task for this cycle:
+
+- add regression tests for active, expired and missing persisted MAL credentials after repository recreation;
+- introduce a validated route-to-`MalMediaKey` parser and tests for anime, manga, malformed type, missing ID and non-positive ID;
+- make `MalDetailsViewModel` expose recoverable invalid-route state without repository/network access;
+- route the production MAL shell through `MalNativeDetails` using a process-restorable Navigation Compose back stack;
+- await `MalAuthRepository.refreshState()` after provider reconciliation and before releasing the startup loading gate;
+- keep cold-start MAL callback completion inside the same deterministic startup sequence;
+- update bug/parity evidence, then require exact-head CI and the GitHub-only MAL APK artifact before Phase 2.
+
+Expected automated evidence:
+
+- route parser and invalid-ViewModel-state unit tests;
+- MAL authentication restoration unit tests;
+- existing OAuth replay/process-recovery tests remain green;
+- existing provider-isolation, purge, Room, compliance, lint and APK gates remain unchanged and green;
+- exact published head is the SHA tested by GitHub Actions.
+
 ## Phase 0 — evidence and baseline
 
 Status: planning complete; implementation evidence still required.
@@ -31,7 +66,7 @@ Exit gate:
 
 ## Phase 1 — emergency stability fixes
 
-Status: next executable phase.
+Status: implementation cycle 1 in progress.
 
 ### 1A. Media details crash
 
