@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="mal_shared_discover_title">Discover</string>
     <string name="mal_shared_discover_anime">Anime</string>
     <string name="mal_shared_discover_manga">Manga</string>
@@ -22,7 +22,6 @@
     <string name="mal_shared_error_temporary">MyAnimeList is temporarily unavailable.</string>
     <string name="mal_shared_error_invalid_response">MyAnimeList returned an invalid response.</string>
     <string name="mal_shared_error_unknown">Something went wrong.</string>
-
     <string name="mal_shared_details_title">Details</string>
     <string name="mal_shared_details_loading">Loading details…</string>
     <string name="mal_shared_details_edit_list">Edit list entry</string>
