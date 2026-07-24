@@ -334,14 +334,45 @@ internal fun malSeasonForMonth(month: Int): MalSeason = when (month.also { requi
     else -> MalSeason.FALL
 }
 
+enum class MalDetailsRouteError {
+    INVALID_MEDIA_IDENTITY,
+}
+
 data class MalDetailsUiState(
-    val key: MalMediaKey,
+    val key: MalMediaKey? = null,
     val details: MalCatalogMedia? = null,
     val loading: Boolean = true,
     val error: MalApiFailure? = null,
+    val routeError: MalDetailsRouteError? = null,
 ) {
     val showingLastGood: Boolean
         get() = details != null && error != null
+}
+
+internal fun malMediaKeyFromRoute(
+    mediaType: String?,
+    malId: Long?,
+): MalMediaKey? {
+    val parsedType = mediaType
+        ?.let { runCatching { TrackingMediaType.valueOf(it) }.getOrNull() }
+        ?: return null
+    val parsedId = malId?.takeIf { it > 0L } ?: return null
+    return MalMediaKey(parsedType, parsedId)
+}
+
+internal fun malDetailsInitialState(
+    mediaType: String?,
+    malId: Long?,
+): MalDetailsUiState {
+    val key = malMediaKeyFromRoute(mediaType, malId)
+    return if (key == null) {
+        MalDetailsUiState(
+            loading = false,
+            routeError = MalDetailsRouteError.INVALID_MEDIA_IDENTITY,
+        )
+    } else {
+        MalDetailsUiState(key = key)
+    }
 }
 
 @HiltViewModel
@@ -350,34 +381,37 @@ class MalDetailsViewModel @Inject constructor(
     private val accounts: MalAccountCredentialStore,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val key = MalMediaKey(
-        mediaType = TrackingMediaType.valueOf(
-            checkNotNull(savedStateHandle.get<String>("mediaType")),
-        ),
-        malId = checkNotNull(savedStateHandle.get<Long>("malId")),
+    private val initialState = malDetailsInitialState(
+        mediaType = savedStateHandle.get<String>("mediaType"),
+        malId = savedStateHandle.get<Long>("malId"),
     )
-    private val _uiState = MutableStateFlow(MalDetailsUiState(key))
+    private val key = initialState.key
+    private val _uiState = MutableStateFlow(initialState)
     val uiState: StateFlow<MalDetailsUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            repository.observeDetails(key).collectLatest { cached ->
-                _uiState.update {
-                    it.copy(
-                        details = cached?.copy(
-                            // The metadata cache is intentionally provider-global and strips the
-                            // active account's list state. Preserve only the in-memory live value.
-                            listState = it.details?.listState,
-                        ),
-                        loading = it.loading && cached == null,
-                    )
+        val routeKey = key
+        if (routeKey != null) {
+            viewModelScope.launch {
+                repository.observeDetails(routeKey).collectLatest { cached ->
+                    _uiState.update {
+                        it.copy(
+                            details = cached?.copy(
+                                // The metadata cache is intentionally provider-global and strips the
+                                // active account's list state. Preserve only the in-memory live value.
+                                listState = it.details?.listState,
+                            ),
+                            loading = it.loading && cached == null,
+                        )
+                    }
                 }
             }
+            refresh()
         }
-        refresh()
     }
 
     fun refresh() {
+        val routeKey = key ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(loading = it.details == null, error = null) }
             val account = accounts.activeAccount()
@@ -390,7 +424,7 @@ class MalDetailsViewModel @Inject constructor(
                 }
                 return@launch
             }
-            when (val result = repository.refreshDetails(account.localAccountId, key)) {
+            when (val result = repository.refreshDetails(account.localAccountId, routeKey)) {
                 is MalApiResult.Success -> _uiState.update {
                     it.copy(details = result.value, loading = false, error = null)
                 }
