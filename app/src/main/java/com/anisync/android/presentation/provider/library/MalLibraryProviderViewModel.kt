@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -40,15 +39,18 @@ sealed interface MalLibraryProviderAction {
         val sort: ProviderLibrarySort,
         val ascending: Boolean,
     ) : MalLibraryProviderAction
+
     data class SetLayout(val layout: ProviderLibraryLayout) : MalLibraryProviderAction
     data class SubmitEdit(
         val item: ProviderLibraryItem,
         val draft: MalLibraryEditDraft,
     ) : MalLibraryProviderAction
+
     data class RetryEdit(
         val item: ProviderLibraryItem,
         val draft: MalLibraryEditDraft,
     ) : MalLibraryProviderAction
+
     data class Delete(val item: ProviderLibraryItem) : MalLibraryProviderAction
 }
 
@@ -127,13 +129,16 @@ class MalLibraryProviderViewModel internal constructor(
                 query.update { it.copy(mediaType = action.mediaType, searchQuery = "") }
                 refresh()
             }
+
             is MalLibraryProviderAction.Search -> query.update { it.copy(searchQuery = action.query) }
             is MalLibraryProviderAction.FilterStatuses -> query.update {
                 it.copy(statuses = action.statuses)
             }
+
             is MalLibraryProviderAction.Sort -> query.update {
                 it.copy(sort = action.sort, ascending = action.ascending)
             }
+
             is MalLibraryProviderAction.SetLayout -> query.update { it.copy(layout = action.layout) }
             is MalLibraryProviderAction.SubmitEdit -> submitEdit(action.item, action.draft)
             is MalLibraryProviderAction.RetryEdit -> submitEdit(action.item, action.draft)
@@ -222,6 +227,7 @@ class MalLibraryProviderViewModel internal constructor(
                     lastPageCount.value = result.pageCount
                     lastFailure.value = null
                 }
+
                 is MalLibraryRefreshResult.Failure -> lastFailure.value = result.error
             }
             refreshing.value = false
@@ -245,6 +251,7 @@ class MalLibraryProviderViewModel internal constructor(
             is MalLibraryEditOutcome.NoChange -> publish(
                 MalLibraryEditLifecycle.NoChange(outcome.displayedItem)
             )
+
             is MalLibraryEditOutcome.Rejected -> publish(
                 MalLibraryEditLifecycle.ValidationFailure(
                     displayedItem = outcome.displayedItem,
@@ -253,6 +260,7 @@ class MalLibraryProviderViewModel internal constructor(
                     retryable = outcome.retryable,
                 )
             )
+
             is MalLibraryEditOutcome.Accepted -> {
                 publish(
                     MalLibraryEditLifecycle.EnqueueAccepted(
@@ -277,13 +285,16 @@ class MalLibraryProviderViewModel internal constructor(
                     }
                 }
             }
+
             is MalLibraryEditLifecycle.ProviderConfirmed,
             is MalLibraryEditLifecycle.RolledBack -> optimisticItems.update { current ->
                 current - lifecycle.identityKey
             }
+
             is MalLibraryEditLifecycle.NoChange,
             is MalLibraryEditLifecycle.ValidationFailure,
             is MalLibraryEditLifecycle.Pending,
+            is MalLibraryEditLifecycle.Delivered,
             is MalLibraryEditLifecycle.RetryableFailure,
             is MalLibraryEditLifecycle.PermanentFailure -> Unit
         }
