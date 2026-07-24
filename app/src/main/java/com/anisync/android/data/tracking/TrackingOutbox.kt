@@ -41,15 +41,12 @@ class TrackingCommandCodec @Inject constructor() {
 
     fun deduplicationKey(
         draft: TrackingCommandDraft,
-        targets: List<TrackingCommandTarget>,
+        target: TrackingCommandTarget,
     ): String {
         val normalizedDraft = draft.copy(
             fields = draft.fields.sortedBy { it.name }.toCollection(linkedSetOf()),
         )
-        val envelope = TrackingDedupeEnvelope(
-            draft = normalizedDraft,
-            targets = targets.sortedBy { it.provider.name },
-        )
+        val envelope = TrackingDedupeEnvelope(normalizedDraft, target)
         return MessageDigest.getInstance("SHA-256")
             .digest(json.encodeToString(envelope).toByteArray(Charsets.UTF_8))
             .joinToString(separator = "") { byte -> "%02x".format(byte) }
@@ -59,7 +56,7 @@ class TrackingCommandCodec @Inject constructor() {
 @Serializable
 private data class TrackingDedupeEnvelope(
     val draft: TrackingCommandDraft,
-    val targets: List<TrackingCommandTarget>,
+    val target: TrackingCommandTarget,
 )
 
 @Singleton
@@ -71,29 +68,24 @@ class TrackingOutboxRepository @Inject constructor(
 ) {
     suspend fun enqueue(
         draft: TrackingCommandDraft,
-        targets: List<TrackingCommandTarget>,
+        target: TrackingCommandTarget,
     ): TrackingEnqueueResult {
-        if (targets.isEmpty() || targets.map { it.provider }.distinct().size != targets.size) {
-            return TrackingEnqueueResult.Rejected(TrackingFailureKind.VALIDATION)
-        }
-        val normalizedTargets = targets.sortedBy { it.provider.name }
-        val deduplicationKey = codec.deduplicationKey(draft, normalizedTargets)
+        val deduplicationKey = codec.deduplicationKey(draft, target)
         return try {
             val receipt = database.withTransaction {
                 val existing = dao.findUnsettledByDeduplicationKey(deduplicationKey)
                 if (existing != null) {
-                    return@withTransaction existing.toReceipt(
-                        targets = dao.getTargets(existing.operationId),
-                        deduplicated = true,
-                    )
+                    val existingTarget = dao.getTarget(existing.operationId)
+                        ?: return@withTransaction null
+                    return@withTransaction existing.toReceipt(existingTarget, deduplicated = true)
                 }
 
-                val logicalKey = logicalKey(draft, normalizedTargets)
+                val logicalKey = logicalKey(draft, target)
                 val generation = dao.latestGeneration(logicalKey) + 1L
                 val operationId = UUID.randomUUID().toString()
                 val now = System.currentTimeMillis()
                 val command = TrackingCommand(operationId, generation, draft)
-                val hasRunnableTarget = normalizedTargets.any { it.blocker == null }
+                val runnable = target.blocker == null
                 val operation = TrackingOperationEntity(
                     operationId = operationId,
                     logicalKey = logicalKey,
@@ -104,46 +96,34 @@ class TrackingOutboxRepository @Inject constructor(
                     commandJson = codec.encode(command),
                     fieldMask = draft.fields.map { it.name }.sorted().joinToString(","),
                     isTombstone = draft.deleteIntent,
-                    state = if (hasRunnableTarget) {
-                        TrackingOperationState.PENDING.name
-                    } else {
-                        TrackingOperationState.BLOCKED.name
-                    },
+                    state = if (runnable) TrackingOperationState.PENDING.name
+                    else TrackingOperationState.BLOCKED.name,
                     createdAtEpochMillis = now,
                     updatedAtEpochMillis = now,
                 )
-                val targetEntities = normalizedTargets.map { target ->
-                    TrackingOperationTargetEntity(
-                        operationId = operationId,
-                        provider = target.provider.name,
-                        providerAccountId = target.providerAccountId,
-                        providerMediaId = target.providerMediaId,
-                        state = if (target.blocker == null) {
-                            TrackingTargetState.PENDING.name
-                        } else {
-                            TrackingTargetState.BLOCKED.name
-                        },
-                        attemptCount = 0,
-                        nextAttemptAtEpochMillis = now,
-                        leaseToken = null,
-                        leaseExpiresAtEpochMillis = null,
-                        lastErrorKind = target.blocker?.name,
-                        lastHttpStatus = null,
-                        retryAfterMillis = null,
-                        remoteRevision = null,
-                        updatedAtEpochMillis = now,
-                    )
-                }
+                val targetEntity = TrackingOperationTargetEntity(
+                    operationId = operationId,
+                    provider = target.provider.name,
+                    providerAccountId = target.providerAccountId,
+                    providerMediaId = target.providerMediaId,
+                    state = if (runnable) TrackingTargetState.PENDING.name
+                    else TrackingTargetState.BLOCKED.name,
+                    attemptCount = 0,
+                    nextAttemptAtEpochMillis = now,
+                    leaseToken = null,
+                    leaseExpiresAtEpochMillis = null,
+                    lastErrorKind = target.blocker?.name,
+                    lastHttpStatus = null,
+                    retryAfterMillis = null,
+                    remoteRevision = null,
+                    updatedAtEpochMillis = now,
+                )
 
-                // A normal newer desired state supersedes only waiting work. RUNNING writes retain
-                // their lease and complete; the new absolute state is delivered immediately after.
                 dao.supersedeWaitingTargets(logicalKey, generation, now)
-                dao.insertOperationWithTargets(operation, targetEntities)
-                operation.toReceipt(targetEntities, deduplicated = false)
-            }
-            if (!receipt.deduplicated &&
-                receipt.targetStates.values.any { it == TrackingTargetState.PENDING }
-            ) {
+                dao.insertOperationWithTarget(operation, targetEntity)
+                operation.toReceipt(targetEntity, deduplicated = false)
+            } ?: return TrackingEnqueueResult.Rejected(TrackingFailureKind.STORAGE)
+            if (!receipt.deduplicated && receipt.targetState == TrackingTargetState.PENDING) {
                 scheduler.enqueue()
             }
             TrackingEnqueueResult.Accepted(receipt)
@@ -154,30 +134,18 @@ class TrackingOutboxRepository @Inject constructor(
         }
     }
 
-    private fun logicalKey(
-        draft: TrackingCommandDraft,
-        targets: List<TrackingCommandTarget>,
-    ): String = buildString {
-        append(draft.mediaType.name)
-        append(':')
-        append(draft.localMediaId)
-        targets.forEach { target ->
-            append(':')
-            append(target.provider.name)
-            append('=')
-            append(target.providerAccountId ?: "none")
-        }
-    }
+    private fun logicalKey(draft: TrackingCommandDraft, target: TrackingCommandTarget): String =
+        "${draft.mediaType.name}:${draft.localMediaId}:${target.provider.name}=" +
+            (target.providerAccountId ?: "none")
 
     private fun TrackingOperationEntity.toReceipt(
-        targets: List<TrackingOperationTargetEntity>,
+        target: TrackingOperationTargetEntity,
         deduplicated: Boolean,
     ) = TrackingEnqueueReceipt(
         operationId = operationId,
         generation = generation,
         deduplicated = deduplicated,
-        targetStates = targets.associate { target ->
-            TrackingProvider.valueOf(target.provider) to TrackingTargetState.valueOf(target.state)
-        },
+        provider = TrackingProvider.valueOf(target.provider),
+        targetState = TrackingTargetState.valueOf(target.state),
     )
 }

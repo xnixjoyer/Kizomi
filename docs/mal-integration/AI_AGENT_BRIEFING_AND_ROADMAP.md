@@ -1,112 +1,80 @@
-# Kizomi MAL integration briefing and roadmap
+# Kizomi MyAnimeList integration briefing
 
 ## Mission
 
-Complete MyAnimeList as an optional public provider without weakening the default AniList experience, credential safety, offline behavior, account isolation or the durable tracking mutation model.
+Complete MyAnimeList as the application's one active provider without weakening AniList mode, credential safety, local-data deletion, offline behavior, account isolation, request discipline, or the durable tracking boundary.
 
-Active implementation exists only on:
+Active implementation:
 
 - repository `xnixjoyer/Kizomi`;
-- branch `test/mal-production-completion`;
-- Draft PR `#2`.
+- branch `compliance/mal-api-agreement-readiness`;
+- Draft PR `#3` into `main`;
+- base SHA `e44efaffae565b0d6a642547d5e37e0f402ea12e`.
 
-Do not reopen historical stacked branches. Do not copy code from a non-public repository. Never merge, approve or enable auto-merge.
+Never merge, approve, enable auto-merge, force-push, rebase, rewrite history, or copy code from a private repository.
 
-## Current consolidated architecture
+## Product model
 
-### Provider-neutral identity
+The persisted app-wide state is exactly:
 
-- A local media identity is immutable, provider-neutral and type-bound.
-- Anime and Manga remain separate.
-- Provider mappings are explicit and verified; fuzzy/title matching never activates a mapping.
-- Missing/conflicting/rejected mappings remain review evidence.
+- `UNCONFIGURED`
+- `ANILIST_ONLY`
+- `MAL_ONLY`
 
-### Account and credential isolation
+No state activates both providers. Anime and Manga do not choose providers independently. The inactive provider is never queried, refreshed, scheduled, used for widgets/workers, or used as a fallback.
 
-- Provider accounts and token stores are independent.
-- Tokens and OAuth continuation state use encrypted, backup-excluded storage.
-- Durable targets capture exact provider account IDs.
-- Delivery rechecks the active account and fails closed after logout or account switching.
-- Sensitive identifiers, notes, raw bodies and revisions are redacted from model strings and diagnostics.
+Fresh installs remain `UNCONFIGURED` until login succeeds. Legacy installations that may contain more than one provider are blocked before provider traffic and require an explicit selection. The non-selected provider is purged. Provider switching is destructive and returns to `UNCONFIGURED`; no account data is copied.
 
-### Durable tracking boundary
+## Tracking boundary
 
-- `TrackingCommandService` is the only production write ingress.
-- Every command is persisted before WorkManager scheduling.
-- `TrackingOutboxExecutor` leases targets, retries independently and records partial outcomes.
-- `TrackingWriteGate` is the final provider/account kill switch before an adapter call.
-- Provider adapters are the only network mutation locations.
-- Blocked work remains visible; no provider/account fallback is permitted.
-- Cancellation remains structured control flow through repository, adapter, executor and worker layers.
+- `TrackingCommandService` is the only production list-write ingress.
+- Every accepted command is persisted before scheduling and has exactly one active-provider target.
+- `TrackingWriteGate` rechecks active provider, exact account, credentials, switch/purge state, and network policy immediately before transport.
+- AniList and MyAnimeList adapters are the only provider mutation locations.
+- Persisted work is never redirected to another provider, account, or media identity.
+- Cross-provider comparison, transfer, conflict planning, import, mirrored delivery, and related user interfaces/workers are removed.
+- Cancellation remains structured control flow.
 
-### Pure-provider guarantees
+## MyAnimeList OAuth and API boundary
 
-- Default AniList-only mode does not consult MyAnimeList configuration, accounts, identities or write transports.
-- MyAnimeList-only produces no AniList write target.
-- AniList-only produces no MyAnimeList write target.
-- Dual mode persists exactly one independent target per provider.
-- MyAnimeList-native search, discovery and details do not fall back to AniList.
-- The tracking-write gate does not disable allowed AniList reads, calendar, profile or social features.
+- Android is a native public client and never uses a client secret.
+- Login uses an external browser and Authorization Code Grant with PKCE.
+- Each attempt uses a cryptographically random verifier and state; redirect and state are checked strictly; callbacks are one-time and replay-protected; pending state expires after at most ten minutes.
+- Token exchange is form encoded, includes the public client identifier and exact redirect URI, and rotates refresh tokens atomically.
+- Codes, states, verifiers, callback URLs, tokens, authorization headers, account IDs, private notes, and raw bodies are redacted.
+- Only official OAuth endpoints and documented API v2 endpoints are allowed.
+- Scraping, cookie/password login, login WebViews, private endpoints, arbitrary paging hosts, and authorization forwarding to third parties are forbidden.
+- Do not invent endpoint contracts. Complete endpoint verification requires a current official reference or owner-supplied original export.
 
-### Persistence
+## Data and deletion
 
-- Room uses an additive migration chain through schema 27.
-- A real data-preserving 1→2 migration precedes 25→26→27.
-- Destructive fallback is forbidden.
-- CI proves every committed schema reaches the current version and generated schemas are committed.
+- Keep only minimum normalized selected-provider data needed for app functionality.
+- Do not send MyAnimeList data to AniList, analytics, advertising, telemetry, diagnostics, a Kizomi backend, cloud backup, device transfer, or GitHub artifacts.
+- Provider switch and explicit MyAnimeList disconnect/delete use one central purge implementation.
+- Purge credentials, OAuth state, account/profile, provider caches, mappings, queues, leases, conflicts, plans, raw payloads, jobs, controllable image caches, exports, and extension state.
 
-## Phase summary
+## Calendar extensions
 
-- Phases 1–4: OAuth environment, encrypted account persistence, refresh coordination and provider-neutral identity.
-- Phase 5: provider snapshots and durable outbox.
-- Phase 6: MyAnimeList list reads/import.
-- Phase 7: provider-native catalog, details and offline cache.
-- Phase 8: central tracking command ingress.
-- Phase 9: independent Anime/Manga routing.
-- Phase 10: production MyAnimeList writes and controlled read-back.
-- Phase 11: dual-target saga and account-bound conflict handling.
-- Phase 12: persistent compare plan and strict missing-only synchronization.
-- Phase 13: fail-closed provider/account write gate, direct-mutation scan and pure-provider zero-write matrix.
-- Phase 14: non-destructive migration completion, security/redaction/backup hardening, adaptive UI and release evidence.
-- Product readiness: whole-tree audit encoded as mandatory CI evidence.
+Calendar support remains a neutral modular contract with stable neutral IDs, supported provider modes, capability sets, availability, display metadata, isolated settings, enable/disable hooks, account/logout/purge/restart hooks, provider/capability filtering, independent enablement, and failure isolation. The public registry has no knowledge of private implementations and never triggers provider fallback.
 
-The PR description, not this document, is authoritative for the actual remote head, run, job, test count and artifact hashes.
+At least four neutral fake extensions must prove registration, activation, deactivation, filtering, settings isolation, cleanup, inactive-provider isolation, and failure isolation.
 
-## Required final workflow
+## Required work order
 
-The exact published head must pass:
+1. Follow `docs/mal-compliance/EXECUTION_STATE.md`.
+2. Remove obsolete product context and runtime paths.
+3. Implement the exclusive provider state machine and legacy migration.
+4. Implement first-run provider selection and versioned MAL consent.
+5. Implement destructive provider switching and central purge.
+6. Convert tracking to exactly one target and remove cross-provider services, workers, persistence, resources, and UI.
+7. Complete the neutral calendar-extension contract and tests.
+8. Harden OAuth, token rotation, endpoint/domain validation, redaction, and no-scraping behavior.
+9. Complete data inventory, policy/support/security/application documentation, request budgeting, and non-commercial scans.
+10. Expand CI and verify the exact-head artifact independently.
+11. Update PR #3 and mark it ready only when all AI-executable gates pass.
 
-1. public full-tree source boundary;
-2. provider-native no-fallback scan;
-3. tracking-write mutation scan;
-4. Room migration graph and schema cleanliness;
-5. repository secret scan;
-6. redaction and backup contracts;
-7. product-readiness evidence matrix;
-8. signing contracts;
-9. all Stable Debug unit tests and lint;
-10. Stable Debug and AndroidTest APK assembly;
-11. exactly one universal diagnostic APK with machine-readable test count and SHA-256 evidence.
+## Evidence rule
 
-A pending, cancelled or older run is not evidence for a newer head. Fix only the first concrete CI cause and never weaken a test, baseline or gate.
+A pending, cancelled, older, or documentation-stale run is not completion evidence. The final exact published head must pass every scanner, unit/UI/state-machine test, Stable Debug lint/build, AndroidTest assembly, Room migration/instrumentation gate, and artifact-evidence check.
 
-## Owner-only acceptance
-
-Technical CI cannot prove:
-
-- real MyAnimeList developer registration and redirect approval;
-- browser OAuth/refresh with a controlled real account;
-- a controlled live write/read-back;
-- physical-device TalkBack, focus order, narrow-display and large-font acceptance;
-- permanent release signing and store acceptance.
-
-After technical completion, an owner reviews PR #2 and uses **Create a merge commit** only after deciding the external gates are acceptable.
-
-## Next-agent procedure
-
-1. Open `EXECUTION_STATE.md` and PR #2.
-2. Resolve the actual head and exact-head workflow state.
-3. Continue only from the first evidenced failure or remaining audit item.
-4. Preserve all public/provider/security boundaries.
-5. Record final artifact evidence in the PR description.
-6. Mark Ready for review only when no AI-executable task remains; never merge.
+Real provider registration, client-ID issuance, controlled real-account OAuth/refresh/write-read-back/deletion tests, traffic capture, physical-device accessibility, and owner merge remain external gates.

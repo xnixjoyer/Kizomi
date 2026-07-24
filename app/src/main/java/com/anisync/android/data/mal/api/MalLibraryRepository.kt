@@ -10,8 +10,8 @@ import com.anisync.android.data.identity.MediaIdentityStore
 import com.anisync.android.data.identity.MediaIdentityVerificationStatus
 import com.anisync.android.data.local.AppDatabase
 import com.anisync.android.data.local.dao.TrackingDao
-import com.anisync.android.data.local.entity.MalImportStateEntity
-import com.anisync.android.data.local.entity.MalImportEntryEntity
+import com.anisync.android.data.local.entity.MalLibraryRefreshEntryEntity
+import com.anisync.android.data.local.entity.MalLibraryRefreshStateEntity
 import com.anisync.android.data.local.entity.MalMediaCacheEntity
 import com.anisync.android.data.local.entity.ProviderTrackingSnapshotEntity
 import com.anisync.android.domain.tracking.TrackingDesiredState
@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -47,56 +46,46 @@ class MalLibraryRepository @Inject constructor(
     ).map { snapshots -> snapshots.mapNotNull { snapshot -> snapshot.toLibraryItem() } }
 
     /**
-     * Refreshes one complete MAL list page-by-page while the existing Room flow remains readable.
-     * Rows absent remotely are removed only after every page succeeds; any failure keeps last-good
-     * rows and records a typed account/type import state.
+     * Refreshes a complete provider-native list into normalized staging rows. Existing last-good
+     * snapshots remain readable until every page succeeds and the new generation is promoted.
      */
     suspend fun refresh(
         localAccountId: String,
         mediaType: TrackingMediaType,
         pageSize: Int = MalListRequestFactory.DEFAULT_PAGE_SIZE,
-    ): MalImportResult {
+    ): MalLibraryRefreshResult {
         if (localAccountId.isBlank()) {
-            return MalImportResult.Failure(
+            return MalLibraryRefreshResult.Failure(
                 MalApiFailure(MalApiFailureKind.ACCOUNT_NOT_FOUND),
                 preservedEntryCount = 0,
             )
         }
-        val previous = dao.getImportState(localAccountId, mediaType.name)
-        val previousStagedIds = if (previous?.state == IMPORT_RUNNING) {
-            dao.getImportEntryIds(localAccountId, mediaType.name, previous.generation)
+        val previous = dao.getLibraryRefreshState(localAccountId, mediaType.name)
+        val previousStagedIds = if (previous?.state == REFRESH_RUNNING) {
+            dao.getLibraryRefreshEntryIds(localAccountId, mediaType.name, previous.generation)
         } else {
             emptyList()
         }
-        val resumeAfterProcessDeath = previous?.state == IMPORT_RUNNING &&
+        val resume = previous?.state == REFRESH_RUNNING &&
             (previous.nextPageUrl != null || previousStagedIds.isNotEmpty())
-        val generation = if (resumeAfterProcessDeath) {
-            requireNotNull(previous).generation
-        } else {
-            (previous?.generation ?: 0L) + 1L
-        }
-        val generationStartedAt = if (resumeAfterProcessDeath) {
+        val generation = if (resume) requireNotNull(previous).generation else (previous?.generation ?: 0L) + 1L
+        val generationStartedAt = if (resume) {
             requireNotNull(previous).lastAttemptAtEpochMillis
         } else {
-            maxOf(
-                System.currentTimeMillis(),
-                (previous?.lastAttemptAtEpochMillis ?: 0L) + 1L,
-            )
+            maxOf(System.currentTimeMillis(), (previous?.lastAttemptAtEpochMillis ?: 0L) + 1L)
         }
-        var nextPageUrl: String? = if (resumeAfterProcessDeath) previous?.nextPageUrl else null
-        var importedCount = if (resumeAfterProcessDeath) previousStagedIds.size else 0
+        var nextPageUrl = if (resume) previous?.nextPageUrl else null
+        var itemCount = if (resume) previousStagedIds.size else 0
         database.withTransaction {
-            if (!resumeAfterProcessDeath) {
-                dao.deleteImportEntries(localAccountId, mediaType.name)
-            }
-            dao.upsertImportState(
-                MalImportStateEntity(
+            if (!resume) dao.deleteLibraryRefreshEntries(localAccountId, mediaType.name)
+            dao.upsertLibraryRefreshState(
+                MalLibraryRefreshStateEntity(
                     localAccountId = localAccountId,
                     mediaType = mediaType.name,
-                    state = IMPORT_RUNNING,
+                    state = REFRESH_RUNNING,
                     generation = generation,
                     nextPageUrl = nextPageUrl,
-                    importedCount = importedCount,
+                    itemCount = itemCount,
                     lastAttemptAtEpochMillis = generationStartedAt,
                     lastSuccessAtEpochMillis = previous?.lastSuccessAtEpochMillis,
                     lastErrorKind = null,
@@ -104,130 +93,84 @@ class MalLibraryRepository @Inject constructor(
             )
         }
 
-        val seenPageUrls = mutableSetOf<String>().apply {
-            nextPageUrl?.let { add(it) }
-        }
+        val seenPageUrls = mutableSetOf<String>().apply { nextPageUrl?.let(::add) }
         val seenMediaIds = previousStagedIds.toMutableSet()
         var pageCount = 0
         try {
-            var shouldFetchPage = !resumeAfterProcessDeath || nextPageUrl != null
-            while (shouldFetchPage) {
-                val pageResult = if (nextPageUrl == null) {
+            var fetchPage = !resume || nextPageUrl != null
+            while (fetchPage) {
+                val result = if (nextPageUrl == null) {
                     api.firstPage(localAccountId, mediaType, limit = pageSize)
                 } else {
                     api.nextPage(localAccountId, mediaType, requireNotNull(nextPageUrl))
                 }
-                val page = when (pageResult) {
-                    is MalApiResult.Failure -> return failImport(
-                        localAccountId,
-                        mediaType,
-                        generation,
-                        generationStartedAt,
-                        importedCount,
-                        previous?.lastSuccessAtEpochMillis,
-                        pageResult.error,
+                val page = when (result) {
+                    is MalApiResult.Failure -> return failRefresh(
+                        localAccountId, mediaType, generation, generationStartedAt, itemCount,
+                        previous?.lastSuccessAtEpochMillis, result.error,
                     )
-                    is MalApiResult.Success -> pageResult.value
+                    is MalApiResult.Success -> result.value
                 }
                 pageCount++
-                if (pageCount > MAX_PAGE_COUNT || importedCount + page.entries.size > MAX_ENTRY_COUNT) {
-                    return failImport(
-                        localAccountId,
-                        mediaType,
-                        generation,
-                        generationStartedAt,
-                        importedCount,
+                if (pageCount > MAX_PAGE_COUNT || itemCount + page.entries.size > MAX_ENTRY_COUNT) {
+                    return failRefresh(
+                        localAccountId, mediaType, generation, generationStartedAt, itemCount,
                         previous?.lastSuccessAtEpochMillis,
                         MalApiFailure(MalApiFailureKind.LIMIT_EXCEEDED),
                     )
                 }
 
-                val stagedEntries = mutableListOf<MalImportEntryEntity>()
+                val staged = mutableListOf<MalLibraryRefreshEntryEntity>()
                 for (entry in page.entries) {
                     if (!seenMediaIds.add(entry.malId)) continue
-                    val localIdentity = when (val identity = resolveOrCreateIdentity(entry)) {
-                        is IdentityResolution.Success -> identity.identity
-                        is IdentityResolution.Failure -> return failImport(
-                            localAccountId,
-                            mediaType,
-                            generation,
-                            generationStartedAt,
-                            importedCount,
-                            previous?.lastSuccessAtEpochMillis,
-                            identity.error,
+                    val localIdentity = when (val resolution = resolveOrCreateIdentity(entry)) {
+                        is IdentityResolution.Success -> resolution.identity
+                        is IdentityResolution.Failure -> return failRefresh(
+                            localAccountId, mediaType, generation, generationStartedAt, itemCount,
+                            previous?.lastSuccessAtEpochMillis, resolution.error,
                         )
                     }
-                    stagedEntries += MalImportEntryEntity(
-                        localAccountId = localAccountId,
-                        mediaType = mediaType.name,
-                        generation = generation,
-                        malId = entry.malId,
-                        localMediaId = localIdentity.id,
-                        payloadJson = json.encodeToString(entry),
-                    )
-                    importedCount++
+                    staged += entry.toRefreshEntry(localAccountId, generation, localIdentity.id)
+                    itemCount++
                 }
 
                 nextPageUrl = page.nextPageUrl
                 if (nextPageUrl != null && !seenPageUrls.add(requireNotNull(nextPageUrl))) {
-                    return failImport(
-                        localAccountId,
-                        mediaType,
-                        generation,
-                        generationStartedAt,
-                        importedCount,
+                    return failRefresh(
+                        localAccountId, mediaType, generation, generationStartedAt, itemCount,
                         previous?.lastSuccessAtEpochMillis,
                         MalApiFailure(MalApiFailureKind.PAGING_LOOP),
                     )
                 }
                 database.withTransaction {
-                    if (stagedEntries.isNotEmpty()) dao.upsertImportEntries(stagedEntries)
-                    dao.upsertImportState(
-                        MalImportStateEntity(
+                    if (staged.isNotEmpty()) dao.upsertLibraryRefreshEntries(staged)
+                    dao.upsertLibraryRefreshState(
+                        MalLibraryRefreshStateEntity(
                             localAccountId = localAccountId,
                             mediaType = mediaType.name,
-                            state = IMPORT_RUNNING,
+                            state = REFRESH_RUNNING,
                             generation = generation,
                             nextPageUrl = nextPageUrl,
-                            importedCount = importedCount,
+                            itemCount = itemCount,
                             lastAttemptAtEpochMillis = generationStartedAt,
                             lastSuccessAtEpochMillis = previous?.lastSuccessAtEpochMillis,
                             lastErrorKind = null,
                         )
                     )
                 }
-                shouldFetchPage = nextPageUrl != null
+                fetchPage = nextPageUrl != null
             }
 
-            val stagedEntries = dao.getImportEntries(localAccountId, mediaType.name, generation)
-            if (stagedEntries.size != importedCount) {
-                return failImport(
-                    localAccountId,
-                    mediaType,
-                    generation,
-                    generationStartedAt,
-                    importedCount,
+            val staged = dao.getLibraryRefreshEntries(localAccountId, mediaType.name, generation)
+            if (staged.size != itemCount) {
+                return failRefresh(
+                    localAccountId, mediaType, generation, generationStartedAt, itemCount,
                     previous?.lastSuccessAtEpochMillis,
                     MalApiFailure(MalApiFailureKind.STORAGE),
                 )
             }
-            val decodedEntries = stagedEntries.map { staged ->
-                val entry = json.decodeFromString<MalListEntry>(staged.payloadJson)
-                require(entry.malId == staged.malId)
-                require(entry.mediaType == mediaType)
-                staged to entry
-            }
-            val snapshots = decodedEntries.map { (staged, entry) ->
-                entry.toSnapshot(
-                    localAccountId = localAccountId,
-                    localMediaId = staged.localMediaId,
-                    fetchedAtEpochMillis = generationStartedAt,
-                )
-            }
-            val mediaCache = decodedEntries.map { (_, entry) ->
-                entry.toCache(generationStartedAt)
-            }
-
+            val snapshots = staged.map { it.toSnapshot(generationStartedAt) }
+            val mediaCache = staged.map { it.toCache(generationStartedAt) }
             val completedAt = System.currentTimeMillis()
             var removed = 0
             database.withTransaction {
@@ -239,34 +182,34 @@ class MalLibraryRepository @Inject constructor(
                     mediaType = mediaType.name,
                     generationStartedAtEpochMillis = generationStartedAt,
                 )
-                dao.upsertImportState(
-                    MalImportStateEntity(
+                dao.upsertLibraryRefreshState(
+                    MalLibraryRefreshStateEntity(
                         localAccountId = localAccountId,
                         mediaType = mediaType.name,
-                        state = IMPORT_SUCCEEDED,
+                        state = REFRESH_SUCCEEDED,
                         generation = generation,
                         nextPageUrl = null,
-                        importedCount = importedCount,
+                        itemCount = itemCount,
                         lastAttemptAtEpochMillis = generationStartedAt,
                         lastSuccessAtEpochMillis = completedAt,
                         lastErrorKind = null,
                     )
                 )
-                dao.deleteImportEntries(localAccountId, mediaType.name)
+                dao.deleteLibraryRefreshEntries(localAccountId, mediaType.name)
             }
-            return MalImportResult.Success(importedCount, removed, pageCount)
+            return MalLibraryRefreshResult.Success(itemCount, removed, pageCount)
         } catch (cancelled: CancellationException) {
             withContext(NonCancellable) {
                 database.withTransaction {
-                    dao.deleteImportEntries(localAccountId, mediaType.name)
-                    dao.upsertImportState(
-                        MalImportStateEntity(
+                    dao.deleteLibraryRefreshEntries(localAccountId, mediaType.name)
+                    dao.upsertLibraryRefreshState(
+                        MalLibraryRefreshStateEntity(
                             localAccountId = localAccountId,
                             mediaType = mediaType.name,
-                            state = IMPORT_CANCELLED,
+                            state = REFRESH_CANCELLED,
                             generation = generation,
                             nextPageUrl = null,
-                            importedCount = importedCount,
+                            itemCount = itemCount,
                             lastAttemptAtEpochMillis = generationStartedAt,
                             lastSuccessAtEpochMillis = previous?.lastSuccessAtEpochMillis,
                             lastErrorKind = MalApiFailureKind.CANCELLED.name,
@@ -276,12 +219,8 @@ class MalLibraryRepository @Inject constructor(
             }
             throw cancelled
         } catch (_: Throwable) {
-            return failImport(
-                localAccountId,
-                mediaType,
-                generation,
-                generationStartedAt,
-                importedCount,
+            return failRefresh(
+                localAccountId, mediaType, generation, generationStartedAt, itemCount,
                 previous?.lastSuccessAtEpochMillis,
                 MalApiFailure(MalApiFailureKind.STORAGE),
             )
@@ -291,40 +230,38 @@ class MalLibraryRepository @Inject constructor(
     suspend fun deleteLocalAccountData(localAccountId: String) {
         require(localAccountId.isNotBlank())
         database.withTransaction {
-            dao.deleteImportEntriesForAccount(localAccountId)
+            dao.deleteLibraryRefreshEntriesForAccount(localAccountId)
             dao.deleteSnapshotsForAccount(MediaIdentityProvider.MYANIMELIST.name, localAccountId)
-            dao.deleteImportStates(localAccountId)
+            dao.deleteLibraryRefreshStates(localAccountId)
         }
     }
 
-    private suspend fun failImport(
+    private suspend fun failRefresh(
         localAccountId: String,
         mediaType: TrackingMediaType,
         generation: Long,
         generationStartedAtEpochMillis: Long,
-        importedCount: Int,
+        itemCount: Int,
         lastSuccessAtEpochMillis: Long?,
         error: MalApiFailure,
-    ): MalImportResult.Failure {
+    ): MalLibraryRefreshResult.Failure {
         database.withTransaction {
-            dao.deleteImportEntries(localAccountId, mediaType.name)
-            dao.upsertImportState(
-                MalImportStateEntity(
+            dao.deleteLibraryRefreshEntries(localAccountId, mediaType.name)
+            dao.upsertLibraryRefreshState(
+                MalLibraryRefreshStateEntity(
                     localAccountId = localAccountId,
                     mediaType = mediaType.name,
-                    state = IMPORT_FAILED,
+                    state = REFRESH_FAILED,
                     generation = generation,
                     nextPageUrl = null,
-                    importedCount = importedCount,
-                    // This timestamp is the generation marker used by the snapshot cleanup query.
-                    // Keeping it stable makes an abrupt-process-death checkpoint resumable.
+                    itemCount = itemCount,
                     lastAttemptAtEpochMillis = generationStartedAtEpochMillis,
                     lastSuccessAtEpochMillis = lastSuccessAtEpochMillis,
                     lastErrorKind = error.kind.name,
                 )
             )
         }
-        return MalImportResult.Failure(
+        return MalLibraryRefreshResult.Failure(
             error = error,
             preservedEntryCount = dao.countActiveSnapshots(
                 MediaIdentityProvider.MYANIMELIST.name,
@@ -339,7 +276,13 @@ class MalLibraryRepository @Inject constructor(
         return when (val existing = identities.resolveByMalId(localType, entry.malId)) {
             is MediaIdentityResult.Success -> existing.value?.let(IdentityResolution::Success)
                 ?: createIdentity(entry, localType)
-            else -> IdentityResolution.Failure(MalApiFailure(MalApiFailureKind.STORAGE))
+            is MediaIdentityResult.StorageFailure -> IdentityResolution.Failure(
+                MalApiFailure(MalApiFailureKind.STORAGE)
+            )
+            is MediaIdentityResult.Invalid,
+            is MediaIdentityResult.NotFound,
+            is MediaIdentityResult.Conflict,
+            is MediaIdentityResult.Rejected -> createIdentity(entry, localType)
         }
     }
 
@@ -356,8 +299,8 @@ class MalLibraryRepository @Inject constructor(
             provider = MediaIdentityProvider.MYANIMELIST,
             providerMediaId = entry.malId,
             mediaType = localType,
-            mappingSource = MediaIdentityMappingSource.MAL_IMPORT,
-            verificationStatus = MediaIdentityVerificationStatus.IMPORTED,
+            mappingSource = MediaIdentityMappingSource.MAL_NATIVE,
+            verificationStatus = MediaIdentityVerificationStatus.PROVIDER_CONFIRMED,
         )) {
             is MediaIdentityResult.Success -> IdentityResolution.Success(created)
             is MediaIdentityResult.Conflict -> when (
@@ -371,41 +314,21 @@ class MalLibraryRepository @Inject constructor(
         }
     }
 
-    private fun MalListEntry.toSnapshot(
+    private fun MalListEntry.toRefreshEntry(
         localAccountId: String,
+        generation: Long,
         localMediaId: String,
-        fetchedAtEpochMillis: Long,
-    ) = ProviderTrackingSnapshotEntity(
-        provider = MediaIdentityProvider.MYANIMELIST.name,
-        providerAccountId = localAccountId,
-        localMediaId = localMediaId,
-        providerMediaId = malId,
-        providerListEntryId = null,
+    ) = MalLibraryRefreshEntryEntity(
+        localAccountId = localAccountId,
         mediaType = mediaType.name,
-        title = title,
-        coverUrl = pictureLarge ?: pictureMedium,
-        status = desiredState.status?.name ?: TrackingStatus.PLANNING.name,
-        progress = desiredState.progress,
-        progressSecondary = desiredState.progressSecondary,
-        score = desiredState.score100,
-        repeatCount = desiredState.repeatCount,
-        notes = desiredState.notes,
-        startedAt = desiredState.startedAt,
-        completedAt = desiredState.completedAt,
-        providerUpdatedAtEpochMillis = providerUpdatedAtEpochMillis,
-        fetchedAtEpochMillis = fetchedAtEpochMillis,
-        rawProviderFieldsJson = rawListStatusJson,
-        isDeleted = false,
-    )
-
-    private fun MalListEntry.toCache(fetchedAtEpochMillis: Long) = MalMediaCacheEntity(
+        generation = generation,
         malId = malId,
-        mediaType = mediaType.name,
+        localMediaId = localMediaId,
         title = title,
         alternativeTitlesJson = json.encodeToString(alternativeTitles),
         synopsis = synopsis,
-        mainPictureMedium = pictureMedium,
-        mainPictureLarge = pictureLarge,
+        pictureMedium = pictureMedium,
+        pictureLarge = pictureLarge,
         meanScore = meanScore,
         rank = rank,
         popularity = popularity,
@@ -416,12 +339,69 @@ class MalLibraryRepository @Inject constructor(
         chapterCount = chapterCount,
         volumeCount = volumeCount,
         genresJson = json.encodeToString(genres),
-        relatedJson = "[]",
-        recommendationsJson = "[]",
-        rawJson = rawMediaJson,
-        fetchedAtEpochMillis = fetchedAtEpochMillis,
-        expiresAtEpochMillis = fetchedAtEpochMillis + MEDIA_CACHE_TTL_MILLIS,
+        status = desiredState.status?.name ?: TrackingStatus.PLANNING.name,
+        progress = desiredState.progress,
+        progressSecondary = desiredState.progressSecondary,
+        score100 = desiredState.score100,
+        repeatCount = desiredState.repeatCount,
+        notes = desiredState.notes,
+        startedAt = desiredState.startedAt,
+        completedAt = desiredState.completedAt,
+        providerUpdatedAtEpochMillis = providerUpdatedAtEpochMillis,
     )
+
+    private fun MalLibraryRefreshEntryEntity.toSnapshot(fetchedAtEpochMillis: Long) =
+        ProviderTrackingSnapshotEntity(
+            provider = MediaIdentityProvider.MYANIMELIST.name,
+            providerAccountId = localAccountId,
+            localMediaId = localMediaId,
+            providerMediaId = malId,
+            providerListEntryId = null,
+            mediaType = mediaType,
+            title = title,
+            coverUrl = pictureLarge ?: pictureMedium,
+            status = status,
+            progress = progress,
+            progressSecondary = progressSecondary,
+            score = score100,
+            repeatCount = repeatCount,
+            notes = notes,
+            startedAt = startedAt,
+            completedAt = completedAt,
+            providerUpdatedAtEpochMillis = providerUpdatedAtEpochMillis,
+            fetchedAtEpochMillis = fetchedAtEpochMillis,
+            isDeleted = false,
+        )
+
+    private fun MalLibraryRefreshEntryEntity.toCache(fetchedAtEpochMillis: Long) =
+        MalMediaCacheEntity(
+            malId = malId,
+            mediaType = mediaType,
+            title = title,
+            alternativeTitlesJson = alternativeTitlesJson,
+            synopsis = synopsis,
+            mainPictureMedium = pictureMedium,
+            mainPictureLarge = pictureLarge,
+            pictureGalleryJson = "[]",
+            meanScore = meanScore,
+            rank = rank,
+            popularity = popularity,
+            mediaStatus = mediaStatus,
+            mediaFormat = null,
+            startDate = startDate,
+            endDate = endDate,
+            episodeCount = episodeCount,
+            chapterCount = chapterCount,
+            volumeCount = volumeCount,
+            genresJson = genresJson,
+            background = null,
+            relatedJson = "[]",
+            recommendationsJson = "[]",
+            rankingPosition = null,
+            isDetailed = false,
+            fetchedAtEpochMillis = fetchedAtEpochMillis,
+            expiresAtEpochMillis = fetchedAtEpochMillis + MEDIA_CACHE_TTL_MILLIS,
+        )
 
     private fun ProviderTrackingSnapshotEntity.toLibraryItem(): MalLibraryItem? {
         val type = runCatching { TrackingMediaType.valueOf(mediaType) }.getOrNull() ?: return null
@@ -457,10 +437,10 @@ class MalLibraryRepository @Inject constructor(
     }
 
     companion object {
-        private const val IMPORT_RUNNING = "RUNNING"
-        private const val IMPORT_SUCCEEDED = "SUCCEEDED"
-        private const val IMPORT_FAILED = "FAILED"
-        private const val IMPORT_CANCELLED = "CANCELLED"
+        private const val REFRESH_RUNNING = "RUNNING"
+        private const val REFRESH_SUCCEEDED = "SUCCEEDED"
+        private const val REFRESH_FAILED = "FAILED"
+        private const val REFRESH_CANCELLED = "CANCELLED"
         private const val MAX_PAGE_COUNT = 10_000
         private const val MAX_ENTRY_COUNT = 50_000
         private const val MEDIA_CACHE_TTL_MILLIS = 7 * 24 * 60 * 60_000L

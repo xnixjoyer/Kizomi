@@ -4,5 +4,9 @@
     <exclude domain="sharedpref" path="auth_prefs.xml" />
     <exclude domain="sharedpref" path="mal_token_vault.xml" />
     <exclude domain="sharedpref" path="mal_oauth_session.xml" />
+    <exclude domain="sharedpref" path="calendar_extension_settings.xml" />
+    <exclude domain="sharedpref" path="calendar_extension_enablement.xml" />
     <include domain="database" path="." />
+    <exclude domain="database" path="anisync.db" />
+    <exclude domain="database" path="apollo_cache.db" />
 </full-backup-content>

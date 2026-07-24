@@ -6,6 +6,9 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.hilt.work.HiltWorkerFactory
 import com.anisync.android.data.AppSettings
+import com.anisync.android.data.provider.ActiveProviderStore
+import com.anisync.android.data.provider.ProviderSessionCoordinator
+import com.anisync.android.domain.provider.ActiveProvider
 import androidx.work.Configuration
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -20,6 +23,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.system.exitProcess
@@ -39,6 +44,12 @@ class AniSyncApplication : Application(), Configuration.Provider, ImageLoaderFac
 
     @Inject
     lateinit var appLockManager: com.anisync.android.data.security.AppLockManager
+
+    @Inject
+    lateinit var providerCoordinator: ProviderSessionCoordinator
+
+    @Inject
+    lateinit var providerStore: ActiveProviderStore
 
     private val applicationScope = CoroutineScope(
         SupervisorJob() + CoroutineExceptionHandler { _, throwable ->
@@ -80,15 +91,21 @@ class AniSyncApplication : Application(), Configuration.Provider, ImageLoaderFac
         com.anisync.android.presentation.components.WebViewWarmer.warmUp(this)
 
         applicationScope.launch {
-            val backgroundInitTime = measureTimeMillis {
-                scheduleWorkersBackground()
-            }
-            Log.d("PerfMetrics", "Background Worker scheduling took $backgroundInitTime ms")
+            providerCoordinator.initialize()
+            userOptionsSyncManager.start(applicationScope)
+            providerStore.state
+                .map { it.activeProvider to it.providerTrafficAllowed }
+                .distinctUntilChanged()
+                .collect { (provider, trafficAllowed) ->
+                    val backgroundInitTime = measureTimeMillis {
+                        scheduleWorkersBackground(provider, trafficAllowed)
+                    }
+                    Log.d(
+                        "PerfMetrics",
+                        "Provider worker scheduling took $backgroundInitTime ms"
+                    )
+                }
         }
-
-        // Keep AniList account options (adult-content, languages, score format, …) in sync with the
-        // web so the app respects them. Off the cold-start critical path.
-        userOptionsSyncManager.start(applicationScope)
     }
 
     private fun currentProcessName(): String = try {
@@ -121,44 +138,57 @@ class AniSyncApplication : Application(), Configuration.Provider, ImageLoaderFac
         }
     }
 
-    private fun scheduleWorkersBackground() {
+    private fun scheduleWorkersBackground(
+        activeProvider: ActiveProvider,
+        providerTrafficAllowed: Boolean,
+    ) {
         val networkConstraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
         val workManager = WorkManager.getInstance(this@AniSyncApplication)
 
-        // Schedule Airing Updates
-        val airingRequest =
-            PeriodicWorkRequestBuilder<com.anisync.android.worker.AiringScheduleWorker>(
-                1, TimeUnit.HOURS
+        val aniListEnabled = providerTrafficAllowed &&
+            activeProvider == ActiveProvider.ANILIST_ONLY
+        if (aniListEnabled) {
+            // Schedule Airing Updates
+            val airingRequest =
+                PeriodicWorkRequestBuilder<com.anisync.android.worker.AiringScheduleWorker>(
+                    1, TimeUnit.HOURS
+                )
+                    .setConstraints(networkConstraints)
+                    .build()
+
+            workManager.enqueueUniquePeriodicWork(
+                "AiringScheduleWorker",
+                ExistingPeriodicWorkPolicy.KEEP,
+                airingRequest
+            )
+
+            com.anisync.android.worker.AiringScheduleWorker.enqueueImmediate(this@AniSyncApplication)
+
+            // Schedule Trending Worker
+            val trendingRequest = PeriodicWorkRequestBuilder<com.anisync.android.worker.TrendingWorker>(
+                12, TimeUnit.HOURS
             )
                 .setConstraints(networkConstraints)
                 .build()
 
-        workManager.enqueueUniquePeriodicWork(
-            "AiringScheduleWorker",
-            ExistingPeriodicWorkPolicy.KEEP,
-            airingRequest
-        )
+            workManager.enqueueUniquePeriodicWork(
+                "TrendingWorker",
+                ExistingPeriodicWorkPolicy.KEEP,
+                trendingRequest
+            )
 
-        com.anisync.android.worker.AiringScheduleWorker.enqueueImmediate(this@AniSyncApplication)
+            // Schedule Widget Refresh
+            com.anisync.android.worker.WidgetRefreshWorker.schedule(this@AniSyncApplication)
 
-        // Schedule Trending Worker
-        val trendingRequest = PeriodicWorkRequestBuilder<com.anisync.android.worker.TrendingWorker>(
-            12, TimeUnit.HOURS
-        )
-            .setConstraints(networkConstraints)
-            .build()
-
-        workManager.enqueueUniquePeriodicWork(
-            "TrendingWorker",
-            ExistingPeriodicWorkPolicy.KEEP,
-            trendingRequest
-        )
-
-        // Schedule Widget Refresh
-        com.anisync.android.worker.WidgetRefreshWorker.schedule(this@AniSyncApplication)
+        } else {
+            workManager.cancelUniqueWork("AiringScheduleWorker")
+            workManager.cancelUniqueWork("AiringScheduleWorkerInitial")
+            workManager.cancelUniqueWork("TrendingWorker")
+            com.anisync.android.worker.WidgetRefreshWorker.cancel(this@AniSyncApplication)
+        }
 
         // Schedule periodic update check (every 6 hours, requires network).
         // The worker itself checks whether auto-update is enabled, so the work

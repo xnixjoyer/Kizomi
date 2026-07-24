@@ -6,8 +6,9 @@ import com.anisync.android.domain.Result
 /**
  * Provider-neutral source for calendar entries.
  *
- * The public application ships an AniList implementation. Private derivatives can contribute
- * additional providers through dependency injection without coupling the calendar UI to them.
+ * Implementations are selected through dependency injection without coupling the calendar UI
+ * to a specific source. Optional calendar capabilities use the separate [CalendarExtension]
+ * contract and are filtered by the app-wide active provider.
  */
 interface CalendarProvider {
     val providerId: String

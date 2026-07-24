@@ -129,43 +129,37 @@ class MalCatalogRepository @Inject constructor(
         MalApiResult.Failure(MalApiFailure(MalApiFailureKind.STORAGE))
     }
 
-    private fun MalCatalogMedia.toEntity(): MalMediaCacheEntity {
-        // Catalog metadata is shared across local MAL accounts. Never persist account-specific
-        // my_list_status (including comments/dates) in this provider-global table.
-        val providerGlobalCopy = copy(listState = null, rawJson = "")
-        return MalMediaCacheEntity(
-            malId = key.malId,
-            mediaType = key.mediaType.name,
-            title = title,
-            alternativeTitlesJson = json.encodeToString(alternativeTitles),
-            synopsis = synopsis,
-            mainPictureMedium = pictureMedium,
-            mainPictureLarge = pictureLarge,
-            meanScore = meanScore,
-            rank = rank,
-            popularity = popularity,
-            mediaStatus = mediaStatus,
-            startDate = startDate,
-            endDate = endDate,
-            episodeCount = episodeCount,
-            chapterCount = chapterCount,
-            volumeCount = volumeCount,
-            genresJson = json.encodeToString(genres),
-            relatedJson = json.encodeToString(related),
-            recommendationsJson = json.encodeToString(recommendations),
-            // Store only the normalized provider-global form, never the account-bound wire body.
-            rawJson = json.encodeToString(providerGlobalCopy),
-            fetchedAtEpochMillis = fetchedAtEpochMillis,
-            expiresAtEpochMillis = fetchedAtEpochMillis + CACHE_TTL_MILLIS,
-        )
-    }
+    private fun MalCatalogMedia.toEntity(): MalMediaCacheEntity = MalMediaCacheEntity(
+        malId = key.malId,
+        mediaType = key.mediaType.name,
+        title = title,
+        alternativeTitlesJson = json.encodeToString(alternativeTitles),
+        synopsis = synopsis,
+        mainPictureMedium = pictureMedium,
+        mainPictureLarge = pictureLarge,
+        pictureGalleryJson = json.encodeToString(pictureGallery),
+        meanScore = meanScore,
+        rank = rank,
+        popularity = popularity,
+        mediaStatus = mediaStatus,
+        mediaFormat = mediaFormat,
+        startDate = startDate,
+        endDate = endDate,
+        episodeCount = episodeCount,
+        chapterCount = chapterCount,
+        volumeCount = volumeCount,
+        genresJson = json.encodeToString(genres),
+        background = background,
+        relatedJson = json.encodeToString(related),
+        recommendationsJson = json.encodeToString(recommendations),
+        rankingPosition = rankingPosition,
+        isDetailed = isDetailed,
+        fetchedAtEpochMillis = fetchedAtEpochMillis,
+        expiresAtEpochMillis = fetchedAtEpochMillis + CACHE_TTL_MILLIS,
+    )
 
     private fun MalMediaCacheEntity.toModel(): MalCatalogMedia? {
         val type = runCatching { TrackingMediaType.valueOf(mediaType) }.getOrNull() ?: return null
-        val normalized = runCatching { json.decodeFromString<MalCatalogMedia>(rawJson) }.getOrNull()
-        if (normalized?.key == MalMediaKey(type, malId)) {
-            return normalized.copy(fetchedAtEpochMillis = fetchedAtEpochMillis)
-        }
         return MalCatalogMedia(
             key = MalMediaKey(type, malId),
             title = title,
@@ -173,20 +167,24 @@ class MalCatalogRepository @Inject constructor(
             synopsis = synopsis,
             pictureMedium = mainPictureMedium,
             pictureLarge = mainPictureLarge,
+            pictureGallery = decodeList(pictureGalleryJson),
             meanScore = meanScore,
             rank = rank,
             popularity = popularity,
             mediaStatus = mediaStatus,
+            mediaFormat = mediaFormat,
             startDate = startDate,
             endDate = endDate,
             episodeCount = episodeCount,
             chapterCount = chapterCount,
             volumeCount = volumeCount,
             genres = decodeList(genresJson),
+            background = background,
             related = decodeRelated(relatedJson),
             recommendations = decodeRelated(recommendationsJson),
+            rankingPosition = rankingPosition,
+            isDetailed = isDetailed,
             fetchedAtEpochMillis = fetchedAtEpochMillis,
-            rawJson = rawJson,
         )
     }
 

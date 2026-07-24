@@ -10,9 +10,7 @@ import com.anisync.android.data.local.dao.MalAccountDao
 import com.anisync.android.data.local.dao.MediaDetailsDao
 import com.anisync.android.data.local.dao.MediaIdentityDao
 import com.anisync.android.data.local.dao.SavedForumThreadDao
-import com.anisync.android.data.local.dao.TrackingConflictDao
 import com.anisync.android.data.local.dao.TrackingDao
-import com.anisync.android.data.local.dao.TrackingReconciliationDao
 import com.anisync.android.data.local.dao.UserProfileDao
 import com.anisync.android.data.local.entity.AiringScheduleEntity
 import com.anisync.android.data.local.entity.CommunityScoreEntity
@@ -27,12 +25,10 @@ import com.anisync.android.data.local.entity.ProviderTrackingSnapshotEntity
 import com.anisync.android.data.local.entity.SavedForumThreadEntity
 import com.anisync.android.data.local.entity.TrackingOperationEntity
 import com.anisync.android.data.local.entity.TrackingOperationTargetEntity
-import com.anisync.android.data.local.entity.TrackingReconciliationItemEntity
-import com.anisync.android.data.local.entity.TrackingReconciliationPlanEntity
 import com.anisync.android.data.local.entity.TrendingEntity
 import com.anisync.android.data.local.entity.UserProfileEntity
-import com.anisync.android.data.local.entity.MalImportStateEntity
-import com.anisync.android.data.local.entity.MalImportEntryEntity
+import com.anisync.android.data.local.entity.MalLibraryRefreshStateEntity
+import com.anisync.android.data.local.entity.MalLibraryRefreshEntryEntity
 import com.anisync.android.data.local.entity.MalMediaCacheEntity
 
 /**
@@ -40,8 +36,12 @@ import com.anisync.android.data.local.entity.MalMediaCacheEntity
  *
  * Version History:
  * ─────────────────────────────────────────────────────────────────────────────
+ * v28 (Jul 2026):
+ *   - Enforced one tracking target per operation and removed legacy cross-provider planning tables.
+ *   - Replaced raw MAL payload persistence with normalized catalog and list-refresh fields.
+ *
  * v27 (Jul 2026):
- *   - Added account-scoped MAL import staging for atomic last-good promotion and restart resume.
+ *   - Added account-scoped MAL list staging for atomic last-good promotion and restart resume.
  *
  * v26 (Jul 2026):
  *   - Added account-scoped provider snapshots and a durable multi-provider command journal.
@@ -126,12 +126,10 @@ import com.anisync.android.data.local.entity.MalMediaCacheEntity
         TrackingOperationEntity::class,
         TrackingOperationTargetEntity::class,
         MalMediaCacheEntity::class,
-        MalImportStateEntity::class,
-        MalImportEntryEntity::class,
-        TrackingReconciliationPlanEntity::class,
-        TrackingReconciliationItemEntity::class,
+        MalLibraryRefreshStateEntity::class,
+        MalLibraryRefreshEntryEntity::class,
     ],
-    version = 27,
+    version = 28,
     exportSchema = true,
     autoMigrations = [
         androidx.room.AutoMigration(from = 2, to = 3),
@@ -169,6 +167,4 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun malAccountDao(): MalAccountDao
     abstract fun mediaIdentityDao(): MediaIdentityDao
     abstract fun trackingDao(): TrackingDao
-    abstract fun trackingConflictDao(): TrackingConflictDao
-    abstract fun trackingReconciliationDao(): TrackingReconciliationDao
 }

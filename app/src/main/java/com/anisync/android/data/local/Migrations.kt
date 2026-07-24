@@ -642,10 +642,230 @@ object Migrations {
         }
     }
 
+
+    val MIGRATION_27_28 = object : Migration(27, 28) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // A legacy multi-target queue cannot be assigned safely to one provider without user
+            // intent. Purge it before enforcing the one-target schema.
+            db.execSQL("DELETE FROM `tracking_operation_targets`")
+            db.execSQL("DELETE FROM `tracking_operations`")
+
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `provider_tracking_snapshots_v28` (
+                    `provider` TEXT NOT NULL,
+                    `providerAccountId` TEXT NOT NULL,
+                    `localMediaId` TEXT NOT NULL,
+                    `providerMediaId` INTEGER NOT NULL,
+                    `providerListEntryId` INTEGER,
+                    `mediaType` TEXT NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `coverUrl` TEXT,
+                    `status` TEXT NOT NULL,
+                    `progress` INTEGER NOT NULL,
+                    `progressSecondary` INTEGER,
+                    `score` REAL,
+                    `repeatCount` INTEGER NOT NULL,
+                    `notes` TEXT,
+                    `startedAt` TEXT,
+                    `completedAt` TEXT,
+                    `providerUpdatedAtEpochMillis` INTEGER,
+                    `fetchedAtEpochMillis` INTEGER NOT NULL,
+                    `isDeleted` INTEGER NOT NULL,
+                    PRIMARY KEY(`provider`, `providerAccountId`, `localMediaId`),
+                    FOREIGN KEY(`localMediaId`) REFERENCES `local_media_identities`(`id`)
+                        ON UPDATE NO ACTION ON DELETE NO ACTION
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                INSERT INTO `provider_tracking_snapshots_v28` (
+                    `provider`, `providerAccountId`, `localMediaId`, `providerMediaId`,
+                    `providerListEntryId`, `mediaType`, `title`, `coverUrl`, `status`, `progress`,
+                    `progressSecondary`, `score`, `repeatCount`, `notes`, `startedAt`, `completedAt`,
+                    `providerUpdatedAtEpochMillis`, `fetchedAtEpochMillis`, `isDeleted`
+                ) SELECT
+                    `provider`, `providerAccountId`, `localMediaId`, `providerMediaId`,
+                    `providerListEntryId`, `mediaType`, `title`, `coverUrl`, `status`, `progress`,
+                    `progressSecondary`, `score`, `repeatCount`, `notes`, `startedAt`, `completedAt`,
+                    `providerUpdatedAtEpochMillis`, `fetchedAtEpochMillis`, `isDeleted`
+                FROM `provider_tracking_snapshots`
+                """.trimIndent()
+            )
+            db.execSQL("DROP TABLE `provider_tracking_snapshots`")
+            db.execSQL("ALTER TABLE `provider_tracking_snapshots_v28` RENAME TO `provider_tracking_snapshots`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_provider_tracking_snapshots_localMediaId` ON `provider_tracking_snapshots` (`localMediaId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_provider_tracking_snapshots_provider_providerAccountId_mediaType` ON `provider_tracking_snapshots` (`provider`, `providerAccountId`, `mediaType`)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_provider_tracking_snapshots_provider_providerAccountId_providerMediaId_mediaType` ON `provider_tracking_snapshots` (`provider`, `providerAccountId`, `providerMediaId`, `mediaType`)")
+
+            db.execSQL("DROP TABLE `tracking_operation_targets`")
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `tracking_operation_targets` (
+                    `operationId` TEXT NOT NULL,
+                    `provider` TEXT NOT NULL,
+                    `providerAccountId` TEXT,
+                    `providerMediaId` INTEGER,
+                    `state` TEXT NOT NULL,
+                    `attemptCount` INTEGER NOT NULL,
+                    `nextAttemptAtEpochMillis` INTEGER NOT NULL,
+                    `leaseToken` TEXT,
+                    `leaseExpiresAtEpochMillis` INTEGER,
+                    `lastErrorKind` TEXT,
+                    `lastHttpStatus` INTEGER,
+                    `retryAfterMillis` INTEGER,
+                    `remoteRevision` TEXT,
+                    `updatedAtEpochMillis` INTEGER NOT NULL,
+                    PRIMARY KEY(`operationId`),
+                    FOREIGN KEY(`operationId`) REFERENCES `tracking_operations`(`operationId`)
+                        ON UPDATE NO ACTION ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_tracking_operation_targets_state_nextAttemptAtEpochMillis_updatedAtEpochMillis` ON `tracking_operation_targets` (`state`, `nextAttemptAtEpochMillis`, `updatedAtEpochMillis`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_tracking_operation_targets_provider_providerAccountId_providerMediaId` ON `tracking_operation_targets` (`provider`, `providerAccountId`, `providerMediaId`)")
+
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `mal_media_cache_v28` (
+                    `malId` INTEGER NOT NULL,
+                    `mediaType` TEXT NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `alternativeTitlesJson` TEXT NOT NULL,
+                    `synopsis` TEXT,
+                    `mainPictureMedium` TEXT,
+                    `mainPictureLarge` TEXT,
+                    `pictureGalleryJson` TEXT NOT NULL,
+                    `meanScore` REAL,
+                    `rank` INTEGER,
+                    `popularity` INTEGER,
+                    `mediaStatus` TEXT,
+                    `mediaFormat` TEXT,
+                    `startDate` TEXT,
+                    `endDate` TEXT,
+                    `episodeCount` INTEGER,
+                    `chapterCount` INTEGER,
+                    `volumeCount` INTEGER,
+                    `genresJson` TEXT NOT NULL,
+                    `background` TEXT,
+                    `relatedJson` TEXT NOT NULL,
+                    `recommendationsJson` TEXT NOT NULL,
+                    `rankingPosition` INTEGER,
+                    `isDetailed` INTEGER NOT NULL,
+                    `fetchedAtEpochMillis` INTEGER NOT NULL,
+                    `expiresAtEpochMillis` INTEGER NOT NULL,
+                    PRIMARY KEY(`malId`, `mediaType`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                INSERT INTO `mal_media_cache_v28` (
+                    `malId`, `mediaType`, `title`, `alternativeTitlesJson`, `synopsis`,
+                    `mainPictureMedium`, `mainPictureLarge`, `pictureGalleryJson`, `meanScore`,
+                    `rank`, `popularity`, `mediaStatus`, `mediaFormat`, `startDate`, `endDate`,
+                    `episodeCount`, `chapterCount`, `volumeCount`, `genresJson`, `background`,
+                    `relatedJson`, `recommendationsJson`, `rankingPosition`, `isDetailed`,
+                    `fetchedAtEpochMillis`, `expiresAtEpochMillis`
+                ) SELECT
+                    `malId`, `mediaType`, `title`, `alternativeTitlesJson`, `synopsis`,
+                    `mainPictureMedium`, `mainPictureLarge`, '[]', `meanScore`,
+                    `rank`, `popularity`, `mediaStatus`, NULL, `startDate`, `endDate`,
+                    `episodeCount`, `chapterCount`, `volumeCount`, `genresJson`, NULL,
+                    `relatedJson`, `recommendationsJson`, NULL, 0,
+                    `fetchedAtEpochMillis`, `expiresAtEpochMillis`
+                FROM `mal_media_cache`
+                """.trimIndent()
+            )
+            db.execSQL("DROP TABLE `mal_media_cache`")
+            db.execSQL("ALTER TABLE `mal_media_cache_v28` RENAME TO `mal_media_cache`")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_mal_media_cache_mediaType_title` ON `mal_media_cache` (`mediaType`, `title`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_mal_media_cache_mediaType_fetchedAtEpochMillis` ON `mal_media_cache` (`mediaType`, `fetchedAtEpochMillis`)")
+
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `mal_library_refresh_states` (
+                    `localAccountId` TEXT NOT NULL,
+                    `mediaType` TEXT NOT NULL,
+                    `state` TEXT NOT NULL,
+                    `generation` INTEGER NOT NULL,
+                    `nextPageUrl` TEXT,
+                    `itemCount` INTEGER NOT NULL,
+                    `lastAttemptAtEpochMillis` INTEGER NOT NULL,
+                    `lastSuccessAtEpochMillis` INTEGER,
+                    `lastErrorKind` TEXT,
+                    PRIMARY KEY(`localAccountId`, `mediaType`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_mal_library_refresh_states_state_lastAttemptAtEpochMillis` ON `mal_library_refresh_states` (`state`, `lastAttemptAtEpochMillis`)")
+            db.execSQL(
+                """
+                INSERT OR REPLACE INTO `mal_library_refresh_states` (
+                    `localAccountId`, `mediaType`, `state`, `generation`, `nextPageUrl`,
+                    `itemCount`, `lastAttemptAtEpochMillis`, `lastSuccessAtEpochMillis`, `lastErrorKind`
+                ) SELECT
+                    `localAccountId`, `mediaType`,
+                    CASE WHEN `state` = 'RUNNING' THEN 'FAILED' ELSE `state` END,
+                    `generation`, NULL, `importedCount`, `lastAttemptAtEpochMillis`,
+                    `lastSuccessAtEpochMillis`,
+                    CASE WHEN `state` = 'RUNNING' THEN 'PROCESS_RESTART' ELSE `lastErrorKind` END
+                FROM `mal_import_states`
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `mal_library_refresh_entries` (
+                    `localAccountId` TEXT NOT NULL,
+                    `mediaType` TEXT NOT NULL,
+                    `generation` INTEGER NOT NULL,
+                    `malId` INTEGER NOT NULL,
+                    `localMediaId` TEXT NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `alternativeTitlesJson` TEXT NOT NULL,
+                    `synopsis` TEXT,
+                    `pictureMedium` TEXT,
+                    `pictureLarge` TEXT,
+                    `meanScore` REAL,
+                    `rank` INTEGER,
+                    `popularity` INTEGER,
+                    `mediaStatus` TEXT,
+                    `startDate` TEXT,
+                    `endDate` TEXT,
+                    `episodeCount` INTEGER,
+                    `chapterCount` INTEGER,
+                    `volumeCount` INTEGER,
+                    `genresJson` TEXT NOT NULL,
+                    `status` TEXT NOT NULL,
+                    `progress` INTEGER NOT NULL,
+                    `progressSecondary` INTEGER,
+                    `score100` REAL,
+                    `repeatCount` INTEGER NOT NULL,
+                    `notes` TEXT,
+                    `startedAt` TEXT,
+                    `completedAt` TEXT,
+                    `providerUpdatedAtEpochMillis` INTEGER,
+                    PRIMARY KEY(`localAccountId`, `mediaType`, `generation`, `malId`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_mal_library_refresh_entries_localAccountId_mediaType_generation` ON `mal_library_refresh_entries` (`localAccountId`, `mediaType`, `generation`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_mal_library_refresh_entries_localMediaId` ON `mal_library_refresh_entries` (`localMediaId`)")
+
+            // Raw staging rows and cross-provider plans are intentionally not migrated.
+            db.execSQL("DROP TABLE IF EXISTS `mal_import_entries`")
+            db.execSQL("DROP TABLE IF EXISTS `mal_import_states`")
+            db.execSQL("DROP TABLE IF EXISTS `tracking_reconciliation_items`")
+            db.execSQL("DROP TABLE IF EXISTS `tracking_reconciliation_plans`")
+        }
+    }
+
     val ALL_MIGRATIONS: Array<Migration> = arrayOf(
         MIGRATION_23_24,
         MIGRATION_24_25,
         MIGRATION_25_26,
         MIGRATION_26_27,
+        MIGRATION_27_28,
     )
 }

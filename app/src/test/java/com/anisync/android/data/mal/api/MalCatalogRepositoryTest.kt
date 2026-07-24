@@ -89,7 +89,8 @@ class MalCatalogRepositoryTest {
         assertEquals(MalApiFailureKind.OFFLINE, (failedRefresh as MalApiResult.Failure).error.kind)
         assertFalse(reopened.toString().contains("Cached synopsis"))
         val stored = database.trackingDao().getMalMedia(key.malId, key.mediaType.name)
-        assertFalse(stored?.rawJson.orEmpty().contains("num_episodes_watched"))
+        assertEquals("Detailed title", stored?.title)
+        assertTrue(stored?.isDetailed == true)
     }
 
     @Test

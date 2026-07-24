@@ -438,7 +438,6 @@ class MalCatalogApi internal constructor(
             rankingPosition = rankingPosition,
             isDetailed = isDetailed,
             fetchedAtEpochMillis = fetchedAtEpochMillis,
-            rawJson = json.encodeToString(this),
         )
     }
 

@@ -301,8 +301,6 @@ class MalListApi internal constructor(
             providerUpdatedAtEpochMillis = listStatus.updatedAt?.let { value ->
                 runCatching { Instant.parse(value).toEpochMilli() }.getOrNull()
             },
-            rawMediaJson = json.encodeToString(node),
-            rawListStatusJson = json.encodeToString(listStatus),
         )
     }
 

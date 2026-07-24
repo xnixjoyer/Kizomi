@@ -15,9 +15,6 @@ import com.anisync.android.domain.FeedFilter
 import com.anisync.android.domain.FeedScope
 import com.anisync.android.domain.ScoreFormat
 import com.anisync.android.domain.media.MediaHost
-import com.anisync.android.domain.tracking.PerMediaTrackingPolicy
-import com.anisync.android.domain.tracking.TrackingMediaType
-import com.anisync.android.domain.tracking.TrackingMode
 import com.anisync.android.type.MediaType
 import com.anisync.android.ui.theme.FontAxisOverrides
 import com.anisync.android.ui.theme.TypeCategory
@@ -226,15 +223,6 @@ class AppSettings @Inject constructor(
     private val _communityScoreMode = MutableStateFlow(readCommunityScoreMode())
     val communityScoreMode: StateFlow<CommunityScoreMode> = _communityScoreMode.asStateFlow()
 
-    // Tracking writes are routed independently for anime and manga. New and upgraded installs
-    // deliberately start in AniList-only mode; changing these values only affects future commands
-    // and never deletes either provider's confirmed state.
-    private val _animeTrackingMode = MutableStateFlow(readTrackingMode(KEY_ANIME_TRACKING_MODE))
-    val animeTrackingMode: StateFlow<TrackingMode> = _animeTrackingMode.asStateFlow()
-
-    private val _mangaTrackingMode = MutableStateFlow(readTrackingMode(KEY_MANGA_TRACKING_MODE))
-    val mangaTrackingMode: StateFlow<TrackingMode> = _mangaTrackingMode.asStateFlow()
-
     private val _mainNavigationOrder = MutableStateFlow(readMainNavigationOrder())
     val mainNavigationOrder: StateFlow<List<String>> = _mainNavigationOrder.asStateFlow()
 
@@ -285,15 +273,6 @@ class AppSettings @Inject constructor(
             if (stored != repaired.name) {
                 prefs.edit().putString(KEY_COMMUNITY_SCORE_MODE, repaired.name).apply()
             }
-        }
-    }
-
-    private fun readTrackingMode(key: String): TrackingMode {
-        val stored = runCatching { prefs.getString(key, null) }.getOrNull()
-        return runCatching {
-            TrackingMode.valueOf(stored ?: TrackingMode.ANILIST_ONLY.name)
-        }.getOrDefault(TrackingMode.ANILIST_ONLY).also { repaired ->
-            if (stored != repaired.name) prefs.edit().putString(key, repaired.name).apply()
         }
     }
 
@@ -792,24 +771,6 @@ class AppSettings @Inject constructor(
         prefs.edit().putString(KEY_COMMUNITY_SCORE_MODE, mode.name).apply()
     }
 
-    fun setTrackingMode(mediaType: TrackingMediaType, mode: TrackingMode) {
-        when (mediaType) {
-            TrackingMediaType.ANIME -> {
-                _animeTrackingMode.value = mode
-                prefs.edit().putString(KEY_ANIME_TRACKING_MODE, mode.name).apply()
-            }
-            TrackingMediaType.MANGA -> {
-                _mangaTrackingMode.value = mode
-                prefs.edit().putString(KEY_MANGA_TRACKING_MODE, mode.name).apply()
-            }
-        }
-    }
-
-    fun currentTrackingPolicy(): PerMediaTrackingPolicy = PerMediaTrackingPolicy(
-        animeMode = _animeTrackingMode.value,
-        mangaMode = _mangaTrackingMode.value,
-    )
-
     fun setMainNavigationOrder(order: List<String>) {
         val normalized = normalizeMainNavigationOrder(order)
         _mainNavigationOrder.value = normalized
@@ -1307,8 +1268,6 @@ companion object {
         private const val KEY_UI_DENSITY = "ui_density_v2"
         private const val KEY_DETAIL_EDGE_TO_EDGE = "detail_edge_to_edge_beta"
         private const val KEY_COMMUNITY_SCORE_MODE = "community_score_mode_beta_v1"
-        private const val KEY_ANIME_TRACKING_MODE = "tracking_mode_anime_v1"
-        private const val KEY_MANGA_TRACKING_MODE = "tracking_mode_manga_v1"
         private const val KEY_MAIN_NAV_ORDER = "main_navigation_order_v2"
         private const val KEY_MAIN_NAV_VISIBLE = "main_navigation_visible_v2"
         private const val KEY_MAIN_NAV_START_MODE = "main_navigation_start_mode_v2"

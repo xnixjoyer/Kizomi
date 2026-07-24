@@ -5,14 +5,14 @@ enum class LocalMediaType { ANIME, MANGA }
 enum class MediaIdentityMappingSource {
     EXISTING_ANILIST_MIGRATION,
     ANILIST_ID_MAL,
-    MAL_IMPORT,
+    MAL_NATIVE,
     ANILIST_LOOKUP_BY_MAL_ID,
     MANUAL_CONFIRMATION,
 }
 enum class MediaIdentityVerificationStatus {
     EXACT,
     CONFIRMED,
-    IMPORTED,
+    PROVIDER_CONFIRMED,
     UNRESOLVED,
     CONFLICTING,
     REJECTED,

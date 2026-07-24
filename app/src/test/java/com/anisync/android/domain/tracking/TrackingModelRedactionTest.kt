@@ -13,7 +13,6 @@ class TrackingModelRedactionTest {
             "operation-private-sentinel",
             "notes-private-sentinel",
             "custom-list-private-sentinel",
-            "raw-provider-private-sentinel",
             "remote-revision-private-sentinel",
         )
         val desired = TrackingDesiredState(
@@ -27,7 +26,7 @@ class TrackingModelRedactionTest {
             mediaType = TrackingMediaType.ANIME,
             desired = desired,
             fields = setOf(TrackingField.STATUS, TrackingField.NOTES, TrackingField.CUSTOM_LISTS),
-            providerListEntryIds = mapOf(TrackingProvider.ANILIST to 987654321L),
+            providerListEntryId = 987654321L,
         )
         val command = TrackingCommand(sentinels[2], 1L, draft)
         val request = TrackingProviderRequest(
@@ -46,8 +45,7 @@ class TrackingModelRedactionTest {
             providerListEntryId = 987654321L,
             title = "Safe title",
             state = desired,
-            rawProviderFieldsJson = sentinels[5],
-            remoteRevision = sentinels[6],
+            remoteRevision = sentinels[5],
         )
         val rendered = listOf(desired, draft, command, request, target, snapshot).joinToString("\n")
 

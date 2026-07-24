@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prevent provider-native catalog/detail paths from silently falling back across providers."""
+"""Prevent provider-native catalog/detail and tracking paths from crossing providers."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ MAL_NATIVE_ROOTS = (
     ROOT / "app/src/main/java/com/anisync/android/data/mal/api",
     ROOT / "app/src/main/java/com/anisync/android/presentation/mal",
 )
-LEGACY_ANILIST_PATHS = (
+ANILIST_NATIVE_PATHS = (
     ROOT / "app/src/main/java/com/anisync/android/data/DetailsRepositoryImpl.kt",
     ROOT / "app/src/main/java/com/anisync/android/data/LibraryRepositoryImpl.kt",
     ROOT / "app/src/main/java/com/anisync/android/worker/EpisodeUpdateWorker.kt",
@@ -37,6 +37,9 @@ FORBIDDEN_IN_ANILIST_NATIVE = (
 def main() -> int:
     violations: list[str] = []
     for root in MAL_NATIVE_ROOTS:
+        if not root.exists():
+            violations.append(f"Missing MAL-native source root: {root.relative_to(ROOT)}")
+            continue
         for path in root.rglob("*.kt"):
             text = path.read_text(encoding="utf-8")
             for marker in FORBIDDEN_IN_MAL_NATIVE:
@@ -45,7 +48,9 @@ def main() -> int:
                         f"{path.relative_to(ROOT)}: cross-provider fallback marker {marker}"
                     )
 
-    for path in LEGACY_ANILIST_PATHS:
+    for path in ANILIST_NATIVE_PATHS:
+        if not path.exists():
+            continue
         text = path.read_text(encoding="utf-8")
         for marker in FORBIDDEN_IN_ANILIST_NATIVE:
             if marker in text:
@@ -53,23 +58,28 @@ def main() -> int:
                     f"{path.relative_to(ROOT)}: native AniList path references MAL catalog transport"
                 )
 
-    tests = (
+    catalog_test_path = (
         ROOT / "app/src/test/java/com/anisync/android/data/mal/api/MalCatalogRepositoryTest.kt"
-    ).read_text(encoding="utf-8")
-    for marker in ("AniList fallback is forbidden", "requestedHosts.all"):
-        if marker not in tests:
-            violations.append("MAL catalog null-fallback network evidence is missing")
-
-    pure_test = (
-        ROOT / "app/src/test/java/com/anisync/android/data/tracking/TrackingNetworkNullTest.kt"
-    ).read_text(encoding="utf-8")
+    )
+    catalog_tests = catalog_test_path.read_text(encoding="utf-8")
     for marker in (
-        "default pure AniList mode never consults MAL",
-        "MAL-only produces zero AniList targets",
-        "AniList-only produces zero MAL targets",
+        "AniList fallback is forbidden",
+        "requestedHosts.all",
     ):
-        if marker not in pure_test:
-            violations.append(f"Pure provider test matrix missing: {marker}")
+        if marker not in catalog_tests:
+            violations.append(f"MAL catalog null-fallback evidence missing: {marker}")
+
+    isolation_test_path = (
+        ROOT / "app/src/test/java/com/anisync/android/data/tracking/TrackingNetworkNullTest.kt"
+    )
+    isolation_tests = isolation_test_path.read_text(encoding="utf-8")
+    for marker in (
+        "MAL mode performs zero AniList identity account and enqueue work for AniList command",
+        "AniList mode performs zero MAL identity account and enqueue work for MAL command",
+        "assertEquals(0, calls)",
+    ):
+        if marker not in isolation_tests:
+            violations.append(f"Inactive-provider null-call evidence missing: {marker}")
 
     if violations:
         print("::error::Provider-native boundary failed")

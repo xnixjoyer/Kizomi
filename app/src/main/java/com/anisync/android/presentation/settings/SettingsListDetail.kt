@@ -201,12 +201,8 @@ private fun SettingsDetailPane(
             )
         }
         composable<SettingsMyAnimeList> {
-            MalAccountSettingsScreen(
-                onBackClick = popOrClose,
-                onOpenTrackingCenter = { paneNav.navigate(SettingsTrackingCenter) },
-            )
+            MalAccountSettingsScreen(onBackClick = popOrClose)
         }
-        composable<SettingsTrackingCenter> { TrackingCenterScreen(onBackClick = popOrClose) }
         composable<SettingsNotifications> { NotificationsScreen(onBackClick = popOrClose) }
         composable<SettingsStorage> { StorageScreen(onBackClick = popOrClose) }
         composable<SettingsMediaUpload> { MediaUploadSettingsScreen(onBackClick = popOrClose) }

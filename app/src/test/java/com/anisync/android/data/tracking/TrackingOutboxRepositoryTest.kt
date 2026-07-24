@@ -55,22 +55,22 @@ class TrackingOutboxRepositoryTest {
     fun `intent is durable before scheduling and duplicate enqueue reuses unsettled operation`() = runTest {
         seedLocal("local-anime")
 
-        val first = accepted(repository.enqueue(draft(progress = 4), listOf(malTarget())))
-        val duplicate = accepted(repository.enqueue(draft(progress = 4), listOf(malTarget())))
+        val first = accepted(repository.enqueue(draft(progress = 4), malTarget()))
+        val duplicate = accepted(repository.enqueue(draft(progress = 4), malTarget()))
 
         assertEquals(first.operationId, duplicate.operationId)
         assertFalse(first.deduplicated)
         assertTrue(duplicate.deduplicated)
         assertEquals(1, scheduler.calls)
         assertEquals(1L, database.trackingDao().latestGeneration(logicalKey()))
-        assertEquals(TrackingTargetState.PENDING, duplicate.targetStates[TrackingProvider.MYANIMELIST])
+        assertEquals(TrackingTargetState.PENDING, duplicate.targetState)
         assertTrue(database.trackingDao().getOperation(first.operationId)?.commandJson?.isNotBlank() == true)
     }
 
     @Test
     fun `new absolute state supersedes waiting generation but never cancels running delivery`() = runTest {
         seedLocal("local-anime")
-        val first = accepted(repository.enqueue(draft(progress = 4), listOf(malTarget())))
+        val first = accepted(repository.enqueue(draft(progress = 4), malTarget()))
         val now = System.currentTimeMillis()
         assertEquals(
             1,
@@ -83,19 +83,19 @@ class TrackingOutboxRepositoryTest {
             ),
         )
 
-        val second = accepted(repository.enqueue(draft(progress = 5), listOf(malTarget())))
+        val second = accepted(repository.enqueue(draft(progress = 5), malTarget()))
 
         assertNotEquals(first.operationId, second.operationId)
         assertEquals(2L, second.generation)
-        assertEquals("RUNNING", database.trackingDao().getTargets(first.operationId).single().state)
-        assertEquals("PENDING", database.trackingDao().getTargets(second.operationId).single().state)
+        assertEquals("RUNNING", database.trackingDao().getTarget(first.operationId)?.state)
+        assertEquals("PENDING", database.trackingDao().getTarget(second.operationId)?.state)
     }
 
     @Test
     fun `new state replaces queued state and delete is a durable tombstone`() = runTest {
         seedLocal("local-anime")
-        val first = accepted(repository.enqueue(draft(progress = 1), listOf(malTarget())))
-        val second = accepted(repository.enqueue(draft(progress = 2), listOf(malTarget())))
+        val first = accepted(repository.enqueue(draft(progress = 1), malTarget()))
+        val second = accepted(repository.enqueue(draft(progress = 2), malTarget()))
         val tombstone = accepted(
             repository.enqueue(
                 TrackingCommandDraft(
@@ -105,12 +105,12 @@ class TrackingOutboxRepositoryTest {
                     fields = setOf(TrackingField.DELETE),
                     deleteIntent = true,
                 ),
-                listOf(malTarget()),
+                malTarget(),
             )
         )
 
-        assertEquals("SUPERSEDED", database.trackingDao().getTargets(first.operationId).single().state)
-        assertEquals("SUPERSEDED", database.trackingDao().getTargets(second.operationId).single().state)
+        assertEquals("SUPERSEDED", database.trackingDao().getTarget(first.operationId)?.state)
+        assertEquals("SUPERSEDED", database.trackingDao().getTarget(second.operationId)?.state)
         assertTrue(database.trackingDao().getOperation(tombstone.operationId)?.isTombstone == true)
         assertEquals(3L, tombstone.generation)
     }
@@ -118,25 +118,23 @@ class TrackingOutboxRepositoryTest {
     @Test
     fun `account keys isolate generations and blocked target is explicit and unscheduled`() = runTest {
         seedLocal("local-anime")
-        val first = accepted(repository.enqueue(draft(1), listOf(malTarget("account-a"))))
-        val second = accepted(repository.enqueue(draft(1), listOf(malTarget("account-b"))))
+        val first = accepted(repository.enqueue(draft(1), malTarget("account-a")))
+        val second = accepted(repository.enqueue(draft(1), malTarget("account-b")))
         val blocked = accepted(
             repository.enqueue(
                 draft(2),
-                listOf(
-                    TrackingCommandTarget(
-                        provider = TrackingProvider.ANILIST,
-                        providerAccountId = null,
-                        providerMediaId = 10,
-                        blocker = com.anisync.android.domain.tracking.TrackingFailureKind.MISSING_ACCOUNT,
-                    )
+                TrackingCommandTarget(
+                    provider = TrackingProvider.ANILIST,
+                    providerAccountId = null,
+                    providerMediaId = 10,
+                    blocker = com.anisync.android.domain.tracking.TrackingFailureKind.MISSING_ACCOUNT,
                 ),
             )
         )
 
         assertEquals(1L, first.generation)
         assertEquals(1L, second.generation)
-        assertEquals(TrackingTargetState.BLOCKED, blocked.targetStates[TrackingProvider.ANILIST])
+        assertEquals(TrackingTargetState.BLOCKED, blocked.targetState)
         assertEquals(2, scheduler.calls)
     }
 
@@ -144,7 +142,7 @@ class TrackingOutboxRepositoryTest {
     fun `concurrent duplicate input produces exactly one operation`() = runTest {
         seedLocal("local-anime")
         val receipts = List(8) {
-            async { accepted(repository.enqueue(draft(7), listOf(malTarget()))) }
+            async { accepted(repository.enqueue(draft(7), malTarget())) }
         }.awaitAll()
 
         assertEquals(1, receipts.map { it.operationId }.distinct().size)

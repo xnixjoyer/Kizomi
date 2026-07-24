@@ -1,7 +1,9 @@
 package com.anisync.android.domain.tracking
 
+import com.anisync.android.domain.provider.ActiveProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -9,48 +11,60 @@ class TrackingRoutingTest {
     private val resolver = TrackingRouteResolver()
 
     @Test
-    fun `anime and manga routes are independent and default to AniList`() {
-        val defaults = PerMediaTrackingPolicy()
-        val split = PerMediaTrackingPolicy(
-            animeMode = TrackingMode.MYANIMELIST_ONLY,
-            mangaMode = TrackingMode.ANILIST_ONLY,
-        )
-        assertEquals(TrackingMode.ANILIST_ONLY, defaults.modeFor(TrackingMediaType.ANIME))
-        assertEquals(TrackingMode.MYANIMELIST_ONLY, split.modeFor(TrackingMediaType.ANIME))
-        assertEquals(TrackingMode.ANILIST_ONLY, split.modeFor(TrackingMediaType.MANGA))
-    }
-
-    @Test
-    fun `MAL-only route remains executable with hard AniList network block`() {
+    fun `unconfigured resolves no target`() {
         val route = resolver.resolve(
-            TrackingMediaType.ANIME,
-            PerMediaTrackingPolicy(
-                animeMode = TrackingMode.MYANIMELIST_ONLY,
-                mangaMode = TrackingMode.MYANIMELIST_ONLY,
-            ),
-            TrackingAccountSelection(myAnimeListAccountId = "mal"),
-            TrackingIdentitySelection(myAnimeListId = 20),
-            ProviderNetworkPolicy(allowAniList = false),
+            activeProvider = ActiveProvider.UNCONFIGURED,
+            accounts = TrackingAccountSelection("ani", "mal"),
+            identities = TrackingIdentitySelection(10, 20),
+            network = ProviderNetworkPolicy(),
         )
-        assertTrue(route.fullyExecutable)
-        assertEquals(listOf(TrackingProvider.MYANIMELIST), route.targets.map { it.provider })
-    }
-
-    @Test
-    fun `dual route persists blocked provider rather than silently downgrading`() {
-        val route = resolver.resolve(
-            TrackingMediaType.MANGA,
-            PerMediaTrackingPolicy(mangaMode = TrackingMode.DUAL),
-            TrackingAccountSelection(aniListAccountId = "ani", myAnimeListAccountId = "mal"),
-            TrackingIdentitySelection(aniListId = 10, myAnimeListId = 20),
-            ProviderNetworkPolicy(allowAniList = false),
-        )
+        assertNull(route.target)
         assertFalse(route.fullyExecutable)
-        assertEquals(2, route.targets.size)
-        assertEquals(
-            TrackingFailureKind.NETWORK_BLOCKED,
-            route.targets.single { it.provider == TrackingProvider.ANILIST }.blocker,
+    }
+
+    @Test
+    fun `AniList active resolves exactly AniList even when MAL data exists`() {
+        val route = resolver.resolve(
+            activeProvider = ActiveProvider.ANILIST_ONLY,
+            accounts = TrackingAccountSelection("ani", "mal"),
+            identities = TrackingIdentitySelection(10, 20),
+            network = ProviderNetworkPolicy(),
         )
-        assertEquals(null, route.targets.single { it.provider == TrackingProvider.MYANIMELIST }.blocker)
+        assertEquals(TrackingProvider.ANILIST, route.target?.provider)
+        assertEquals("ani", route.target?.providerAccountId)
+        assertEquals(10L, route.target?.providerMediaId)
+        assertTrue(route.fullyExecutable)
+    }
+
+    @Test
+    fun `MAL active resolves exactly MAL and respects MAL kill switch`() {
+        val route = resolver.resolve(
+            activeProvider = ActiveProvider.MAL_ONLY,
+            accounts = TrackingAccountSelection("ani", "mal"),
+            identities = TrackingIdentitySelection(10, 20),
+            network = ProviderNetworkPolicy(allowAniList = true, allowMyAnimeList = false),
+        )
+        assertEquals(TrackingProvider.MYANIMELIST, route.target?.provider)
+        assertEquals(TrackingFailureKind.NETWORK_BLOCKED, route.target?.blocker)
+        assertFalse(route.fullyExecutable)
+    }
+
+    @Test
+    fun `missing active-provider account and identity fail closed`() {
+        val missingAccount = resolver.resolve(
+            ActiveProvider.MAL_ONLY,
+            TrackingAccountSelection(),
+            TrackingIdentitySelection(myAnimeListId = 20),
+            ProviderNetworkPolicy(),
+        )
+        assertEquals(TrackingFailureKind.MISSING_ACCOUNT, missingAccount.target?.blocker)
+
+        val missingIdentity = resolver.resolve(
+            ActiveProvider.ANILIST_ONLY,
+            TrackingAccountSelection(aniListAccountId = "ani"),
+            TrackingIdentitySelection(),
+            ProviderNetworkPolicy(),
+        )
+        assertEquals(TrackingFailureKind.MISSING_IDENTITY, missingIdentity.target?.blocker)
     }
 }

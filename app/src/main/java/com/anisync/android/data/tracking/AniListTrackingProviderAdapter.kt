@@ -113,7 +113,6 @@ class AniListTrackingProviderAdapter @Inject constructor(
             TrackingConfirmedSnapshot(
                 providerListEntryId = saved.id.toLong(),
                 state = desired,
-                rawProviderFieldsJson = "{}",
             )
         )
     }
@@ -123,7 +122,7 @@ class AniListTrackingProviderAdapter @Inject constructor(
         token: String,
     ): TrackingDeliveryResult {
         val listEntryId = request.command.draft
-            .providerListEntryIds[TrackingProvider.ANILIST]
+            .providerListEntryId
             ?.takeIf { it in 1..Int.MAX_VALUE.toLong() }
             ?.toInt()
             ?: return TrackingDeliveryResult.TerminalFailure(TrackingFailureKind.MISSING_IDENTITY)
@@ -138,7 +137,6 @@ class AniListTrackingProviderAdapter @Inject constructor(
             TrackingConfirmedSnapshot(
                 providerListEntryId = listEntryId.toLong(),
                 state = request.command.draft.desired,
-                rawProviderFieldsJson = "{}",
                 deleted = true,
             )
         )
