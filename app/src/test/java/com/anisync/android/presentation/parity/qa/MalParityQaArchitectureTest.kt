@@ -11,6 +11,7 @@ import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -61,7 +62,7 @@ class MalParityQaArchitectureTest {
         assertEquals(TrackingProvider.MYANIMELIST, available.target?.provider)
         assertEquals("mal-account", available.target?.providerAccountId)
         assertEquals(202L, available.target?.providerMediaId)
-        assertEquals(null, available.target?.blocker)
+        assertNull(available.target?.blocker)
 
         val blocked = resolver.resolve(
             activeProvider = ActiveProvider.MAL_ONLY,
