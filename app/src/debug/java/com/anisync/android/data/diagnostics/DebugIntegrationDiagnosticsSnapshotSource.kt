@@ -12,6 +12,8 @@ import com.anisync.android.domain.provider.ActiveProvider
 import com.anisync.android.presentation.diagnostics.DiagnosticsParityRegistry
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Singleton
 class DebugIntegrationDiagnosticsSnapshotSource @Inject constructor(
@@ -21,7 +23,7 @@ class DebugIntegrationDiagnosticsSnapshotSource @Inject constructor(
     private val database: AppDatabase,
     private val recorder: IntegrationDiagnosticsRecorder,
 ) : IntegrationDiagnosticsSnapshotSource {
-    override suspend fun snapshot(): IntegrationDiagnosticsSnapshot {
+    override suspend fun snapshot(): IntegrationDiagnosticsSnapshot = withContext(Dispatchers.IO) {
         val providerState = providerStore.snapshot()
         val malAccount = if (providerState.activeProvider == ActiveProvider.MAL_ONLY) {
             runCatching { malAccounts.activeAccount() }.getOrNull()
@@ -39,7 +41,7 @@ class DebugIntegrationDiagnosticsSnapshotSource @Inject constructor(
         val accountPresent = malAccount != null || aniListAccount != null
         val lastRefresh = recorder.lastRefreshOutcome()
 
-        return IntegrationDiagnosticsSnapshot(
+        IntegrationDiagnosticsSnapshot(
             build = DiagnosticsBuildMetadata(
                 versionName = BuildConfig.VERSION_NAME,
                 versionCode = BuildConfig.VERSION_CODE.toLong(),
