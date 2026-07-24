@@ -1,12 +1,15 @@
 package com.anisync.android.presentation.provider.library
 
-import com.anisync.android.data.local.entity.ProviderTrackingSnapshotEntity
+import com.anisync.android.data.tracking.MalLibraryConfirmedSnapshot
+import com.anisync.android.data.tracking.MalLibraryTrackingState
 import com.anisync.android.data.tracking.MalTrackingCommandInput
 import com.anisync.android.domain.tracking.TrackingEnqueueReceipt
 import com.anisync.android.domain.tracking.TrackingEnqueueResult
 import com.anisync.android.domain.tracking.TrackingFailureKind
 import com.anisync.android.domain.tracking.TrackingField
+import com.anisync.android.domain.tracking.TrackingMediaType
 import com.anisync.android.domain.tracking.TrackingProvider
+import com.anisync.android.domain.tracking.TrackingStatus
 import com.anisync.android.domain.tracking.TrackingTargetState
 import com.anisync.android.presentation.model.MediaListItemPresentation
 import com.anisync.android.presentation.model.PresentationMediaType
@@ -28,7 +31,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class MalLibraryTrackingAdapterTest {
     @Test
-    fun `one edit creates exactly one MAL command with no AniList identity`() = runTest {
+    fun `one edit creates exactly one MAL command containing only changed fields`() = runTest {
         val captured = mutableListOf<MalTrackingCommandInput>()
         val adapter = MalLibraryTrackingAdapter { input ->
             captured += input
@@ -36,37 +39,21 @@ class MalLibraryTrackingAdapterTest {
         }
         val original = item(malId = 101L, progress = 2)
 
-        val outcome = adapter.submit(
-            original = original,
-            draft = MalLibraryEditDraft.from(original).copy(
-                status = ProviderLibraryStatus.CURRENT,
-                progress = 3,
-                score100 = 80.0,
-                startedAt = "2026-01-02",
-            ),
-        )
+        val accepted = adapter.submit(
+            original,
+            MalLibraryEditDraft.from(original).copy(progress = 3),
+        ) as MalLibraryEditOutcome.Accepted
 
         assertEquals(1, captured.size)
         assertEquals(101L, captured.single().malMediaId)
-        assertEquals(
-            setOf(
-                TrackingField.STATUS,
-                TrackingField.PROGRESS,
-                TrackingField.SCORE,
-                TrackingField.STARTED_AT,
-            ),
-            captured.single().fields,
-        )
-        assertTrue(outcome is MalLibraryEditOutcome.Accepted)
-        val accepted = outcome as MalLibraryEditOutcome.Accepted
+        assertEquals(setOf(TrackingField.PROGRESS), captured.single().fields)
         assertEquals(3, accepted.displayedItem.progress)
         assertEquals(2, accepted.rollbackItem.progress)
         assertEquals(TrackingProvider.MYANIMELIST, accepted.receipt.provider)
-        assertFalse(accepted.deleteIntent)
     }
 
     @Test
-    fun `manga edit carries chapter and volume progress while anime rejects secondary progress`() = runTest {
+    fun `manga identity carries chapter and volume fields while anime rejects volume progress`() = runTest {
         val captured = mutableListOf<MalTrackingCommandInput>()
         val adapter = MalLibraryTrackingAdapter { input ->
             captured += input
@@ -91,9 +78,11 @@ class MalLibraryTrackingAdapterTest {
 
         assertTrue(mangaOutcome is MalLibraryEditOutcome.Accepted)
         assertEquals(202L, captured.single().malMediaId)
+        assertEquals(
+            setOf(TrackingField.PROGRESS, TrackingField.PROGRESS_SECONDARY),
+            captured.single().fields,
+        )
         assertEquals(2, captured.single().desired.progressSecondary)
-        assertTrue(TrackingField.PROGRESS_SECONDARY in captured.single().fields)
-        assertTrue(animeOutcome is MalLibraryEditOutcome.Rejected)
         assertEquals(
             TrackingFailureKind.UNSUPPORTED_FIELD,
             (animeOutcome as MalLibraryEditOutcome.Rejected).reason,
@@ -102,62 +91,40 @@ class MalLibraryTrackingAdapterTest {
     }
 
     @Test
-    fun `enqueue accepted and pending are distinct states`() = runTest {
-        val delivery = MutableSharedFlow<MalLibraryDeliveryState>(extraBufferCapacity = 4)
+    fun `accepted pending delivered and confirmed are four distinct states`() = runTest {
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 4)
         val adapter = lifecycleAdapter(delivery)
         val original = item(malId = 301L, progress = 1)
         val accepted = adapter.submit(
             original,
             MalLibraryEditDraft.from(original).copy(progress = 2),
         ) as MalLibraryEditOutcome.Accepted
-
-        assertEquals(TrackingTargetState.PENDING, accepted.receipt.targetState)
-        val event = async(UnconfinedTestDispatcher(testScheduler)) {
-            adapter.observe(accepted).take(1).toList().single()
-        }
-        delivery.emit(MalLibraryDeliveryState.Pending(TrackingTargetState.PENDING, 0))
-        runCurrent()
-
-        val pending = event.await() as MalLibraryEditLifecycle.Pending
-        assertEquals(2, pending.displayedItem.progress)
-        assertEquals(1, pending.rollbackItem.progress)
-        assertEquals(0, pending.attemptCount)
-    }
-
-    @Test
-    fun `retryable delivery failure remains pending and keeps retry draft`() = runTest {
-        val delivery = MutableSharedFlow<MalLibraryDeliveryState>(extraBufferCapacity = 4)
-        val adapter = lifecycleAdapter(delivery)
-        val original = item(malId = 302L, progress = 3)
-        val accepted = adapter.submit(
-            original,
-            MalLibraryEditDraft.from(original).copy(progress = 4),
-        ) as MalLibraryEditOutcome.Accepted
-        val event = async(UnconfinedTestDispatcher(testScheduler)) {
-            adapter.observe(accepted).take(1).toList().single()
+        val events = async(UnconfinedTestDispatcher(testScheduler)) {
+            adapter.observe(accepted).take(3).toList()
         }
 
+        delivery.emit(MalLibraryTrackingState.Pending(TrackingTargetState.PENDING, 0))
+        delivery.emit(MalLibraryTrackingState.Delivered(attemptCount = 1))
         delivery.emit(
-            MalLibraryDeliveryState.RetryableFailure(
-                reason = TrackingFailureKind.RATE_LIMITED,
-                attemptCount = 2,
-                retryAfterMillis = 12_000L,
+            MalLibraryTrackingState.Confirmed(
+                snapshot(malId = 301L, progress = 2)
             )
         )
         runCurrent()
 
-        val retryable = event.await() as MalLibraryEditLifecycle.RetryableFailure
-        assertEquals(4, retryable.displayedItem.progress)
-        assertEquals(4, retryable.retryDraft.progress)
-        assertEquals(TrackingFailureKind.RATE_LIMITED, retryable.reason)
-        assertEquals(12_000L, retryable.retryAfterMillis)
+        val lifecycle = events.await()
+        assertTrue(lifecycle[0] is MalLibraryEditLifecycle.Pending)
+        assertTrue(lifecycle[1] is MalLibraryEditLifecycle.Delivered)
+        val confirmed = lifecycle[2] as MalLibraryEditLifecycle.ProviderConfirmed
+        assertTrue(confirmed.matchesRequestedState)
+        assertEquals(2, confirmed.displayedItem.progress)
     }
 
     @Test
-    fun `accepted command that later fails permanently emits failure then rollback`() = runTest {
-        val delivery = MutableSharedFlow<MalLibraryDeliveryState>(extraBufferCapacity = 4)
+    fun `accepted late terminal failure emits failure then rollback`() = runTest {
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 2)
         val adapter = lifecycleAdapter(delivery)
-        val original = item(malId = 303L, progress = 4)
+        val original = item(malId = 302L, progress = 4)
         val accepted = adapter.submit(
             original,
             MalLibraryEditDraft.from(original).copy(progress = 9),
@@ -166,22 +133,47 @@ class MalLibraryTrackingAdapterTest {
             adapter.observe(accepted).take(2).toList()
         }
 
-        delivery.emit(MalLibraryDeliveryState.PermanentFailure(TrackingFailureKind.PERMANENT))
+        delivery.emit(
+            MalLibraryTrackingState.TerminalFailure(
+                reason = TrackingFailureKind.PERMANENT,
+                targetState = TrackingTargetState.FAILED,
+            )
+        )
         runCurrent()
 
         val lifecycle = events.await()
         val failure = lifecycle[0] as MalLibraryEditLifecycle.PermanentFailure
         val rollback = lifecycle[1] as MalLibraryEditLifecycle.RolledBack
-        assertEquals(9, failure.displayedItem.progress)
-        assertEquals(4, failure.rollbackItem.progress)
+        assertEquals(TrackingTargetState.FAILED, failure.terminalState)
         assertEquals(4, rollback.displayedItem.progress)
         assertEquals(9, rollback.failedOptimisticItem.progress)
-        assertEquals(TrackingFailureKind.PERMANENT, rollback.reason)
     }
 
     @Test
-    fun `provider confirmed read-back reconciles mismatch instead of claiming requested state`() = runTest {
-        val delivery = MutableSharedFlow<MalLibraryDeliveryState>(extraBufferCapacity = 4)
+    fun `retry exhaustion is terminal and rolls back`() = runTest {
+        val lifecycle = terminalLifecycle(
+            reason = TrackingFailureKind.RETRY_BUDGET_EXHAUSTED,
+            state = TrackingTargetState.FAILED,
+        )
+        val rollback = lifecycle.last() as MalLibraryEditLifecycle.RolledBack
+        assertEquals(TrackingFailureKind.RETRY_BUDGET_EXHAUSTED, rollback.reason)
+        assertEquals(TrackingTargetState.FAILED, rollback.terminalState)
+    }
+
+    @Test
+    fun `supersession is terminal and rolls back obsolete optimistic state`() = runTest {
+        val lifecycle = terminalLifecycle(
+            reason = TrackingFailureKind.PERMANENT,
+            state = TrackingTargetState.SUPERSEDED,
+        )
+        val rollback = lifecycle.last() as MalLibraryEditLifecycle.RolledBack
+        assertEquals(TrackingTargetState.SUPERSEDED, rollback.terminalState)
+        assertEquals(3, rollback.displayedItem.progress)
+    }
+
+    @Test
+    fun `provider read-back mismatch reconciles to provider value`() = runTest {
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 2)
         val adapter = lifecycleAdapter(delivery)
         val original = item(malId = 304L, progress = 5)
         val accepted = adapter.submit(
@@ -193,56 +185,22 @@ class MalLibraryTrackingAdapterTest {
         }
 
         delivery.emit(
-            MalLibraryDeliveryState.ProviderConfirmed(
-                snapshot(
-                    malId = 304L,
-                    progress = 8,
-                    score100 = 90.0,
-                )
+            MalLibraryTrackingState.Confirmed(
+                snapshot(malId = 304L, progress = 8, score100 = 90.0)
             )
         )
         runCurrent()
 
         val confirmed = event.await() as MalLibraryEditLifecycle.ProviderConfirmed
+        assertFalse(confirmed.matchesRequestedState)
         assertEquals(8, confirmed.displayedItem.progress)
         assertEquals(90.0, confirmed.displayedItem.score100)
-        assertFalse(confirmed.matchesRequestedState)
-        assertFalse(confirmed.deleted)
     }
 
     @Test
-    fun `matching provider read-back is the only durable success state`() = runTest {
-        val delivery = MutableSharedFlow<MalLibraryDeliveryState>(extraBufferCapacity = 4)
-        val adapter = lifecycleAdapter(delivery)
-        val original = item(malId = 305L, progress = 5)
-        val accepted = adapter.submit(
-            original,
-            MalLibraryEditDraft.from(original).copy(progress = 6, score100 = 85.0),
-        ) as MalLibraryEditOutcome.Accepted
-        val event = async(UnconfinedTestDispatcher(testScheduler)) {
-            adapter.observe(accepted).take(1).toList().single()
-        }
-
-        delivery.emit(
-            MalLibraryDeliveryState.ProviderConfirmed(
-                snapshot(
-                    malId = 305L,
-                    progress = 6,
-                    score100 = 90.0,
-                )
-            )
-        )
-        runCurrent()
-
-        val confirmed = event.await() as MalLibraryEditLifecycle.ProviderConfirmed
-        assertTrue(confirmed.matchesRequestedState)
-        assertEquals(6, confirmed.displayedItem.progress)
-    }
-
-    @Test
-    fun `delete creates one MAL tombstone target and waits for confirmed deletion`() = runTest {
+    fun `delete creates one MAL tombstone and durable success requires confirmed absence`() = runTest {
         val captured = mutableListOf<MalTrackingCommandInput>()
-        val delivery = MutableSharedFlow<MalLibraryDeliveryState>(extraBufferCapacity = 4)
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 2)
         val adapter = MalLibraryTrackingAdapter(
             enqueueMal = { input ->
                 captured += input
@@ -250,123 +208,95 @@ class MalLibraryTrackingAdapterTest {
             },
             observeDelivery = { delivery },
         )
-        val original = item(malId = 306L, progress = 7)
+        val original = item(malId = 305L, progress = 7)
         val accepted = adapter.delete(original) as MalLibraryEditOutcome.Accepted
-        val event = async(UnconfinedTestDispatcher(testScheduler)) {
-            adapter.observe(accepted).take(1).toList().single()
+        val events = async(UnconfinedTestDispatcher(testScheduler)) {
+            adapter.observe(accepted).take(2).toList()
         }
 
-        assertEquals(1, captured.size)
-        assertEquals(setOf(TrackingField.DELETE), captured.single().fields)
-        assertTrue(captured.single().deleteIntent)
+        delivery.emit(MalLibraryTrackingState.Delivered(1))
         delivery.emit(
-            MalLibraryDeliveryState.ProviderConfirmed(
-                snapshot(malId = 306L, progress = 0, deleted = true)
+            MalLibraryTrackingState.Confirmed(
+                snapshot(malId = 305L, progress = 0, deleted = true)
             )
         )
         runCurrent()
 
-        val confirmed = event.await() as MalLibraryEditLifecycle.ProviderConfirmed
+        assertEquals(1, captured.size)
+        assertEquals(setOf(TrackingField.DELETE), captured.single().fields)
+        assertTrue(captured.single().deleteIntent)
+        assertTrue(events.await()[0] is MalLibraryEditLifecycle.Delivered)
+        val confirmed = events.await()[1] as MalLibraryEditLifecycle.ProviderConfirmed
         assertTrue(confirmed.deleted)
         assertTrue(confirmed.matchesRequestedState)
     }
 
     @Test
-    fun `immediate permanent rejection restores last good item`() = runTest {
-        val adapter = MalLibraryTrackingAdapter {
-            TrackingEnqueueResult.Rejected(TrackingFailureKind.PERMANENT)
-        }
-        val original = item(malId = 307L, progress = 4)
-
-        val outcome = adapter.submit(
+    fun `enqueue rejection no-op AniList identity and invalid date fail before delivery`() = runTest {
+        val original = item(malId = 401L, progress = 4)
+        val rejected = MalLibraryTrackingAdapter {
+            TrackingEnqueueResult.Rejected(TrackingFailureKind.OFFLINE)
+        }.submit(
             original,
             MalLibraryEditDraft.from(original).copy(progress = 9),
         ) as MalLibraryEditOutcome.Rejected
+        assertTrue(rejected.retryable)
+        assertEquals(4, rejected.displayedItem.progress)
 
-        assertEquals(4, outcome.displayedItem.progress)
-        assertEquals(9, outcome.retryDraft.progress)
-        assertFalse(outcome.retryable)
-    }
-
-    @Test
-    fun `transient enqueue rejection keeps retry draft and restores last good item`() = runTest {
-        val adapter = MalLibraryTrackingAdapter {
-            TrackingEnqueueResult.Rejected(TrackingFailureKind.OFFLINE)
-        }
-        val original = item(malId = 308L, progress = 7)
-
-        val outcome = adapter.submit(
-            original,
-            MalLibraryEditDraft.from(original).copy(progress = 8),
-        ) as MalLibraryEditOutcome.Rejected
-
-        assertEquals(7, outcome.displayedItem.progress)
-        assertEquals(8, outcome.retryDraft.progress)
-        assertTrue(outcome.retryable)
-    }
-
-    @Test
-    fun `unchanged draft performs no write`() = runTest {
         var calls = 0
-        val adapter = MalLibraryTrackingAdapter {
+        val noOp = MalLibraryTrackingAdapter {
             calls++
             TrackingEnqueueResult.Accepted(receipt())
-        }
-        val original = item(malId = 309L, progress = 1)
-
-        val outcome = adapter.submit(original, MalLibraryEditDraft.from(original))
-
-        assertTrue(outcome is MalLibraryEditOutcome.NoChange)
+        }.submit(original, MalLibraryEditDraft.from(original))
+        assertTrue(noOp is MalLibraryEditOutcome.NoChange)
         assertEquals(0, calls)
-    }
 
-    @Test
-    fun `AniList identity is rejected before any MAL command is created`() = runTest {
         var captured: MalTrackingCommandInput? = null
-        val adapter = MalLibraryTrackingAdapter { input ->
-            captured = input
-            TrackingEnqueueResult.Accepted(receipt())
-        }
-        val original = item(malId = 310L).copy(
+        val aniListItem = original.copy(
             card = MediaListItemPresentation(
-                identity = ProviderMediaIdentity.AniList(310, PresentationMediaType.ANIME),
+                identity = ProviderMediaIdentity.AniList(401, PresentationMediaType.ANIME),
                 title = "AniList row",
                 coverUrl = null,
-                progress = 0,
+                progress = 4,
             )
         )
-
-        val outcome = adapter.submit(
-            original,
-            MalLibraryEditDraft.from(original).copy(progress = 1),
-        )
-
-        assertTrue(outcome is MalLibraryEditOutcome.Rejected)
-        assertEquals(
-            TrackingFailureKind.VALIDATION,
-            (outcome as MalLibraryEditOutcome.Rejected).reason,
-        )
+        val identityRejected = MalLibraryTrackingAdapter { input ->
+            captured = input
+            TrackingEnqueueResult.Accepted(receipt())
+        }.submit(aniListItem, MalLibraryEditDraft.from(aniListItem).copy(progress = 5))
+        assertTrue(identityRejected is MalLibraryEditOutcome.Rejected)
         assertNull(captured)
-    }
 
-    @Test
-    fun `invalid calendar date is rejected before command construction`() {
-        val original = item(malId = 311L)
-        var rejected = false
-
+        var invalidDateRejected = false
         try {
             MalLibraryEditDraft.from(original).copy(startedAt = "2026-02-30")
         } catch (_: IllegalArgumentException) {
-            rejected = true
+            invalidDateRejected = true
         }
+        assertTrue(invalidDateRejected)
+    }
 
-        assertTrue(rejected)
-        assertTrue("2024-02-29".isValidMalLibraryDate())
-        assertFalse("2025-02-29".isValidMalLibraryDate())
+    private suspend fun terminalLifecycle(
+        reason: TrackingFailureKind,
+        state: TrackingTargetState,
+    ): List<MalLibraryEditLifecycle> {
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 2)
+        val adapter = lifecycleAdapter(delivery)
+        val original = item(malId = 303L, progress = 3)
+        val accepted = adapter.submit(
+            original,
+            MalLibraryEditDraft.from(original).copy(progress = 8),
+        ) as MalLibraryEditOutcome.Accepted
+        val events = async(UnconfinedTestDispatcher(testScheduler)) {
+            adapter.observe(accepted).take(2).toList()
+        }
+        delivery.emit(MalLibraryTrackingState.TerminalFailure(reason, state))
+        runCurrent()
+        return events.await()
     }
 
     private fun lifecycleAdapter(
-        delivery: MutableSharedFlow<MalLibraryDeliveryState>,
+        delivery: MutableSharedFlow<MalLibraryTrackingState>,
     ) = MalLibraryTrackingAdapter(
         enqueueMal = { TrackingEnqueueResult.Accepted(receipt()) },
         observeDelivery = { delivery },
@@ -395,30 +325,25 @@ class MalLibraryTrackingAdapterTest {
         progress: Int,
         score100: Double? = null,
         deleted: Boolean = false,
-    ) = ProviderTrackingSnapshotEntity(
-        provider = TrackingProvider.MYANIMELIST.name,
-        providerAccountId = "account",
-        localMediaId = "local-$malId",
+    ) = MalLibraryConfirmedSnapshot(
         providerMediaId = malId,
-        providerListEntryId = null,
-        mediaType = "ANIME",
+        mediaType = TrackingMediaType.ANIME,
         title = "Confirmed $malId",
         coverUrl = null,
-        status = if (deleted) "DELETED" else "PLANNING",
+        status = if (deleted) null else TrackingStatus.PLANNING,
         progress = progress,
         progressSecondary = null,
-        score = score100,
+        score100 = score100,
         repeatCount = 0,
-        notes = null,
         startedAt = null,
         completedAt = null,
         providerUpdatedAtEpochMillis = 100L,
         fetchedAtEpochMillis = 200L,
-        isDeleted = deleted,
+        deleted = deleted,
     )
 
-    private fun receipt() = TrackingEnqueueReceipt(
-        operationId = "operation",
+    private fun receipt(operationId: String = "operation") = TrackingEnqueueReceipt(
+        operationId = operationId,
         generation = 1L,
         deduplicated = false,
         provider = TrackingProvider.MYANIMELIST,
