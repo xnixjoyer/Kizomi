@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mal_library_refresh_failed">Library refresh failed. Saved content remains visible.</string>
+    <string name="mal_library_edit_state_no_change">No changes to save</string>
+    <string name="mal_library_edit_state_validation_failed">Invalid or unsupported change</string>
+    <string name="mal_library_edit_state_enqueue_accepted">Change queued locally</string>
+    <string name="mal_library_edit_state_pending">Waiting for MyAnimeList</string>
+    <string name="mal_library_edit_state_delivered">Delivered; confirming MyAnimeList state</string>
+    <string name="mal_library_edit_state_retrying">Temporary failure; retry scheduled</string>
+    <string name="mal_library_edit_state_confirmed">Confirmed by MyAnimeList</string>
+    <string name="mal_library_edit_state_confirmed_mismatch">MyAnimeList confirmed a different value; showing provider state</string>
+    <string name="mal_library_edit_state_deleted">Removed from MyAnimeList</string>
+    <string name="mal_library_edit_state_failed">Change failed</string>
+    <string name="mal_library_edit_state_rolled_back">Previous confirmed value restored</string>
+</resources>
