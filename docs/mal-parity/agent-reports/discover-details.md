@@ -6,306 +6,344 @@
 - Assigned branch: `parallel/mal-discover-details`
 - Draft PR: `#6` — `Parallel MAL Discover and details parity`
 - Required PR base: `planning/mal-ui-feature-parity`
-- Verified reviewed head before this report-only freeze: `e8f3ff92356ab384ecec76d7778b1c6935a7899a`
-- Current integration-base head observed during final verification: `7492f2cd3d33caf0b2f358154330dc28086ceac9`
+- Verified green implementation head before this report-only freeze: `6adfe21655a4181504c654f988da8377c40ef05f`
+- Current integration-base head observed during final verification: `e110bc5b4647f73f366afe42976510a72762cc1c`
 - Worker merge base: `3e1ebc10b40d63f4cce48678884ee9dc5dd08035`
-- PR state at final verification: open, mergeable, Draft
+- PR state retained: open, mergeable, Draft
 - Reserved files changed: none
-- Canonical context changed: none
-- Merge, approval, rebase, force-push and auto-merge actions: none
+- Canonical coordination/context files changed: none
+- Main, PR #5, merge, approval, Ready-for-review, rebase, force-push and auto-merge actions: none
 
-The integration branch advanced after this worker branch was created. The worker was not rebased and the integration branch was not merged into it because the coordination contract reserves that decision for the Integrator. The PR remains mergeable, and its changed-file set is still confined to the Discover/Details ownership.
+The integration branch advanced after this worker branch was created. This worker did not rebase or merge the integration branch because reconciliation and central wiring are Integrator-owned. The final report-only commit cannot embed its own resulting SHA recursively; PR #6 and the workflow attached to its final head are the authoritative exact-head record.
 
-This report update is intentionally the only change after the reviewed head above. A Git commit cannot contain its own resulting SHA. Therefore the exact final report-only branch head is recorded authoritatively by PR #6 and its attached exact-head workflow run rather than self-embedded recursively in this file.
+## Mandatory source and confidence labels
 
-## Review and comment disposition
+Mandatory project source:
 
-Final re-fetch found:
+`docs/mal-parity/MAL_API_V2_AI_REFERENCE.md`
 
-- two historical Integrator issue comments;
-- no submitted reviews;
-- no inline review threads.
+Verified source blob:
 
-The historical blockers requested tests, a complete report, exact-head CI, typed wiring instructions and removal of one Compose-version-specific explicit `weight` import. All are resolved in the current branch. The PR remains Draft as required.
+`714ee1d2739f9503ed3d467d168ad94eca868959`
+
+The source is the accepted engineering extraction of the owner-supplied official MAL API v2 PDF. Current live official documentation would take precedence if it conflicts, but no field absent from the accepted extraction is inferred by this worker.
+
+Labels used below:
+
+- `SOURCE_CONFIRMED`: explicitly documented by the accepted MAL API v2 source extraction.
+- `REPOSITORY_CONFIRMED`: demonstrated by current repository code, tests or exact-head CI, without elevating it to provider-contract evidence.
+- `INFERRED`: an explicitly stated engineering interpretation.
+- `UNVERIFIED`: unsupported by the accepted source and current live official evidence.
+
+## Provider evidence disposition
+
+### Popular ranking
+
+- Anime `GET /anime/ranking` with `ranking_type=bypopularity`: `SOURCE_CONFIRMED`.
+- Manga `GET /manga/ranking` with `ranking_type=bypopularity`: `SOURCE_CONFIRMED`.
+- Popular remains enabled for both anime and manga in `MalCatalogSharedDiscoverViewModel`.
+- Any earlier PR comment or report statement that described `bypopularity` as provider-unverified is superseded by the mandatory AI reference.
+
+### List and ranking limits
+
+- Anime and manga search default/max limit 100: `SOURCE_CONFIRMED`.
+- Anime and manga ranking default 100, maximum 500: `SOURCE_CONFIRMED`.
+- Seasonal anime default 100, maximum 500: `SOURCE_CONFIRMED`.
+- This worker did not raise existing repository page sizes or bypass validated paging URLs.
+
+### Details fields consumed by the worker presentation
+
+The worker adds no new transport endpoint and no new provider wire DTO. It consumes the existing typed `MalCatalogMedia` repository model and maps only values represented there.
+
+Common fields mapped for anime and manga, all `SOURCE_CONFIRMED` for both details endpoints:
+
+- `id`
+- `title`
+- `main_picture`
+- `alternative_titles`
+- `start_date`
+- `end_date`
+- `synopsis`
+- `mean`
+- `rank`
+- `popularity`
+- `media_type`
+- `status`
+- `genres`
+- `my_list_status`
+- `pictures`
+- `background`
+- `related_anime`
+- `related_manga`
+- `recommendations`
+
+Media-specific counters mapped only to the matching typed presentation:
+
+- anime `num_episodes`: `SOURCE_CONFIRMED`;
+- manga `num_chapters`: `SOURCE_CONFIRMED`;
+- manga `num_volumes`: `SOURCE_CONFIRMED`.
+
+Source-confirmed fields not represented in the current typed repository model and therefore not displayed by this worker:
+
+- anime `broadcast`, `studios`, `statistics`, `num_list_users`, `num_scoring_users`, `start_season`, `source`, `average_episode_duration`, `rating`, `nsfw`, `created_at`, `updated_at`;
+- manga `authors{first_name,last_name}`, `serialization{name}`, `num_list_users`, `num_scoring_users`, `nsfw`, `created_at`, `updated_at`.
+
+These fields are not classified as unverified. They are `SOURCE_CONFIRMED` but unavailable at the current worker-owned typed presentation boundary. They remain hidden rather than being synthesized from unrelated data.
+
+`broadcast` is treated only as provider metadata. It is not evidence of exact episode dates, an exact per-episode schedule or a replacement for a calendar-specific transport contract.
+
+Characters, detailed staff roles, videos and external links remain `UNVERIFIED` for this worker because the accepted details field lists do not establish those sections. They are hidden.
+
+### Existing shared transport field selection
+
+`REPOSITORY_CONFIRMED`: the existing `MalCatalogRequestFactory`, outside this worker's original presentation ownership, supplies the typed `MalCatalogRepository` data used here. This worker did not add an endpoint, parameter or field name to that transport.
+
+The presentation adapters consume only the media-compatible subset listed above. If strict endpoint-specific field-string minimization is required, the Integrator should split the shared anime/manga field lists in the transport owner’s branch using only `SOURCE_CONFIRMED` fields; this worker does not silently broaden that cross-worker file during a presentation PR.
 
 ## Delivered Discover work
 
-- Added a provider-neutral Discover presentation contract under `presentation/provider/discover/**`.
-- Added a shared Compose Discover surface using Kizomi Material theme tokens, localized resources and the existing provider-neutral `ProviderMediaListItem` card.
-- Preserved typed callbacks through `ProviderMediaIdentity`; MAL IDs are never handled as untyped interchangeable integers.
-- Added `MalCatalogSharedDiscoverViewModel`, backed only by `MalCatalogRepository` and `MalAccountCredentialStore`.
-- Added supported MAL feeds:
-  - top/ranking for anime and manga;
-  - popularity ranking using the proven repository request value `ranking_type=bypopularity`;
-  - current-season anime;
-  - anime and manga text search.
-- Added independent states for:
-  - initial loading;
-  - content;
-  - explicit refresh;
-  - stale cached search content;
-  - empty results;
-  - terminal failure;
-  - retry;
-  - append loading;
-  - append failure.
-- Added next-page handling that preserves loaded content, validates paging through the existing repository/API boundary and de-duplicates rows by typed stable provider identity.
-- Kept current-season browsing unavailable for manga instead of issuing an unsupported seasonal request.
-- Added a route-ready composable entry point without modifying central route registration.
+- Added provider-neutral Discover contracts under `presentation/provider/discover/**`.
+- Added a shared Compose Discover surface using existing Kizomi Material tokens, localized resources and `ProviderMediaListItem`.
+- Preserved typed callbacks through `ProviderMediaIdentity`; numeric identifiers are never treated as provider-interchangeable IDs.
+- Added `MalCatalogSharedDiscoverViewModel`, backed only by `MalCatalogRepository` and the active MAL account store.
+- Added anime and manga top ranking.
+- Added anime and manga Popular ranking with source-confirmed `bypopularity`.
+- Added current-season anime; manga does not advertise or issue an unsupported seasonal request.
+- Added anime and manga text search.
+- Added independent initial loading, content, explicit refresh, stale cache, empty, terminal error, retry, append loading and append error states.
+- Added validated next-page handling that preserves existing content on append failure and de-duplicates by typed provider identity.
+- Added saved search results as an explicitly stale interim state until the current network request succeeds.
+- Added a route-ready shared entry point without editing reserved central navigation.
 
 ## Delivered Details work
 
-- Added provider-neutral details models and a shared Compose details surface under `presentation/provider/details/**`.
-- Added MAL adapters for:
-  - typed anime and manga identity;
-  - primary and alternative titles;
-  - cover and best available documented picture for the hero area;
-  - synopsis and background;
-  - format, status, start/end dates and anime/manga progress totals;
-  - mean score, rank and popularity;
-  - genres;
-  - active MAL list state;
-  - related anime/manga and recommendations.
-- Added a typed list-edit callback. The edit action is hidden when no integrator callback is supplied.
-- Added capability-driven section visibility. Missing values do not create blank headings, invented data or provider-shaped placeholders.
-- Reused the existing crash-free `MalDetailsViewModel` and `SavedStateHandle` route path.
-- Added a route-ready details entry point without modifying `MalSharedNavHost.kt` or another reserved navigation file.
+- Added provider-neutral details presentation contracts under `presentation/provider/details/**`.
+- Added shared Compose details content with capability-driven section visibility.
+- Added typed anime/manga identity mapping.
+- Added title, alternative titles, cover, best available hero picture, synopsis and background.
+- Added format, status, partial/full dates and media-compatible episode/chapter/volume counts.
+- Added score, rank, popularity and genres.
+- Added active MAL list state.
+- Added typed related anime/manga and recommendation items.
+- Added a typed list-edit callback; the edit action is absent when the Integrator passes `null`.
+- Missing, blank or optional values do not create empty headings, fake values or inferred sections.
+- Reused the existing crash-free `MalDetailsViewModel` route parsing and recoverable invalid-route state.
+- Added a route-ready details entry point without editing `MalSharedNavHost.kt` or other reserved files.
 
-## Verification matrix
+## Localization completion
 
-### Typed identity
+The original default resource file suppressed `MissingTranslation`. That suppression was removed.
 
-Verified by source and tests:
+Real translations are now present for every app-supported UI language:
 
-- `MalMediaKey` maps only to `ProviderMediaIdentity.MyAnimeList`.
-- Anime remains `PresentationMediaType.ANIME` and manga remains `PresentationMediaType.MANGA`.
-- Discover paging de-duplicates through `identity.stableKey`.
-- Related and recommended media retain their own typed MAL anime/manga identity.
-- Invalid, missing or non-positive route values never construct a `MalMediaKey`.
+- English default;
+- German (`de`);
+- Arabic (`ar`);
+- Spanish (`es`);
+- Brazilian Portuguese (`pt-BR`);
+- Portuguese (`pt`);
+- French (`fr`);
+- Persian (`fa`);
+- Russian (`ru`);
+- Tamil (`ta`).
 
-### Provider isolation and zero inactive-provider path
+The repository also already contained a separate `values-peo` qualifier. Android Lint treats it as an additional locale and therefore requires the new strings there. The same real Persian translations were added to that existing package rather than suppressing Lint or deleting unrelated pre-existing locale resources.
 
-Verified statically and through repository gates:
+No worker-owned Discover/Details string uses:
 
-- shared Discover/Details composables import no MAL transport DTO, AniList data type, Apollo type, GraphQL type or provider endpoint;
-- MAL presentation entry points use `MalCatalogRepository`, the active MAL account store and neutral presentation models only;
-- no `AniListClient`, AniList repository, `DetailsRepositoryImpl` or `DiscoverRepositoryImpl` appears in the MAL shared path;
-- no AniList fallback, cross-provider ID conversion or cross-provider data transfer was added;
-- full provider-native, exclusive-provider and private-reference CI gates passed.
+- `tools:ignore="MissingTranslation"`;
+- ordinary `translatable="false"`;
+- hard-coded Compose UI copy in place of a string resource.
 
-This proves that the implemented MAL path has no inactive-provider call dependency. Live device traffic capture remains an integration/device acceptance item after central route wiring.
+Exact-head Lint in run `498` proves the completed locale coverage.
 
-### Shared Kizomi UI
+## Provider isolation and architecture
 
-Verified by source:
-
-- Discover reuses `ProviderMediaListItem` rather than introducing another MAL-only card shell;
-- Discover and Details use shared neutral state/models, Material theme tokens, existing adaptive Compose primitives and dedicated localized resources;
-- no transport DTO reaches a shared composable;
-- the existing AniList Discover and Details production files remain present and unmodified by this PR.
-
-### Loading, empty, error, retry, refresh and paging
-
-Verified by source and tests:
-
-- initial loading can clear content;
-- refresh preserves existing content and exposes a refresh state;
-- cached search results are explicitly stale until network success;
-- failure with no content renders a terminal retry state;
-- failure with existing content preserves the content;
-- append failure preserves previous pages;
-- append success de-duplicates typed identities and updates `canLoadMore`;
-- stale, loading-more, empty and retry transitions are independently represented.
-
-### Route recreation and malformed routes
-
-Verified by inherited `MalDetailsRouteTest` on the exact worker head:
-
-- anime route arguments restore the same MAL anime identity;
-- manga route arguments restore the same MAL manga identity;
-- missing, malformed and non-positive values produce a recoverable non-loading route error;
-- the shared details screen continues to consume the existing `MalDetailsViewModel` state reconstructed from `SavedStateHandle`.
-
-### Anime and manga handling
-
-Verified by fixtures and source:
-
-- anime maps episode totals and anime identity;
-- manga maps chapter/volume values, secondary progress and manga identity;
-- ranking and search support both media types;
-- season browsing is anime-only;
-- next-page validation cannot cross from one media type to another.
-
-## Proven MAL request and field contracts
-
-The official MAL API reference remains the authoritative external contract. Its Swagger renderer was not machine-readable from this execution environment during the final pass, so this worker did not infer or add a new endpoint, private request, undocumented query parameter or provider DTO field.
-
-Displayed values were verified against the already reviewed and tested repository contracts in `MalCatalogRequestFactory`, `MalCatalogApi`, `MalCatalogRepository` and `MalCatalogApiTest`.
-
-Existing request contracts used:
-
-- anime search: `GET /v2/anime?q=...&limit=...&offset=...&fields=...`
-- manga search: `GET /v2/manga?q=...&limit=...&offset=...&fields=...`
-- anime ranking: `GET /v2/anime/ranking?ranking_type=...&limit=...&offset=...&fields=...`
-- manga ranking: `GET /v2/manga/ranking?ranking_type=...&limit=...&offset=...&fields=...`
-- anime season: `GET /v2/anime/season/{year}/{winter|spring|summer|fall}?sort=...&limit=...&offset=...&fields=...`
-- anime details: `GET /v2/anime/{id}?fields=...`
-- manga details: `GET /v2/manga/{id}?fields=...`
-- validated server-supplied paging URLs restricted to the official MAL API origin and expected catalogue path/media type.
-
-Existing catalogue fields consumed by the presentation adapters:
-
-`id,title,main_picture,alternative_titles,start_date,end_date,synopsis,mean,rank,popularity,status,media_type,num_episodes,num_chapters,num_volumes,genres,my_list_status`
-
-Existing details-only fields consumed:
-
-`pictures,background,related_anime,related_manga,recommendations`
-
-Repository tests prove the concrete search, ranking, `bypopularity`, seasonal, details, typed relation/recommendation and hostile paging behavior used by this presentation work.
-
-## Unsupported or intentionally hidden sections
-
-- Creators and studios remain empty and hidden because the currently approved `MalCatalogMedia` contract does not expose typed creator/studio values.
-- Characters and staff remain hidden because no accepted current transport endpoint/field contract was added by this worker.
-- Videos/trailers remain hidden because no approved documented URL field exists in the current transport model.
-- External links remain hidden because no approved validated external-link field exists in the current transport model.
-- Reviews and community sections remain hidden; no inactive-provider fallback is permitted.
-- MAL has no separate banner field in the approved model; the first documented picture is used when present, otherwise the large/medium cover.
-- Manga seasonal browsing remains unavailable.
-- AniList-only entity search and advanced taxonomy/community filters are not imitated in MAL mode.
+- Shared Discover and Details composables import neutral presentation models, not MAL transport DTOs.
+- MAL transport mapping remains in `MalCatalogPresentationAdapters.kt`.
+- MAL Discover uses `MalCatalogRepository`; it does not use Apollo, an AniList client or an AniList repository.
+- No AniList fallback is introduced for search, ranking, seasonal browsing, paging or details.
+- Existing AniList Discover and Details production paths remain present and unchanged by this worker.
+- Related and recommendation navigation preserves `ProviderMediaIdentity.MyAnimeList` plus anime/manga media type.
+- List editing is exposed only as a typed callback; this worker does not create another mutation pipeline.
 
 ## Complete changed-file inventory
 
-### Production
+### Production Kotlin
 
-- `app/src/main/java/com/anisync/android/presentation/mal/MalCatalogPresentationAdapters.kt`
-- `app/src/main/java/com/anisync/android/presentation/mal/MalCatalogSharedDiscoverScreen.kt`
-- `app/src/main/java/com/anisync/android/presentation/mal/MalCatalogSharedDiscoverViewModel.kt`
-- `app/src/main/java/com/anisync/android/presentation/mal/MalDetailsSharedScreen.kt`
-- `app/src/main/java/com/anisync/android/presentation/provider/details/ProviderDetailsContent.kt`
-- `app/src/main/java/com/anisync/android/presentation/provider/details/ProviderDetailsFailureLookup.kt`
-- `app/src/main/java/com/anisync/android/presentation/provider/details/ProviderDetailsPresentation.kt`
-- `app/src/main/java/com/anisync/android/presentation/provider/discover/ProviderDiscoverContent.kt`
-- `app/src/main/java/com/anisync/android/presentation/provider/discover/ProviderDiscoverFailureLookup.kt`
-- `app/src/main/java/com/anisync/android/presentation/provider/discover/ProviderDiscoverPresentation.kt`
-- `app/src/main/res/values/strings_mal_discover_details.xml`
+1. `app/src/main/java/com/anisync/android/presentation/mal/MalCatalogPresentationAdapters.kt`
+2. `app/src/main/java/com/anisync/android/presentation/mal/MalCatalogSharedDiscoverScreen.kt`
+3. `app/src/main/java/com/anisync/android/presentation/mal/MalCatalogSharedDiscoverViewModel.kt`
+4. `app/src/main/java/com/anisync/android/presentation/mal/MalDetailsSharedScreen.kt`
+5. `app/src/main/java/com/anisync/android/presentation/provider/details/ProviderDetailsContent.kt`
+6. `app/src/main/java/com/anisync/android/presentation/provider/details/ProviderDetailsFailureLookup.kt`
+7. `app/src/main/java/com/anisync/android/presentation/provider/details/ProviderDetailsPresentation.kt`
+8. `app/src/main/java/com/anisync/android/presentation/provider/discover/ProviderDiscoverContent.kt`
+9. `app/src/main/java/com/anisync/android/presentation/provider/discover/ProviderDiscoverFailureLookup.kt`
+10. `app/src/main/java/com/anisync/android/presentation/provider/discover/ProviderDiscoverPresentation.kt`
+
+### Localized resources
+
+11. `app/src/main/res/values/strings_mal_discover_details.xml`
+12. `app/src/main/res/values-ar/strings_mal_discover_details.xml`
+13. `app/src/main/res/values-de/strings_mal_discover_details.xml`
+14. `app/src/main/res/values-es/strings_mal_discover_details.xml`
+15. `app/src/main/res/values-fa/strings.xml`
+16. `app/src/main/res/values-fr/strings_mal_discover_details.xml`
+17. `app/src/main/res/values-peo/strings.xml`
+18. `app/src/main/res/values-pt-rBR/strings_mal_discover_details.xml`
+19. `app/src/main/res/values-pt/strings_mal_discover_details.xml`
+20. `app/src/main/res/values-ru/strings_mal_discover_details.xml`
+21. `app/src/main/res/values-ta/strings_mal_discover_details.xml`
 
 ### Tests
 
-- `app/src/test/java/com/anisync/android/presentation/mal/MalCatalogPresentationAdaptersTest.kt`
-- `app/src/test/java/com/anisync/android/presentation/mal/MalDiscoverDetailsArchitectureTest.kt`
-- `app/src/test/java/com/anisync/android/presentation/provider/details/ProviderDetailsPresentationTest.kt`
-- `app/src/test/java/com/anisync/android/presentation/provider/discover/ProviderDiscoverPresentationTest.kt`
+22. `app/src/test/java/com/anisync/android/presentation/mal/MalCatalogPresentationAdaptersTest.kt`
+23. `app/src/test/java/com/anisync/android/presentation/mal/MalDiscoverDetailsArchitectureTest.kt`
+24. `app/src/test/java/com/anisync/android/presentation/provider/details/ProviderDetailsPresentationTest.kt`
+25. `app/src/test/java/com/anisync/android/presentation/provider/discover/ProviderDiscoverPresentationTest.kt`
 
-### Report
+### Exclusive report
 
-- `docs/mal-parity/agent-reports/discover-details.md`
-
-No reserved central navigation, root shell, OAuth, tracking core, Room, Gradle, manifest, workflow or canonical parity file is in the PR changed-file inventory.
+26. `docs/mal-parity/agent-reports/discover-details.md`
 
 ## Test coverage
 
-Added tests cover:
+Worker tests cover:
 
 - anime fixture mapping;
 - manga fixture mapping;
-- null, blank and missing optional field mapping;
-- ranking paging and typed identity de-duplication;
-- seasonal capability and append-failure preservation;
-- cached/stale search transition to fresh network content;
-- typed MAL anime and manga identity preservation;
-- capability-driven details-section visibility;
-- list-edit visibility with and without a callback;
-- provider transport exclusion from shared composables;
-- absence of AniList/Apollo/repository dependencies from MAL shared paths;
+- typed MAL anime and manga identities;
+- anime episode totals versus manga chapter and volume values;
+- null, blank and missing optional values;
+- absence of empty optional details sections;
+- list-edit section visibility with and without a callback;
+- ranking paging and typed-identity de-duplication;
+- seasonal capability restricted to anime;
+- append failure preserving loaded content;
+- cached/stale search transitioning to fresh content;
+- provider transport DTO exclusion from shared composables;
+- no Apollo, AniList client or AniList repository use in MAL shared paths;
 - preservation of existing AniList Discover and Details production paths.
 
-Inherited exact-head tests additionally cover route recreation, malformed routes, request construction, field mapping, same-origin paging validation and cross-media-type paging rejection.
+Existing repository tests additionally cover:
 
-## Exact CI and artifact evidence
+- typed anime and manga route recreation;
+- rejection of missing, malformed and non-positive MAL route identities;
+- recoverable non-loading invalid-route state;
+- MAL search, ranking, seasonal, details and hostile paging URL request behavior.
 
-Final reviewed head before this report-only freeze:
+Full exact-head CI also compiles Android instrumentation tests and runs Android Lint against every localized resource.
 
-- Exact head: `e8f3ff92356ab384ecec76d7778b1c6935a7899a`
+## Exact CI evidence
+
+### Final green implementation head
+
+- Exact head: `6adfe21655a4181504c654f988da8377c40ef05f`
 - Workflow: `Pull request and push CI`
-- Run number: `345`
-- Run ID: `30110901503`
+- Run number: `498`
+- Run ID: `30126545168`
 - Job: `verify`
-- Job ID: `89539868144`
+- Job ID: `89591285075`
 - Conclusion: `success`
 
-Successful steps include:
+Successful gates:
 
-- checkout of the exact published head;
-- public provider boundary verification;
-- exclusive-provider/private-reference verification;
-- provider-native boundary verification;
-- tracking write-boundary verification;
-- Room migration and exported-schema verification;
+- exact published-head checkout;
+- public provider boundary;
+- exclusive-provider and private-reference boundary;
+- provider-native boundaries;
+- tracking write boundary;
+- Room migration contract;
 - secret scan;
-- redaction and backup verification;
-- product-readiness verification;
-- MAL application-readiness verification;
-- signing workflow verification;
-- full tests, lint and Stable Debug build.
+- redaction and backup contracts;
+- product readiness;
+- MAL application readiness;
+- signing workflow contracts;
+- full unit tests;
+- Android-test compilation;
+- Android Lint, including complete Discover/Details translations;
+- Stable Debug build;
+- committed exported Room schema;
+- exact diagnostic evidence generation and upload.
 
 Diagnostic artifact:
 
-- Artifact ID: `8603652068`
-- Name: `Kizomi-e8f3ff92356ab384ecec76d7778b1c6935a7899a-run345-diagnostic-apk`
-- Size: `39,655,886` bytes
-- Digest: `sha256:2d64ebfcc2a575ca57a865c6f0900d791dd17b430e5afa13e9fe350fdb5bcaee`
+- Artifact ID: `8609623623`
+- Name: `Kizomi-6adfe21655a4181504c654f988da8377c40ef05f-run498-diagnostic-apk`
+- Size: `39,663,760` bytes
+- Digest: `sha256:101713ab18c2f47121043afe88719a01f4656f7acce9a4d7670aabe0c63f8ea1`
 
-A prior run on head `4983b8b1a1227d37dbbd2b48fba3d00059c66818` found one explicit Compose `weight` import incompatible with this project version. The import was removed. Subsequent runs `331` and `345` completed the full repository workflow successfully.
+### Superseded localization investigation runs
+
+- Run `454` on `332366dd8ffdf38f2217eabcf9aefc1bc0400759` failed only because the pre-existing `values-peo` locale was not initially identified.
+- Run `492` on `27050eb7b1bb3f3df3f87b3cfd355feea4da260c` confirmed that adding strings only to `values-fa` did not satisfy the separate `values-peo` package.
+- Run `498` added real translations to both existing qualifiers and completed successfully.
+
+The final PR head is the report-only successor of the green implementation head. Its attached workflow must complete successfully before the branch is considered frozen. No code or resource change follows this report update.
+
+## Review and authorization disposition
+
+Final re-fetch found:
+
+- historical Integrator issue comments;
+- no submitted review;
+- no inline review thread.
+
+A historical merge authorization applied only to head `e8f3ff92356ab384ecec76d7778b1c6935a7899a` and was explicitly voided after that head moved. There is no valid merge authorization for the current head. This worker does not request owner merge, mark the PR Ready or perform any merge action.
+
+The historical comment that treated `bypopularity` and optional details fields as not provider-verified is superseded by `MAL_API_V2_AI_REFERENCE.md`; the report now uses the required confidence labels.
 
 ## INTEGRATOR ACTION REQUIRED
 
-1. Revalidate PR #6 against the current integration head because `planning/mal-ui-feature-parity` advanced after the worker merge base. Do not infer that the worker exact-head run replaces post-merge integration CI.
+1. Reconcile PR #6 against the current `planning/mal-ui-feature-parity` head.
+   - The base advanced to `e110bc5b4647f73f366afe42976510a72762cc1c` after the worker merge base.
+   - Perform reconciliation only under Integrator policy; the worker did not rebase or merge the base into its branch.
+   - Worker exact-head CI does not replace post-integration exact-head CI.
 
-2. In reserved `MalSharedNavHost.kt`, replace the current MAL Discover destination body with:
+2. Wire MAL Discover in reserved `MalSharedNavHost.kt`.
+   - Replace the transitional MAL Discover destination body with `MalCatalogSharedDiscoverScreen(onMediaClick = ...)`.
+   - Accept only `ProviderMediaIdentity.MyAnimeList` at this MAL-only callback boundary.
+   - Map `identity.mediaType.name` and `identity.malId` into the existing typed `MalNativeDetails` route.
+   - Reject or ignore any non-MAL identity.
+   - Never reinterpret another provider's numeric ID as a MAL ID.
 
-   `MalCatalogSharedDiscoverScreen(onMediaClick = ...)`
+3. Wire MAL Details in the reserved destination.
+   - Replace the transitional body with `MalDetailsSharedScreen(onBackClick = ..., onRelatedClick = ..., onEditListEntry = ...)`.
+   - `onBackClick` uses the existing back-stack action.
+   - `onRelatedClick` accepts only `ProviderMediaIdentity.MyAnimeList` and uses the same typed `MalNativeDetails` conversion.
+   - `onEditListEntry` calls the existing single-target active-provider list editor/tracking boundary.
+   - Pass `null` until that boundary is available; the shared UI then hides the edit action.
+   - Do not create a second mutation pipeline.
 
-   At the callback boundary:
+4. Decide whether to extend typed details data with additional source-confirmed fields.
+   - Anime candidates: `broadcast`, `studios`, `statistics` and other explicitly listed anime fields.
+   - Manga candidates: `authors` and `serialization` and other explicitly listed manga fields.
+   - Add them through the Integrator/transport owner’s typed provider model and cache boundary before exposing them in shared UI.
+   - Treat `broadcast` as metadata only; do not synthesize exact episode dates or an exact episode schedule.
+   - Do not add characters, detailed staff, videos or external links without separate accepted provider evidence.
+   - If strict per-endpoint field minimization is required, split the existing shared anime/manga request field strings using only `SOURCE_CONFIRMED` fields.
 
-   - accept only `ProviderMediaIdentity.MyAnimeList`;
-   - map `identity.mediaType.name` and `identity.malId` into the existing `MalNativeDetails` route;
-   - reject or ignore every non-MAL identity;
-   - never reinterpret another provider's numeric ID as a MAL ID.
-
-3. In the reserved MAL details destination, replace the transitional body with:
-
-   `MalDetailsSharedScreen(onBackClick = ..., onRelatedClick = ..., onEditListEntry = ...)`
-
-   Wiring requirements:
-
-   - `onBackClick` uses the existing back-stack action;
-   - `onRelatedClick` accepts only `ProviderMediaIdentity.MyAnimeList` and navigates through the same typed `MalNativeDetails` contract;
-   - `onEditListEntry` calls the existing single-target active-provider list-editor/tracking boundary;
-   - pass `null` for `onEditListEntry` until that existing boundary is available; the UI then hides the action;
-   - do not create another mutation pipeline.
-
-4. Approve the smallest typed provider-model/cache extension only if creators/studios are required for the first integrated release:
-
-   - request only currently documented anime `studios` and manga `authors` values;
-   - add them to the non-worker-owned MAL details/cache model through the Integrator-owned architecture boundary;
-   - map them into the already-present neutral `creators`/`studios` fields;
-   - do not add character, staff, video or external-link transport without separate accepted official evidence.
-
-5. After wiring or merging, run full exact-head CI on `planning/mal-ui-feature-parity` and verify:
-
+5. Run full exact-head CI after reconciliation and wiring, then verify:
    - AniList Discover and Details remain unchanged;
-   - MAL mode has no AniList network/client activity;
-   - anime and manga identities open the correct MAL details route after process recreation;
-   - retry, refresh, stale cache and paging behavior remains intact;
+   - MAL mode performs no AniList client or network call;
+   - Popular remains available for anime and manga using `bypopularity`;
+   - typed anime and manga identities open the correct MAL details route after process recreation;
+   - initial loading, refresh, stale cache, empty, retry and paging behavior remain intact;
+   - append failure preserves existing content;
+   - missing optional fields remain safe and hidden;
+   - all supported app locales render the new Discover/Details resources without Lint suppression;
    - list edits target only the active MAL account.
 
 ## Remaining limitations and acceptance boundary
 
 - Central route registration and root wiring are intentionally absent from this worker PR.
-- The worker exact-head CI does not replace integration-branch exact-head CI after the advanced base is reconciled by the Integrator.
-- Live-device traffic capture and visual acceptance require the central route wiring and are therefore Integrator/device acceptance tasks.
-- Creators/studios, characters/staff, videos and external links remain hidden as documented above.
-- The PR must remain Draft until Integrator review.
+- Live-device traffic capture and visual acceptance require the reserved central wiring and remain Integrator/device tasks.
+- Source-confirmed fields that are absent from the current typed repository model remain hidden.
+- Characters, detailed staff, videos and external links remain hidden because they are not established by the accepted source field lists.
+- MAL has no separate banner field in the current typed model; details use the first available documented picture, then large/medium cover fallback.
+- Current-season browsing is anime-only.
+- The shared Discover surface intentionally omits AniList-only entity search, reviews, community and advanced taxonomy filters.
+- PR #6 must remain Draft until the Integrator verifies the final exact head and issues any subsequent authorization independently.
 
 READY FOR INTEGRATOR REVIEW
