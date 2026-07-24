@@ -19,16 +19,18 @@ Only the Integrator may write:
 
 Never work directly on a worker branch. Workers may never push to the integration branch or edit canonical/reserved files.
 
-## Published exact-green checkpoint before the latest canonical refresh
+## Last exact-green canonical checkpoint
 
 - `main`: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 - integration branch: `planning/mal-ui-feature-parity`
 - Draft PR: #5
-- exact green head: `5d56b6fc6ea1ea2902e4e6abc3192d6378a3b3c4`
-- run ID / number: `30123370413` / `417`
+- exact green head: `85d87505b51db539986eb86d8f0dfd01e4327357`
+- run ID / number: `30125841225` / `491`
+- verify job: `89589067856`
 - result: `success`
+- worker implementation integrated: none
 
-That head contains accepted API-v2/Round-04 documentation but no worker implementation. Always fetch the newer integration head because canonical refresh commits may have advanced it. The newest canonical head requires its own exact-head CI.
+Canonical audit-consumption commits after that head require their own exact-head CI. Always fetch the current PR #5 head first.
 
 ## Mandatory reading order
 
@@ -41,9 +43,9 @@ That head contains accepted API-v2/Round-04 documentation but no worker implemen
 7. `docs/mal-parity/UI_PARITY_CONTRACT.md`
 8. `docs/mal-parity/DEBUG_INTEGRATION_DASHBOARD.md`
 9. `docs/mal-parity/TEST_AND_RELEASE_PLAN.md`
-10. every worker prompt, current report, PR comment, diff and exact-head CI
-11. `docs/mal-parity/agent-reports/legacy-new-readonly-audit.md` when PR #11 publishes it
-12. current central request factories, tracking transport, routes, provider state, purge and isolation tests.
+10. every worker prompt, current report, PR comment, full diff and exact-head CI
+11. `docs/mal-parity/agent-reports/legacy-new-readonly-audit.md`
+12. current central request factories, tracking transport, routes, provider state, purge, scheduling and isolation tests.
 
 ## Provider evidence authority
 
@@ -87,12 +89,30 @@ Round-04 corrected decisions:
 
 Every PR remains Draft. PR #11 is not automatically part of the merge queue.
 
+## Advisory audit status
+
+PR #11 final report:
+
+- head `a8a9d3b798d8e84ba8d71cde93d9a6fe41474af5`;
+- run `30125909197` / `493`, success;
+- one report file only;
+- ends `READY FOR INTEGRATOR REVIEW`.
+
+Consume its reproducible findings, but remember its worker-head table is point-in-time evidence. Re-fetch current heads.
+
+New Integrator findings from the audit:
+
+1. Add an execution-time authoritative provider/traffic gate to legacy `AiringScheduleWorker.doWork()`; scheduling/cancellation alone leaves a switch race.
+2. Replace separate AniList/MAL account categories with one active-provider Account route after PR #8 integration.
+3. Before PR #9 registration, require a MAL/provider-scoped extension ID/settings namespace and resource-backed metadata.
+4. Preserve the previously confirmed catalogue-field, enum-allowlist, DELETE-404 and unsupported-date fixes.
+
 ## Immediate Round-04 review loop
 
 1. Fetch PR #5 and verify CI for the exact current integration head.
-2. Re-fetch #6–#11; heads may be moving and old green runs may be cancelled by concurrency.
-3. For each worker inspect the complete changed-file list, not only the latest commit delta.
-4. Reject any reserved/canonical file in a worker diff.
+2. Re-fetch #6–#11; heads may move and old green runs may be cancelled by concurrency.
+3. For each worker inspect the complete changed-file list, not only latest deltas.
+4. Reject every canonical/reserved/shared-file ownership collision.
 5. Require the exclusive report to describe the final exact implementation, accepted source labels, tests, limitations and minimal Integrator requests.
 6. Require the report to end exactly `READY FOR INTEGRATOR REVIEW` on the same frozen green head.
 7. Keep canonical context and PR #5 current after each meaningful decision.
@@ -102,15 +122,16 @@ Every PR remains Draft. PR #11 is not automatically part of the merge queue.
 
 ### PR #6
 
-- complete every repository-supported locale, including `values-peo`, with no MissingTranslation suppression;
-- refresh report to `MAL_API_V2_AI_REFERENCE.md` source classifications;
+- restore shared `values-fa/strings.xml` and `values-peo/strings.xml` so both disappear from the complete diff;
+- use dedicated `strings_mal_discover_details.xml` files for every supported locale;
+- refresh report to `MAL_API_V2_AI_REFERENCE.md` classifications;
 - preserve typed identity/provider isolation;
 - obtain one stable exact-green final SHA.
 
 ### PR #7
 
 - retain durable enqueue/pending/retry/confirmed/rollback lifecycle and typed data repository;
-- remove `MalTrackingProviderAdapter.kt` from the complete worker diff by a normal corrective commit;
+- restore central `MalTrackingProviderAdapter.kt` and `MalTrackingProviderAdapterTest.kt` exactly to the integration-base versions so both disappear from the complete worker diff;
 - document, do not implement, the central DELETE-404 fix;
 - hide/gate unsupported date writes unless accepted evidence is added;
 - localize typed failures and freeze final report/CI.
@@ -119,28 +140,25 @@ Every PR remains Draft. PR #11 is not automatically part of the merge queue.
 
 - preserve real localization, debug source separation and fixture-bearing copy-path redaction;
 - preserve nullable unknown uninstrumented metrics, unknown inactive-provider traffic and conservative parity defaults;
+- fix opaque PKCE/state/client/account sanitizer shapes without weakening fixtures or short approved categories;
 - align final report/tests/UI and obtain stable exact-head CI;
 - leave producer hooks/routes/package proof to the Integrator.
 
 ### PR #9
 
 - preserve source-confirmed Seasonal/sort/broadcast and recurring/degraded semantics;
-- complete locale inventory with no suppression;
+- complete locale inventory including `values-peo`, with no suppression;
+- use a provider-scoped extension ID/settings namespace and localized metadata before registration;
 - preserve provider/lifecycle/widget isolation and update report;
 - obtain stable exact-head CI.
 
 ### PR #10
 
-- run last, after final #6–#9 heads and PR #11 findings;
-- audit current integration head, source labels, scope and CI;
+- run last, after final #6–#9 heads;
+- consume PR #11 findings and re-audit the current integration head, source labels, scope and CI;
+- distinguish candidate worker fixes from integrated PR #5 behavior;
 - update additive QA scanners for corrected central gaps;
 - freeze report/CI.
-
-### PR #11
-
-- only one report file may change;
-- identify exact legacy/new collisions, severity, files/symbols and owner;
-- advisory only; no code changes.
 
 ## Confirmed Integrator-owned fixes
 
@@ -156,8 +174,10 @@ Do these only after the relevant ordered worker merge and a green integration ch
    - provider score `0..10` ↔ Kizomi `0..100` tests;
    - disable unsupported date mutations.
 3. Minimal typed navigation and shared Library/Account wiring.
-4. Safe diagnostics recorder hooks and debug-only route bridge; packaged release exclusion proof.
-5. One MAL calendar extension, authoritative provider routing, network-free widget render and complete lifecycle/purge scheduling.
+4. Replace dual provider-account categories with one authoritative active-provider Account route.
+5. Add execution-time provider/traffic gating to the legacy AniList airing worker and a switch-race test.
+6. Safe diagnostics recorder hooks and debug-only route bridge; packaged release exclusion proof.
+7. One provider-scoped MAL calendar extension, authoritative provider routing, network-free widget render and complete lifecycle/purge scheduling.
 
 ## Worker acceptance gate
 
@@ -165,7 +185,7 @@ A worker is eligible for owner merge only when one frozen SHA has:
 
 - correct branch/base and Draft state;
 - fully owned changed-file scope;
-- no reserved/canonical file;
+- no reserved/canonical/shared file;
 - complete report ending exactly `READY FOR INTEGRATOR REVIEW`;
 - conservative accepted provider evidence;
 - focused tests and successful full exact-head CI;
