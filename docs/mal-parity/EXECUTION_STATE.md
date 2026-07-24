@@ -5,13 +5,14 @@
 - Planning baseline on `main`: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 - Integration branch: `planning/mal-ui-feature-parity`
 - Integration PR: Draft `#5 – MAL stability and shared Kizomi UI parity`
-- Published exact-green checkpoint before this canonical refresh: `5d56b6fc6ea1ea2902e4e6abc3192d6378a3b3c4`
-- Exact-head workflow run ID / number: `30123370413` / `417`
+- Last exact-green canonical checkpoint: `85d87505b51db539986eb86d8f0dfd01e4327357`
+- Exact-head workflow run ID / number: `30125841225` / `491`
+- Verify job: `89589067856`
 - Result: `success`
 - Worker implementation integrated at that checkpoint: **none**
 - Production readiness: **NO-GO**
 
-The canonical refresh commits after `5d56b6fc...` require a new successful exact-head workflow before becoming the next green checkpoint.
+Canonical audit-consumption commits after `85d87505...` require a new successful exact-head workflow before becoming the next green checkpoint.
 
 ## Verified integrated foundation
 
@@ -69,31 +70,34 @@ All worker code below remains unmerged and non-canonical.
 Progress:
 
 - shared typed Discover/details presentation, paging/stale/error states and provider isolation are implemented;
-- Popular and current-season provider evidence is source-confirmed;
-- real locale files are being added.
+- Popular and current-season evidence is source-confirmed;
+- real locale values and report exist;
+- implementation head Run #498 is green.
 
-Still required on one final frozen SHA:
+Blocking:
 
-- complete every repository-supported locale, including `values-peo`;
-- remove all translation suppression;
-- update report to the accepted evidence source;
-- successful exact-head CI and exact final marker.
+- complete PR diff modifies existing shared `values-fa/strings.xml` and `values-peo/strings.xml`, outside the literal allowed `strings_mal_discover_details*.xml` scope;
+- worker must restore shared files and create dedicated `values-fa/values-peo` worker resources;
+- current report incorrectly claims no reserved/non-owned file changed;
+- a corrected final head and exact-head CI are required.
 
 ### PR #7 — Library and Tracking
 
 Progress:
 
-- real localized Library/editor UI;
-- one-target MAL enqueue;
-- pending/retry/confirmed/terminal/rollback lifecycle;
-- confirmed read-back and mismatch reconciliation;
-- typed data-layer delivery repository added.
+- localized MAL Library/editor UI;
+- one-target enqueue;
+- pending/retry/delivered/confirmed/terminal/rollback lifecycle;
+- provider snapshot confirmation and mismatch reconciliation;
+- typed data-layer delivery repository.
 
 Blocking:
 
-- current PR diff contains reserved central `MalTrackingProviderAdapter.kt` changes; worker must revert that file;
-- central DELETE-404 reconciliation remains an Integrator task;
-- final report/frozen CI must follow the scope correction.
+- complete PR diff contains reserved central `MalTrackingProviderAdapter.kt` and `MalTrackingProviderAdapterTest.kt`;
+- report claims the worker owns central sparse PATCH/score/DELETE-404 implementation, contradicting the Single-Writer contract;
+- unsupported date mutation controls remain exposed although absent from accepted PATCH fields;
+- central files must be restored and central behavior requested only through `INTEGRATOR ACTION REQUIRED`;
+- corrected final report and exact-head CI are required.
 
 ### PR #8 — Account, Settings and Diagnostics
 
@@ -102,14 +106,15 @@ Progress:
 - provider-neutral account/settings presentation;
 - debug-only local dashboard and real locale resources;
 - realistic fixture-bearing redaction/copy tests;
-- uninstrumented counters now nullable/unknown;
-- inactive-provider traffic remains explicitly unknown without boundary instrumentation;
-- manual parity defaults are conservatively downgraded.
+- uninstrumented counters nullable/unknown;
+- inactive-provider traffic explicitly unknown without instrumentation;
+- parity defaults conservatively downgraded;
+- opaque PKCE/state/client/account sanitizer rules strengthened.
 
 Still required:
 
-- final report matching the new semantics;
-- stable exact-head CI;
+- Run #502 must prove the final 18-digit numeric-ID redaction correction;
+- final report must match nullable unknown/checklist/parity behavior and the exact final run;
 - later Integrator recorder hooks, debug route and packaged release exclusion evidence.
 
 ### PR #9 — Calendar, Widgets and Background
@@ -119,36 +124,44 @@ Progress:
 - source-confirmed Seasonal Anime, sort and nullable broadcast metadata;
 - recurring `Asia/Tokyo` slots with `episodeNumber = null` and degraded notices;
 - active-provider gating, bounded paging/cache, widget snapshots and WorkManager lifecycle;
-- real locale files and additional tests are being added.
+- complete locale inventory;
+- implementation head Run #495 green;
+- source-aware report published.
 
-Still required:
+Blocking:
 
-- complete supported locales without suppression;
-- final report using accepted evidence labels;
-- stable exact-head CI;
-- later Integrator registration/routing/widget/scheduling/purge wiring.
+- `MalCalendarExtension` still uses generic ID/settings namespace `calendar.provider.native.broadcast` and hard-coded English metadata;
+- worker-owned provider-scoped identity and localized metadata/tests are required;
+- report-head/final corrected head must be exact-head green;
+- later Integrator registration/routing/widget/scheduling/purge wiring remains.
 
 ### PR #10 — QA/API audit
 
 - additive API-v2 contract scanner and Round-04 report exist;
-- current report snapshot predates later #6–#9 corrective heads;
-- final re-audit must occur after those heads stop moving and after PR #11 findings are available.
+- current report snapshot predates later #6–#9 corrective heads and completed PR #11 findings;
+- final re-audit occurs last after worker heads freeze.
 
 ### PR #11 — read-only legacy/new audit
 
-- scope is correctly limited to one report file;
-- current report still says the audit has not been performed;
-- advisory findings are pending and do not independently block workers.
+- scope remained one report file;
+- final head: `a8a9d3b798d8e84ba8d71cde93d9a6fe41474af5`;
+- run `30125909197` / `493`: success;
+- report ends `READY FOR INTEGRATOR REVIEW`;
+- actionable findings were consumed into canonical context;
+- advisory only, not part of owner merge queue.
 
 ## Confirmed Integrator-owned implementation tasks
 
-After the ordered owner merges and between green integration checkpoints:
+After ordered owner merges and between green integration checkpoints:
 
 1. Split catalogue selectable fields by anime/manga and enforce source-confirmed ranking/list-status allowlists.
 2. Correct central DELETE-404 behavior through controlled absence read-back; preserve sparse PATCH and score normalization; add central tests.
-3. Wire Discover/Details, Library/editor lifecycle, Account/Settings and typed details navigation without provider-ID coercion.
-4. Wire diagnostics recorder producers at safe existing boundaries and register the dashboard through a debug-only bridge.
-5. Register exactly one MAL calendar extension; select calendar/widget sources by authoritative provider state; keep widget rendering network-free and purge/scheduling fail-closed.
+3. Hide/capability-gate unsupported date writes while preserving read-only provider dates.
+4. Wire Discover/Details, Library/editor lifecycle, Account/Settings and typed details navigation without provider-ID coercion.
+5. Replace separate AniList/MAL account categories with one active-provider Account route and explicit destructive provider-switch flow.
+6. Add an execution-time authoritative provider/traffic gate to legacy `AiringScheduleWorker.doWork()` and a provider-switch race test.
+7. Wire diagnostics recorder producers at safe existing boundaries and register the dashboard through a debug-only bridge.
+8. Register exactly one provider-scoped MAL calendar extension with localized metadata; select calendar/widget sources by authoritative provider state; keep widget rendering network-free and purge/scheduling fail-closed.
 
 ## Merge protocol
 
