@@ -2,7 +2,7 @@ package com.anisync.android.presentation.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.anisync.android.data.AniListAuth
+import com.anisync.android.presentation.login.AniListAuth
 import com.anisync.android.data.mal.oauth.MalAuthFailureReason
 import com.anisync.android.data.mal.oauth.MalAuthRepository
 import com.anisync.android.data.mal.oauth.MalLoginStartResult
