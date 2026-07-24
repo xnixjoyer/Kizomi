@@ -1,8 +1,11 @@
 package com.anisync.android.presentation.provider.library
 
-import com.anisync.android.data.local.entity.ProviderTrackingSnapshotEntity
+import com.anisync.android.data.mal.api.MalApiFailure
+import com.anisync.android.data.mal.api.MalApiFailureKind
 import com.anisync.android.data.mal.api.MalLibraryPresentationRecord
 import com.anisync.android.data.mal.api.MalLibraryRefreshResult
+import com.anisync.android.data.tracking.MalLibraryConfirmedSnapshot
+import com.anisync.android.data.tracking.MalLibraryTrackingState
 import com.anisync.android.data.tracking.MalTrackingCommandInput
 import com.anisync.android.domain.tracking.TrackingDesiredState
 import com.anisync.android.domain.tracking.TrackingEnqueueReceipt
@@ -15,6 +18,7 @@ import com.anisync.android.domain.tracking.TrackingTargetState
 import com.anisync.android.presentation.model.PresentationMediaType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.take
@@ -50,23 +54,18 @@ class MalLibraryProviderViewModelTest {
 
     @Test
     fun `missing account produces explicit unauthenticated refresh state`() = runTest {
-        val viewModel = viewModel(
-            activeAccountId = { null },
-        )
+        val viewModel = viewModel(activeAccountId = { null })
 
         advanceUntilIdle()
 
-        assertEquals(
-            com.anisync.android.data.mal.api.MalApiFailureKind.NOT_AUTHENTICATED,
-            viewModel.uiState.value.lastFailure?.kind,
-        )
+        assertEquals(MalApiFailureKind.NOT_AUTHENTICATED, viewModel.uiState.value.lastFailure?.kind)
         assertFalse(viewModel.uiState.value.snapshot.isRefreshing)
     }
 
     @Test
     fun `anime manga switch changes observation and triggers provider refresh`() = runTest {
-        val anime = MutableStateFlow(listOf(record(1L, TrackingMediaType.ANIME, progress = 2)))
-        val manga = MutableStateFlow(listOf(record(2L, TrackingMediaType.MANGA, progress = 3)))
+        val anime = MutableStateFlow(listOf(record(1L, TrackingMediaType.ANIME, 2)))
+        val manga = MutableStateFlow(listOf(record(2L, TrackingMediaType.MANGA, 3)))
         val refreshes = mutableListOf<TrackingMediaType>()
         val viewModel = viewModel(
             observeLibrary = { _, type -> if (type == TrackingMediaType.ANIME) anime else manga },
@@ -84,9 +83,7 @@ class MalLibraryProviderViewModelTest {
 
         assertEquals(listOf(TrackingMediaType.ANIME, TrackingMediaType.MANGA), refreshes)
         assertEquals(PresentationMediaType.MANGA, viewModel.uiState.value.snapshot.query.mediaType)
-        assertEquals(2L, viewModel.uiState.value.snapshot.visibleItems.single().identity.let {
-            (it as com.anisync.android.presentation.model.ProviderMediaIdentity.MyAnimeList).malId
-        })
+        assertEquals(3, viewModel.uiState.value.snapshot.visibleItems.single().progress)
     }
 
     @Test
@@ -98,9 +95,7 @@ class MalLibraryProviderViewModelTest {
             observeLibrary = { _, _ -> records },
             refreshLibrary = { _, _ ->
                 MalLibraryRefreshResult.Failure(
-                    error = com.anisync.android.data.mal.api.MalApiFailure(
-                        com.anisync.android.data.mal.api.MalApiFailureKind.OFFLINE
-                    ),
+                    error = MalApiFailure(MalApiFailureKind.OFFLINE),
                     preservedEntryCount = 1,
                 )
             },
@@ -110,20 +105,16 @@ class MalLibraryProviderViewModelTest {
 
         assertTrue(viewModel.uiState.value.snapshot.hasStaleContent)
         assertEquals(1, viewModel.uiState.value.snapshot.visibleItems.size)
-        assertEquals(
-            com.anisync.android.data.mal.api.MalApiFailureKind.OFFLINE,
-            viewModel.uiState.value.lastFailure?.kind,
-        )
+        assertEquals(MalApiFailureKind.OFFLINE, viewModel.uiState.value.lastFailure?.kind)
     }
 
     @Test
-    fun `accepted pending late permanent failure and rollback are distinct viewmodel states`() = runTest {
-        val records = MutableStateFlow(listOf(record(4L, TrackingMediaType.ANIME, progress = 4)))
-        val delivery = MutableSharedFlow<MalLibraryDeliveryState>(extraBufferCapacity = 4)
-        val tracking = tracking(delivery)
+    fun `accepted pending delivered and confirmed remain distinct and only confirmed clears overlay`() = runTest {
+        val records = MutableStateFlow(listOf(record(4L, TrackingMediaType.ANIME, 4)))
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 4)
         val viewModel = viewModel(
             observeLibrary = { _, _ -> records },
-            tracking = tracking,
+            tracking = tracking(delivery),
         )
         advanceUntilIdle()
         val original = viewModel.uiState.value.snapshot.visibleItems.single()
@@ -134,34 +125,74 @@ class MalLibraryProviderViewModelTest {
 
         viewModel.onAction(
             MalLibraryProviderAction.SubmitEdit(
-                item = original,
-                draft = MalLibraryEditDraft.from(original).copy(progress = 9),
+                original,
+                MalLibraryEditDraft.from(original).copy(progress = 9),
             )
         )
         runCurrent()
-        assertEquals(9, viewModel.uiState.value.snapshot.visibleItems.single().progress)
         assertTrue(events[0] is MalLibraryEditLifecycle.EnqueueAccepted)
+        assertEquals(9, viewModel.uiState.value.snapshot.visibleItems.single().progress)
 
-        delivery.emit(MalLibraryDeliveryState.Pending(TrackingTargetState.PENDING, 0))
+        delivery.emit(MalLibraryTrackingState.Pending(TrackingTargetState.PENDING, 0))
         runCurrent()
-        delivery.emit(MalLibraryDeliveryState.PermanentFailure(TrackingFailureKind.PERMANENT))
-        advanceUntilIdle()
-
         assertTrue(events[1] is MalLibraryEditLifecycle.Pending)
-        assertTrue(events[2] is MalLibraryEditLifecycle.PermanentFailure)
-        assertTrue(events[3] is MalLibraryEditLifecycle.RolledBack)
-        assertEquals(4, viewModel.uiState.value.snapshot.visibleItems.single().progress)
-        assertTrue(
-            viewModel.uiState.value.editStates[original.identity.stableKey] is
-                MalLibraryEditLifecycle.RolledBack
-        )
+        assertEquals(9, viewModel.uiState.value.snapshot.visibleItems.single().progress)
+
+        delivery.emit(MalLibraryTrackingState.Delivered(1))
+        runCurrent()
+        assertTrue(events[2] is MalLibraryEditLifecycle.Delivered)
+        assertEquals(9, viewModel.uiState.value.snapshot.visibleItems.single().progress)
+
+        records.value = listOf(record(4L, TrackingMediaType.ANIME, progress = 9, fetchedAt = 200L))
+        delivery.emit(MalLibraryTrackingState.Confirmed(snapshot(4L, 9)))
+        advanceUntilIdle()
+        assertTrue(events[3] is MalLibraryEditLifecycle.ProviderConfirmed)
+        assertEquals(9, viewModel.uiState.value.snapshot.visibleItems.single().progress)
         collection.cancel()
     }
 
     @Test
-    fun `provider read back mismatch replaces optimistic state with confirmed snapshot`() = runTest {
-        val records = MutableStateFlow(listOf(record(5L, TrackingMediaType.ANIME, progress = 5)))
-        val delivery = MutableSharedFlow<MalLibraryDeliveryState>(extraBufferCapacity = 4)
+    fun `late terminal retry exhaustion rolls back optimistic state`() = runTest {
+        val records = MutableStateFlow(listOf(record(5L, TrackingMediaType.ANIME, 5)))
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 2)
+        val viewModel = viewModel(
+            observeLibrary = { _, _ -> records },
+            tracking = tracking(delivery),
+        )
+        advanceUntilIdle()
+        val original = viewModel.uiState.value.snapshot.visibleItems.single()
+        val events = mutableListOf<MalLibraryEditLifecycle>()
+        val collection = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.editOutcomes.take(3).toList(events)
+        }
+
+        viewModel.onAction(
+            MalLibraryProviderAction.SubmitEdit(
+                original,
+                MalLibraryEditDraft.from(original).copy(progress = 10),
+            )
+        )
+        runCurrent()
+        delivery.emit(
+            MalLibraryTrackingState.TerminalFailure(
+                TrackingFailureKind.RETRY_BUDGET_EXHAUSTED,
+                TrackingTargetState.FAILED,
+            )
+        )
+        advanceUntilIdle()
+
+        assertTrue(events[0] is MalLibraryEditLifecycle.EnqueueAccepted)
+        assertTrue(events[1] is MalLibraryEditLifecycle.PermanentFailure)
+        val rollback = events[2] as MalLibraryEditLifecycle.RolledBack
+        assertEquals(TrackingFailureKind.RETRY_BUDGET_EXHAUSTED, rollback.reason)
+        assertEquals(5, viewModel.uiState.value.snapshot.visibleItems.single().progress)
+        collection.cancel()
+    }
+
+    @Test
+    fun `superseded operation rolls back obsolete optimistic state`() = runTest {
+        val records = MutableStateFlow(listOf(record(6L, TrackingMediaType.ANIME, 6)))
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 2)
         val viewModel = viewModel(
             observeLibrary = { _, _ -> records },
             tracking = tracking(delivery),
@@ -171,31 +202,56 @@ class MalLibraryProviderViewModelTest {
 
         viewModel.onAction(
             MalLibraryProviderAction.SubmitEdit(
-                item = original,
-                draft = MalLibraryEditDraft.from(original).copy(progress = 10),
+                original,
+                MalLibraryEditDraft.from(original).copy(progress = 11),
             )
         )
         runCurrent()
-        assertEquals(10, viewModel.uiState.value.snapshot.visibleItems.single().progress)
-
-        records.value = listOf(record(5L, TrackingMediaType.ANIME, progress = 8, fetchedAt = 200L))
         delivery.emit(
-            MalLibraryDeliveryState.ProviderConfirmed(
-                snapshot(malId = 5L, progress = 8)
+            MalLibraryTrackingState.TerminalFailure(
+                TrackingFailureKind.PERMANENT,
+                TrackingTargetState.SUPERSEDED,
             )
         )
+        advanceUntilIdle()
+
+        val lifecycle = viewModel.uiState.value.editStates[original.identity.stableKey]
+            as MalLibraryEditLifecycle.RolledBack
+        assertEquals(TrackingTargetState.SUPERSEDED, lifecycle.terminalState)
+        assertEquals(6, viewModel.uiState.value.snapshot.visibleItems.single().progress)
+    }
+
+    @Test
+    fun `provider mismatch replaces optimistic state with confirmed provider snapshot`() = runTest {
+        val records = MutableStateFlow(listOf(record(7L, TrackingMediaType.ANIME, 7)))
+        val delivery = MutableSharedFlow<MalLibraryTrackingState>(extraBufferCapacity = 2)
+        val viewModel = viewModel(
+            observeLibrary = { _, _ -> records },
+            tracking = tracking(delivery),
+        )
+        advanceUntilIdle()
+        val original = viewModel.uiState.value.snapshot.visibleItems.single()
+
+        viewModel.onAction(
+            MalLibraryProviderAction.SubmitEdit(
+                original,
+                MalLibraryEditDraft.from(original).copy(progress = 12),
+            )
+        )
+        runCurrent()
+        records.value = listOf(record(7L, TrackingMediaType.ANIME, progress = 8, fetchedAt = 200L))
+        delivery.emit(MalLibraryTrackingState.Confirmed(snapshot(7L, 8)))
         advanceUntilIdle()
 
         val confirmed = viewModel.uiState.value.editStates[original.identity.stableKey]
             as MalLibraryEditLifecycle.ProviderConfirmed
         assertFalse(confirmed.matchesRequestedState)
-        assertEquals(8, confirmed.displayedItem.progress)
         assertEquals(8, viewModel.uiState.value.snapshot.visibleItems.single().progress)
     }
 
     @Test
-    fun `delete and retry actions each retain single MAL target semantics`() = runTest {
-        val records = MutableStateFlow(listOf(record(6L, TrackingMediaType.ANIME, progress = 6)))
+    fun `retry and delete actions preserve one MAL target per action`() = runTest {
+        val records = MutableStateFlow(listOf(record(8L, TrackingMediaType.ANIME, 8)))
         val captured = mutableListOf<MalTrackingCommandInput>()
         var rejectFirst = true
         val tracking = MalLibraryTrackingAdapter(
@@ -210,13 +266,10 @@ class MalLibraryProviderViewModelTest {
             },
             observeDelivery = { MutableSharedFlow() },
         )
-        val viewModel = viewModel(
-            observeLibrary = { _, _ -> records },
-            tracking = tracking,
-        )
+        val viewModel = viewModel(observeLibrary = { _, _ -> records }, tracking = tracking)
         advanceUntilIdle()
         val original = viewModel.uiState.value.snapshot.visibleItems.single()
-        val draft = MalLibraryEditDraft.from(original).copy(progress = 7)
+        val draft = MalLibraryEditDraft.from(original).copy(progress = 9)
 
         viewModel.onAction(MalLibraryProviderAction.SubmitEdit(original, draft))
         runCurrent()
@@ -227,11 +280,11 @@ class MalLibraryProviderViewModelTest {
 
         assertEquals(3, captured.size)
         assertEquals(1, captured.count { it.deleteIntent })
-        assertTrue(captured.all { it.malMediaId == 6L })
+        assertTrue(captured.all { it.malMediaId == 8L })
     }
 
     private fun viewModel(
-        observeLibrary: (String, TrackingMediaType) -> kotlinx.coroutines.flow.Flow<List<MalLibraryPresentationRecord>> =
+        observeLibrary: (String, TrackingMediaType) -> Flow<List<MalLibraryPresentationRecord>> =
             { _, _ -> MutableStateFlow(emptyList()) },
         refreshLibrary: suspend (String, TrackingMediaType) -> MalLibraryRefreshResult =
             { _, _ -> MalLibraryRefreshResult.Success(0, 0, 1) },
@@ -247,7 +300,7 @@ class MalLibraryProviderViewModelTest {
     )
 
     private fun tracking(
-        delivery: MutableSharedFlow<MalLibraryDeliveryState>,
+        delivery: MutableSharedFlow<MalLibraryTrackingState>,
     ) = MalLibraryTrackingAdapter(
         enqueueMal = { TrackingEnqueueResult.Accepted(receipt()) },
         observeDelivery = { delivery },
@@ -279,26 +332,22 @@ class MalLibraryProviderViewModelTest {
     private fun snapshot(
         malId: Long,
         progress: Int,
-    ) = ProviderTrackingSnapshotEntity(
-        provider = TrackingProvider.MYANIMELIST.name,
-        providerAccountId = "account",
-        localMediaId = "local-$malId",
+        deleted: Boolean = false,
+    ) = MalLibraryConfirmedSnapshot(
         providerMediaId = malId,
-        providerListEntryId = null,
-        mediaType = TrackingMediaType.ANIME.name,
+        mediaType = TrackingMediaType.ANIME,
         title = "Confirmed $malId",
         coverUrl = null,
-        status = TrackingStatus.PLANNING.name,
+        status = if (deleted) null else TrackingStatus.PLANNING,
         progress = progress,
         progressSecondary = null,
-        score = null,
+        score100 = null,
         repeatCount = 0,
-        notes = null,
         startedAt = null,
         completedAt = null,
         providerUpdatedAtEpochMillis = 100L,
         fetchedAtEpochMillis = 200L,
-        isDeleted = false,
+        deleted = deleted,
     )
 
     private fun receipt(operationId: String = "operation") = TrackingEnqueueReceipt(
