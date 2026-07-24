@@ -159,7 +159,7 @@ class MalTrackingProviderAdapterTest {
     }
 
     @Test
-    fun `DELETE success is durable only after read-back confirms list status absent`() = runTest {
+    fun `DELETE is reconciled only after read-back confirms list status absent`() = runTest {
         val fixture = fixture(
             response(200, ""),
             response(200, """{"id":20,"title":"Removed"}"""),
@@ -184,7 +184,7 @@ class MalTrackingProviderAdapterTest {
 
         assertTrue(result is TrackingDeliveryResult.Success)
         assertTrue((result as TrackingDeliveryResult.Success).snapshot.deleted)
-        assertEquals(listOf("DELETE", "GET"), fixture.requests.map(Request::method))
+        assertEquals(listOf("DELETE", "GET"), fixture.requests.map { it.method })
     }
 
     @Test
@@ -200,7 +200,7 @@ class MalTrackingProviderAdapterTest {
             TrackingFailureKind.INVALID_RESPONSE,
             (result as TrackingDeliveryResult.TerminalFailure).kind,
         )
-        assertEquals(listOf("DELETE", "GET"), fixture.requests.map(Request::method))
+        assertEquals(listOf("DELETE", "GET"), fixture.requests.map { it.method })
     }
 
     @Test
