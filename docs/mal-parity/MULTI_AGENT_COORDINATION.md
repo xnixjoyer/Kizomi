@@ -10,210 +10,180 @@ This is the binding concurrency contract for MAL parity work in `xnixjoyer/Kizom
 - integration branch: `planning/mal-ui-feature-parity`
 - integration PR: Draft #5
 - last exact green integration head: `41ff9f05888b1318c702199bcd8b0d4f6694fcff`
-- exact-head workflow: `Pull request and push CI`
+- workflow: `Pull request and push CI`
 - run ID / number: `30106544534` / `250`
 - verify job: `89525244135`
 - result: `success`
 
-Completed at this checkpoint:
+Completed at that checkpoint:
 
 - Phase 1 typed MAL details and deterministic account/session restoration;
 - Phase 2 common Kizomi `MainScreen`, provider capability projection and MAL root graph;
-- first Phase 3 sealed provider-neutral media identity, adapters and shared list/search card;
-- worker ownership, prompts, branches and Draft PRs.
+- first Phase 3 provider-neutral media identity, explicit adapters and shared list/search card;
+- isolated worker branches, Draft PRs, exclusive reports and single-writer canonical context.
 
 Open work:
 
-- shared Discover/search and details;
-- shared Library/edit/read-back;
-- shared Account/Settings and debug diagnostics;
-- MAL calendar/widgets/background;
+- Discover/search/details integration;
+- Library/edit/durable delivery/read-back integration;
+- Account/Settings and safe debug diagnostics integration;
+- calendar/widgets/background;
 - official API/parity audit;
 - final Integrator wiring, localization, accessibility, visual and release evidence;
-- device/provider acceptance.
+- controlled device/provider acceptance.
 
-Stable architecture contracts:
+## Stable architecture contracts
 
-- exactly one active provider;
-- no inactive-provider fallback or data transfer;
-- one shared app shell;
+These contracts are frozen unless a worker report proves a concrete missing typed API:
+
+- exactly one active provider: `UNCONFIGURED`, `ANILIST_ONLY` or `MAL_ONLY`;
+- no inactive-provider fallback, traffic or account/list-data transfer;
+- one shared app shell, not a second provider shell;
 - typed non-interchangeable provider media identities;
-- provider transport models stay below shared presentation;
-- central routing, capability and tracking boundaries remain single-writer;
-- every newer commit requires a new exact-head run.
+- provider transport models remain below shared presentation;
+- central navigation, capability, tracking, purge and final wiring remain Integrator-owned;
+- MAL uses only official OAuth/API-v2 boundaries; no scraping, private endpoints or undocumented assumptions;
+- every newer commit requires its own exact-head CI.
 
 ## Live Integrator review snapshot — 2026-07-24
 
-The Integrator reviewed remote state from integration head `5959fcc2b45737e9cf3f830265099300171ba9a6`. That head is five canonical-document commits ahead of the last green checkpoint. Its exact-head run `30108001270` / `255`, job `89530111299`, was still queued when this snapshot was prepared. Therefore `5959fcc2b45737e9cf3f830265099300171ba9a6` is not recorded as green evidence here. The commit containing this snapshot also requires its own successful exact-head run before it can become the next green checkpoint.
+Current published integration head before this snapshot commit: `900c828fc6a6ce87f50257aaa56d709ac784a531`.
 
-PR #5 remains open, mergeable and Draft against `main`. No PR comment or review thread requires action.
+Its run `30108864956` / `264` remained queued during review, so it is not a green checkpoint. The commit containing this snapshot also requires a new successful exact-head run before it may replace `41ff9f05...` as the green checkpoint.
 
-| Queue | Worker PR | Branch | Verified head | Changed scope | Exact-head CI | Report state | Integrator decision |
+PR #5 remains open, mergeable and Draft against `main`. No worker work is integrated merely because it exists on a worker branch.
+
+| Queue | PR | Branch | Reviewed head | Scope at review | Exact-head CI | Report | Integrator decision |
 |---:|---:|---|---|---|---|---|---|
-| 1 | #6 | `parallel/mal-discover-details` | `b6b6480293f94b8235df36ba8ce8921a7d2f0f84` | only `agent-reports/discover-details.md` | run `30106242925` / `245`, job `89524264986`, success | `IN PROGRESS` | blocked; no production work, tests or integration request |
-| 2 | #7 | `parallel/mal-library-tracking` | `deaed924fbe61b6e188d3ed67e0a925bfaa4b8d5` | only `agent-reports/library-tracking.md` | run `30106261313` / `246`, job `89524328263`, success | `IN PROGRESS` | blocked; no production work, tests or integration request |
-| 3 | #8 | `parallel/mal-account-settings-diagnostics` | `9322eb0a9fdab9ba6cad8c7658fc577fe1dce5c4` | only `agent-reports/account-settings-diagnostics.md` | run `30106284414` / `247`, job `89524401761`, success | `IN PROGRESS` | blocked; no production work, tests or integration request |
-| 4 | #9 | `parallel/mal-calendar-widgets-background` | `a6cd27735ba984d654c1720ba06df170c01adac9` | only `agent-reports/calendar-widgets-background.md` | run `30106300900` / `248`, job `89524455404`, success | `IN PROGRESS` | blocked; no production work, tests or integration request |
-| 5 | #10 | `parallel/mal-qa-research` | `4deb497c4e9cbbf1c686f765ff73a79ee0a387b5` | only `agent-reports/qa-research.md` | run `30106319746` / `249`, job `89524518145`, success | `IN PROGRESS` | blocked; no audit evidence, additive tests/scanners or integration request |
+| 1 | #6 | `parallel/mal-discover-details` | `c1e4bb9f4f3456058c1e9ed8e4315e9b28310dd8` | 15 owned production/resource/test files plus report; four tests now present | run `30109327089` / `300`, cancelled | stale `IN PROGRESS`; no evidence or wiring request | blocked; review comment `5072014776` remains applicable |
+| 2 | #7 | `parallel/mal-library-tracking` | `bb97113306c222b6c492a21de4328c2ecbbdeffd` | 10 owned production/resource/test files plus report; editor and two tests present | run `30109503420` / `311`, queued | stale `IN PROGRESS`; no evidence or wiring request | blocked; durable delivery/read-back lifecycle unresolved; comment `5072038613` |
+| 3 | #8 | `parallel/mal-account-settings-diagnostics` | `ca8c25000eb0dd32a3580b481392c187b7bc9175` | 21 owned debug/main/resource/test files plus report; seven tests now present | run `30109495508` / `309`, cancelled | stale `IN PROGRESS`; no evidence or route request | blocked; diagnostic semantics/localization/redaction gates remain; comment `5072060986` |
+| 4 | #9 | `parallel/mal-calendar-widgets-background` | `a6cd27735ba984d654c1720ba06df170c01adac9` | only exclusive report | run `30106300900` / `248`, job `89524455404`, success | `IN PROGRESS` | blocked; no implementation or capability evidence |
+| 5 | #10 | `parallel/mal-qa-research` | `a7c1e6b2b3c0314cbee20249b3dc9292f85c556c` | one additive owned architecture test plus report | run `30109018240` / `277`, queued | stale `IN PROGRESS`; no official-source audit | blocked; comment `5072088986` |
 
-Verified worker conditions:
+Verified common conditions:
 
 - all five PRs are open and Draft;
-- all five PRs target `planning/mal-ui-feature-parity`;
-- every worker changed only its exclusive report;
-- every worker branch is one report commit ahead of and six Integrator commits behind the current integration branch;
-- no worker report ends `READY FOR INTEGRATOR REVIEW`;
-- no worker requests a reserved-file change;
-- no worker PR is authorized for owner merge;
-- green CI for a report-only worker head is not feature or integration evidence.
+- all five target `planning/mal-ui-feature-parity`;
+- no worker changed a canonical file or the integration branch;
+- no report ends `READY FOR INTEGRATOR REVIEW`;
+- no report contains a complete changed-file inventory, final exact-head evidence and minimal reserved-file request;
+- no worker PR is authorized for owner merge.
 
-Central contracts remain frozen. The reviewed worker reports identify no missing typed API, route, capability, tracking, purge or app-shell contract. The Integrator must not duplicate worker feature bodies while this remains true.
-
-## Roles and branches
-
-Only the Integrator may write to `planning/mal-ui-feature-parity` and PR #5.
-
-| Role | Branch | Draft PR | Base | Exclusive report |
-|---|---|---:|---|---|
-| Integrator | `planning/mal-ui-feature-parity` | #5 | `main` | canonical files |
-| Discover and Details | `parallel/mal-discover-details` | #6 | integration branch | `agent-reports/discover-details.md` |
-| Library and Tracking | `parallel/mal-library-tracking` | #7 | integration branch | `agent-reports/library-tracking.md` |
-| Account, Settings and Diagnostics | `parallel/mal-account-settings-diagnostics` | #8 | integration branch | `agent-reports/account-settings-diagnostics.md` |
-| Calendar, Widgets and Background | `parallel/mal-calendar-widgets-background` | #9 | integration branch | `agent-reports/calendar-widgets-background.md` |
-| QA, API Research and Parity Audit | `parallel/mal-qa-research` | #10 | integration branch | `agent-reports/qa-research.md` |
-
-Workers never push to the integration branch and never edit another worker report.
-
-## Canonical single-writer files
-
-Only the Integrator may change:
-
-- `docs/mal-parity/NEXT_AI_PROMPT.md`
-- `docs/mal-parity/EXECUTION_STATE.md`
-- `docs/mal-parity/BUG_REGISTER.md`
-- `docs/mal-parity/FEATURE_PARITY_MATRIX.md`
-- `docs/mal-parity/MULTI_AGENT_COORDINATION.md`
-- PR #5 description and merge queue
-- central app entry, navigation and provider capability contracts
-- shared root presentation identity/model primitives
-- central provider state, tracking, purge and final cross-workstream wiring
-
-Globally reserved worker-read-only files include:
-
-- `MainActivity.kt`, `AniSyncApplication.kt`;
-- `MainScreen.kt`, `MainScreenViewModel.kt`;
-- `ProviderMainNavigationPolicy.kt`;
-- `MalSharedNavHost.kt`, `MalProviderMainScreen.kt`;
-- `MediaListItemPresentation.kt`, its central adapters and `ProviderMediaListItem.kt`;
-- OAuth, credential, purge, central tracking and provider-state core;
-- Gradle, manifests, Room entities/migrations/schemas and workflows;
-- active compliance/integration contracts.
-
-A worker needing a reserved-file change must leave the file unchanged, describe the exact requested signature/wiring in its report, mark `INTEGRATOR ACTION REQUIRED` and keep all other work buildable.
-
-## Worker ownership
+## Integrator review findings
 
 ### PR #6 — Discover and Details
 
-Branch: `parallel/mal-discover-details`
+Positive:
 
-Allowed:
+- current changed files stay inside assigned Discover/Details paths;
+- shared surfaces use neutral presentation models and typed identities;
+- MAL transport mapping remains in a MAL adapter boundary;
+- loading/content/empty/error presentation tests were added after review feedback.
 
-- `presentation/discover/**`;
-- `presentation/details/**`;
-- new `presentation/provider/discover/**` and `presentation/provider/details/**`;
-- non-reserved MAL catalogue/details files;
-- uniquely named tests and `strings_mal_discover_details*.xml`;
-- its report.
+Still required:
 
-Forbidden: shared root navigation, canonical files, other workstreams and reserved files.
-
-Acceptance: documented MAL fields only; shared Kizomi states/components; typed identity; loading/content/empty/error tests; exact-head CI.
-
-Dependencies: stable identity/card and shell contracts.
+- current report and official MAL field/capability evidence;
+- exact list of changed files and limitations;
+- explicit central route/root wiring request without editing reserved navigation;
+- final successful exact-head CI;
+- final report status `READY FOR INTEGRATOR REVIEW`.
 
 ### PR #7 — Library and Tracking
 
-Branch: `parallel/mal-library-tracking`
+Positive:
 
-Allowed:
+- current files remain inside assigned Library/provider-facing adapter scope;
+- typed MAL identities are preserved;
+- writes call only the existing one-target `enqueueMal` ingress;
+- mapping/edit validation tests exist.
 
-- `presentation/library/**`;
-- new `presentation/provider/library/**`;
-- non-reserved `MalLibrary*` repository/view-model files;
-- provider-facing list-edit adapters using the existing single-target write boundary;
-- uniquely named tests and `strings_mal_library_tracking*.xml`;
-- its report.
+Blocking behavior:
 
-Forbidden: central tracking routing/service, Room migrations, shared root navigation, canonical and reserved files.
+- an accepted enqueue receipt is not durable remote success;
+- the reviewed ViewModel emitted only immediate enqueue outcomes and did not observe delivery, confirmed MAL read-back, retry exhaustion, supersession or terminal failure;
+- the test named as a permanent rollback covered only immediate enqueue rejection;
+- final code must prove optimistic reconciliation/rollback and confirmed read-back semantics or stop claiming them.
 
-Acceptance: anime/manga Library states, edit validation, optimistic/retry/read-back behavior, typed identity and exact-head CI.
-
-Dependencies: stable identity/card and tracking contracts; merges after #6 by default.
+Also required: current report, ViewModel/use-case lifecycle tests, exact editor/root wiring request and final successful exact-head CI.
 
 ### PR #8 — Account, Settings and Diagnostics
 
-Branch: `parallel/mal-account-settings-diagnostics`
+Positive:
 
-Allowed:
+- destructive actions delegate to the existing `ProviderSessionCoordinator`;
+- confirmation UI remains present;
+- dashboard screen/ViewModel/DI binding are in the debug source set;
+- snapshot source reads local stores/database rather than provider clients;
+- multiple redaction/settings/debug tests were added after review feedback.
 
-- new `presentation/settings/provider/**`;
-- new `presentation/diagnostics/**` and `data/diagnostics/**`;
-- non-reserved MAL account settings presentation;
-- uniquely named tests and `strings_mal_account_diagnostics*.xml`;
-- its report.
+Still required:
 
-Forbidden: OAuth/credential/purge core, shared navigation, canonical and reserved files.
-
-Acceptance: shared account/settings presentation; debug-only dashboard; zero network on open; sanitized output; exact-head CI.
-
-Dependencies: stable provider/session contracts; merges after #7 by default.
+- current report, exact debug route/settings-row request and final CI;
+- proof that release builds cannot reach dashboard code;
+- zero-network-open/reload tests;
+- fixture-based secret/token/code/verifier/state/client-ID/account-ID/raw-payload redaction;
+- parity registry drift protection and evidence-backed statuses;
+- correction of misleading inactive-provider counter semantics;
+- resource-backed localized dashboard strings and accessibility evidence.
 
 ### PR #9 — Calendar, Widgets and Background
 
-Branch: `parallel/mal-calendar-widgets-background`
+No implementation is available for review. It remains blocked on documented MAL capabilities, bounded active-provider work, lifecycle tests, safe unavailable states and final CI.
 
-Allowed:
+### PR #10 — QA/API Research
 
-- new provider calendar domain/data/presentation files;
-- new provider widget files;
-- new MAL worker files;
-- uniquely named tests and `strings_mal_calendar_widgets*.xml`;
-- its report.
+Positive:
 
-Forbidden: application entry, manifests, central scheduling, shared receivers/navigation, canonical and reserved files.
+- scope is limited to one additive QA test and the exclusive report;
+- the test checks single-provider state, single-target routing, shared shell, official host/paging guards and purge markers.
 
-Acceptance: documented MAL data only; bounded active-provider work; safe unavailable states; no AniList fallback; lifecycle tests; exact-head CI.
+Still required:
 
-Dependencies: official capability evidence; merges after #8 by default.
+- current official MAL agreement/OAuth/API-v2 citations and access dates;
+- explicit open gate where complete API-v2 reference is unavailable;
+- independent PR #6–#9 scope/security/capability audit;
+- resilience review for brittle source-string assertions;
+- final report and successful exact-head CI.
 
-### PR #10 — QA, API Research and Parity Audit
+## Roles and exclusive ownership
 
-Branch: `parallel/mal-qa-research`
+Only the Integrator writes `planning/mal-ui-feature-parity`, PR #5 metadata and canonical files.
 
-Allowed only:
+| Role | Branch | Draft PR | Exclusive report |
+|---|---|---:|---|
+| Integrator | `planning/mal-ui-feature-parity` | #5 | canonical files |
+| Discover and Details | `parallel/mal-discover-details` | #6 | `agent-reports/discover-details.md` |
+| Library and Tracking | `parallel/mal-library-tracking` | #7 | `agent-reports/library-tracking.md` |
+| Account, Settings and Diagnostics | `parallel/mal-account-settings-diagnostics` | #8 | `agent-reports/account-settings-diagnostics.md` |
+| Calendar, Widgets and Background | `parallel/mal-calendar-widgets-background` | #9 | `agent-reports/calendar-widgets-background.md` |
+| QA, API Research and Parity Audit | `parallel/mal-qa-research` | #10 | `agent-reports/qa-research.md` |
 
-- `agent-reports/qa-research.md`;
-- new tests under `presentation/parity/qa/**`;
-- new `tools/verification/mal_parity_qa_*` scripts;
-- non-sensitive fixtures.
+## Canonical and reserved files
 
-Forbidden: production code, existing tests, workflows, canonical and reserved files.
+Only the Integrator may change:
 
-Acceptance: current official-source citations in report; additive passing tests/scanners; exact-head CI.
+- `NEXT_AI_PROMPT.md`, `EXECUTION_STATE.md`, `BUG_REGISTER.md`, `FEATURE_PARITY_MATRIX.md`, `MULTI_AGENT_COORDINATION.md`;
+- PR #5 description and merge queue;
+- `MainActivity.kt`, `AniSyncApplication.kt`, `MainScreen.kt`, `MainScreenViewModel.kt`;
+- central routes/NavHosts and `ProviderMainNavigationPolicy.kt`;
+- central neutral identity/model/component primitives;
+- central provider state, tracking, purge and final wiring;
+- Gradle, manifests, Room migrations/schemas and workflows;
+- active compliance/integration contracts.
 
-Dependencies: may audit in parallel; merged last so tests reflect integrated behavior.
+A worker needing one of these changes leaves it unchanged and records an exact `INTEGRATOR ACTION REQUIRED` request.
 
-## Worker gates
-
-Before editing, a worker verifies branch, Draft PR base, integration head, this contract, its prompt, open PR scopes and exclusive report.
+## Worker acceptance gates
 
 A worker is ready for Integrator review only when:
 
 - every changed file is owned;
-- the report lists every changed file and ends `READY FOR INTEGRATOR REVIEW`;
+- the report lists every changed file, evidence, limitations, tests, run and job;
+- the report ends exactly `READY FOR INTEGRATOR REVIEW`;
 - no reserved/canonical file changed;
-- relevant tests and exact-head CI are green;
+- relevant tests and full exact-head CI are green;
+- official provider claims are cited and conservative;
 - integration requests are explicit and minimal;
 - the PR remains Draft.
 
@@ -221,21 +191,17 @@ A worker is ready for Integrator review only when:
 
 No agent may push to `main`, merge, approve, enable auto-merge, rebase, force-push, use another worker branch, weaken gates, add a second shell, contact the inactive provider, transfer account data, scrape, use undocumented APIs or claim unmerged work as integrated.
 
-## Integrator review and merge queue
+## Merge queue
 
-The Integrator verifies branch/base/Draft state, changed files, report, CI, provider/API/privacy claims and dependencies. The Integrator never merges.
+Current state: **authorize no merge**.
 
-Current queue state: **all entries blocked; authorize no merge**.
-
-Default owner merge order using **Create a merge commit**:
+Default future owner order, using **Create a merge commit** and only after explicit Integrator authorization:
 
 1. PR #6 Discover and Details
 2. PR #7 Library and Tracking
 3. PR #8 Account, Settings and Diagnostics
 4. PR #9 Calendar, Widgets and Background
 5. PR #10 QA/API audit
-6. final Integrator wiring and release evidence
+6. final Integrator wiring and release evidence in PR #5
 
-Only one worker PR may be authorized at a time. After the owner merges it, exact-head integration CI must be green before another authorization. Any reorder requires a documented dependency reason.
-
-PR #5 remains Draft until all integrated work and final evidence are complete.
+Only one worker PR may be authorized at a time. After the owner merges it, the new integration head must pass exact-head CI before another authorization. PR #5 remains Draft until all worker work and final evidence are complete.
