@@ -84,9 +84,14 @@ Do not edit files currently owned by an active worker unless its report explicit
 
 ## Immediate tasks
 
-1. Verify that all five worker branches exist from the coordination checkpoint.
-2. Inspect or create their Draft PRs targeting `planning/mal-ui-feature-parity`.
-3. Record each PR and status in `MULTI_AGENT_COORDINATION.md`.
+1. Verify the existing worker Draft PRs:
+   - #6 Discover and Details
+   - #7 Library and Tracking
+   - #8 Account, Settings and Diagnostics
+   - #9 Calendar, Widgets and Background
+   - #10 QA, API Research and Parity Audit
+2. Verify every PR still targets `planning/mal-ui-feature-parity`.
+3. Record current worker heads/checks/status in `MULTI_AGENT_COORDINATION.md`.
 4. Freeze central contracts unless a worker documents a concrete missing API.
 5. Review worker reports continuously.
 6. Continue only central work that cannot conflict:

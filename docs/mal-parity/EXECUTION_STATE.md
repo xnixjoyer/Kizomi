@@ -82,6 +82,7 @@ The project is now split into one Integrator plus five workers. The binding cont
 ### Worker 02 — Discover and Details
 
 - Branch: `parallel/mal-discover-details`
+- Draft PR: `#6`
 - Draft PR base: integration branch
 - Owns shared Discover/details adapters, components and feature tests.
 - Integration status: not yet merged.
@@ -89,6 +90,7 @@ The project is now split into one Integrator plus five workers. The binding cont
 ### Worker 03 — Library and Tracking
 
 - Branch: `parallel/mal-library-tracking`
+- Draft PR: `#7`
 - Draft PR base: integration branch
 - Owns Library presentation and provider-facing list edit/read-back.
 - Integration status: not yet merged.
@@ -96,6 +98,7 @@ The project is now split into one Integrator plus five workers. The binding cont
 ### Worker 04 — Account, Settings and Diagnostics
 
 - Branch: `parallel/mal-account-settings-diagnostics`
+- Draft PR: `#8`
 - Draft PR base: integration branch
 - Owns shared account/settings components and debug dashboard.
 - Integration status: not yet merged.
@@ -103,6 +106,7 @@ The project is now split into one Integrator plus five workers. The binding cont
 ### Worker 05 — Calendar, Widgets and Background
 
 - Branch: `parallel/mal-calendar-widgets-background`
+- Draft PR: `#9`
 - Draft PR base: integration branch
 - Owns capability-aware calendar/widget/background implementations.
 - Integration status: not yet merged.
@@ -110,6 +114,7 @@ The project is now split into one Integrator plus five workers. The binding cont
 ### Worker 06 — QA, API Research and Parity Audit
 
 - Branch: `parallel/mal-qa-research`
+- Draft PR: `#10`
 - Draft PR base: integration branch
 - Owns official-source audit, additive tests/scanners and independent review.
 - Integration status: not yet merged.

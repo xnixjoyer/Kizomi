@@ -60,13 +60,13 @@ Workers must never push to the integration branch, even to fix a typo.
 
 Each worker has one branch and one Draft PR targeting the integration branch:
 
-| Role | Branch | Draft PR base | Exclusive report |
-|---|---|---|---|
-| Discover and Details | `parallel/mal-discover-details` | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/discover-details.md` |
-| Library and Tracking | `parallel/mal-library-tracking` | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/library-tracking.md` |
-| Account, Settings and Diagnostics | `parallel/mal-account-settings-diagnostics` | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/account-settings-diagnostics.md` |
-| Calendar, Widgets and Background | `parallel/mal-calendar-widgets-background` | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/calendar-widgets-background.md` |
-| QA, API Research and Parity Audit | `parallel/mal-qa-research` | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/qa-research.md` |
+| Role | Branch | Draft PR | Base | Exclusive report |
+|---|---|---|---|---|
+| Discover and Details | `parallel/mal-discover-details` | Draft PR #6 | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/discover-details.md` |
+| Library and Tracking | `parallel/mal-library-tracking` | Draft PR #7 | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/library-tracking.md` |
+| Account, Settings and Diagnostics | `parallel/mal-account-settings-diagnostics` | Draft PR #8 | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/account-settings-diagnostics.md` |
+| Calendar, Widgets and Background | `parallel/mal-calendar-widgets-background` | Draft PR #9 | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/calendar-widgets-background.md` |
+| QA, API Research and Parity Audit | `parallel/mal-qa-research` | Draft PR #10 | `planning/mal-ui-feature-parity` | `docs/mal-parity/agent-reports/qa-research.md` |
 
 A worker may write only its own report file. It must not edit another report.
 
