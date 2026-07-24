@@ -1,6 +1,7 @@
 name: Apply final readiness payload
 
 on:
+  pull_request:
   push:
     branches:
       - compliance/mal-api-agreement-readiness
@@ -16,20 +17,23 @@ concurrency:
 
 jobs:
   apply:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      EXACT_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
-      - name: Checkout exact triggering head
+      - name: Checkout exact pull request head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.EXACT_SHA }}
           fetch-depth: 0
 
       - name: Decode, verify, and publish final tree
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$EXACT_SHA"
           mapfile -t parts < <(find .compliance-final -maxdepth 1 -type f -name 'part-*' | sort)
           [[ ${#parts[@]} -eq 6 ]] || { echo "Expected six payload parts, found ${#parts[@]}"; exit 1; }
           cat "${parts[@]}" > "$RUNNER_TEMP/final-payload.b64"
