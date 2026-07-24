@@ -31,8 +31,8 @@ import com.anisync.android.presentation.model.PresentationMediaType
 import com.anisync.android.presentation.model.ProviderMediaIdentity
 
 /**
- * Provider-neutral Library surface. MAL and AniList adapters supply typed items and callbacks; this
- * composable never imports provider transport models and never performs network work.
+ * MAL-owned Library surface built from provider-neutral card and identity primitives. It never
+ * imports provider transport, DAO or Room entity types and never performs network work.
  */
 @Composable
 fun ProviderLibraryScreen(
@@ -69,9 +69,9 @@ fun ProviderLibraryScreen(
             query = snapshot.query,
             onAction = onAction,
         )
-        state.lastFailure?.let { failure ->
+        if (state.lastFailure != null) {
             Text(
-                text = stringResource(R.string.mal_library_error, failure.kind.name),
+                text = stringResource(R.string.mal_library_refresh_failed),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 16.dp),
@@ -102,10 +102,12 @@ fun ProviderLibraryScreen(
                 ) {
                     CircularProgressIndicator()
                 }
+
                 snapshot.visibleItems.isEmpty() -> EmptyLibraryState(
                     canRetry = state.lastFailure != null,
                     onRetry = { onAction(MalLibraryProviderAction.Refresh) },
                 )
+
                 grid -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 240.dp),
                     modifier = Modifier.fillMaxSize(),
@@ -117,9 +119,15 @@ fun ProviderLibraryScreen(
                         items = snapshot.visibleItems,
                         key = { it.identity.stableKey },
                     ) { item ->
-                        ProviderLibraryItemCard(item, onOpenDetails, onEdit)
+                        ProviderLibraryItemCard(
+                            item = item,
+                            lifecycle = state.editStates[item.identity.stableKey],
+                            onOpenDetails = onOpenDetails,
+                            onEdit = onEdit,
+                        )
                     }
                 }
+
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
@@ -129,7 +137,12 @@ fun ProviderLibraryScreen(
                         items = snapshot.visibleItems,
                         key = { it.identity.stableKey },
                     ) { item ->
-                        ProviderLibraryItemCard(item, onOpenDetails, onEdit)
+                        ProviderLibraryItemCard(
+                            item = item,
+                            lifecycle = state.editStates[item.identity.stableKey],
+                            onOpenDetails = onOpenDetails,
+                            onEdit = onEdit,
+                        )
                     }
                 }
             }
@@ -140,6 +153,7 @@ fun ProviderLibraryScreen(
 @Composable
 private fun ProviderLibraryItemCard(
     item: ProviderLibraryItem,
+    lifecycle: MalLibraryEditLifecycle?,
     onOpenDetails: (ProviderMediaIdentity) -> Unit,
     onEdit: (ProviderLibraryItem) -> Unit,
 ) {
@@ -148,6 +162,14 @@ private fun ProviderLibraryItemCard(
             item = item.card,
             onClick = onOpenDetails,
         )
+        lifecycle?.let { state ->
+            Text(
+                text = lifecycleLabel(state),
+                color = lifecycleColor(state),
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+        }
         TextButton(
             onClick = { onEdit(item) },
             modifier = Modifier.align(Alignment.End),
@@ -155,6 +177,40 @@ private fun ProviderLibraryItemCard(
             Text(stringResource(R.string.mal_library_edit))
         }
     }
+}
+
+@Composable
+private fun lifecycleLabel(lifecycle: MalLibraryEditLifecycle): String = stringResource(
+    when (lifecycle) {
+        is MalLibraryEditLifecycle.NoChange -> R.string.mal_library_edit_state_no_change
+        is MalLibraryEditLifecycle.ValidationFailure ->
+            R.string.mal_library_edit_state_validation_failed
+
+        is MalLibraryEditLifecycle.EnqueueAccepted ->
+            R.string.mal_library_edit_state_enqueue_accepted
+
+        is MalLibraryEditLifecycle.Pending -> R.string.mal_library_edit_state_pending
+        is MalLibraryEditLifecycle.Delivered -> R.string.mal_library_edit_state_delivered
+        is MalLibraryEditLifecycle.RetryableFailure -> R.string.mal_library_edit_state_retrying
+        is MalLibraryEditLifecycle.ProviderConfirmed -> when {
+            lifecycle.deleted -> R.string.mal_library_edit_state_deleted
+            lifecycle.matchesRequestedState -> R.string.mal_library_edit_state_confirmed
+            else -> R.string.mal_library_edit_state_confirmed_mismatch
+        }
+
+        is MalLibraryEditLifecycle.PermanentFailure -> R.string.mal_library_edit_state_failed
+        is MalLibraryEditLifecycle.RolledBack -> R.string.mal_library_edit_state_rolled_back
+    }
+)
+
+@Composable
+private fun lifecycleColor(lifecycle: MalLibraryEditLifecycle) = when (lifecycle) {
+    is MalLibraryEditLifecycle.ValidationFailure,
+    is MalLibraryEditLifecycle.PermanentFailure,
+    is MalLibraryEditLifecycle.RolledBack -> MaterialTheme.colorScheme.error
+
+    is MalLibraryEditLifecycle.ProviderConfirmed -> MaterialTheme.colorScheme.primary
+    else -> MaterialTheme.colorScheme.onSurfaceVariant
 }
 
 @Composable
@@ -223,9 +279,7 @@ private fun StatusSelector(
             FilterChip(
                 selected = status in selected,
                 onClick = {
-                    onSelected(
-                        if (status in selected) selected - status else selected + status
-                    )
+                    onSelected(if (status in selected) selected - status else selected + status)
                 },
                 label = { Text(statusLabel(status)) },
             )
@@ -246,9 +300,7 @@ private fun SortAndLayoutControls(
             items(ProviderLibrarySort.entries) { sort ->
                 FilterChip(
                     selected = query.sort == sort,
-                    onClick = {
-                        onAction(MalLibraryProviderAction.Sort(sort, query.ascending))
-                    },
+                    onClick = { onAction(MalLibraryProviderAction.Sort(sort, query.ascending)) },
                     label = { Text(sortLabel(sort)) },
                 )
             }
@@ -261,9 +313,7 @@ private fun SortAndLayoutControls(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(
-                onClick = {
-                    onAction(MalLibraryProviderAction.Sort(query.sort, !query.ascending))
-                },
+                onClick = { onAction(MalLibraryProviderAction.Sort(query.sort, !query.ascending)) },
             ) {
                 Text(
                     stringResource(
