@@ -21,6 +21,7 @@ data class ProviderCalendarPresentationItem(
     val episodeNumber: Int?,
     val isOnList: Boolean,
     val precision: ProviderCalendarPrecision,
+    val sourceTimeZoneId: String?,
 )
 
 data class ProviderCalendarPresentationDay(
@@ -102,6 +103,7 @@ object ProviderCalendarPresentationMapper {
             episodeNumber = entry.episodeNumber,
             isOnList = entry.isOnList,
             precision = entry.precision,
+            sourceTimeZoneId = entry.sourceTimeZoneId,
         )
     }
 
