@@ -2,99 +2,86 @@
 
 ## Status legend
 
-- `READY`: provider implementation exists and is suitable for shared UI integration.
-- `PARTIAL`: useful implementation exists but needs missing behavior, tests, real-device evidence or shared presentation.
-- `BLOCKED`: official provider capability/evidence is missing.
-- `NOT APPLICABLE`: provider does not offer an equivalent concept and Kizomi must not emulate it through another provider.
+- `READY`: provider implementation exists and is suitable for the next shared-UI layer; account/device-dependent release evidence may still be tracked separately.
+- `PARTIAL`: useful implementation exists but shared presentation, tests, provider evidence or real-device acceptance remains.
+- `BLOCKED`: current official provider capability/evidence is missing.
+- `NOT APPLICABLE`: the provider does not offer an equivalent concept and Kizomi must not emulate it through another provider.
 
-This matrix is a planning contract, not a claim that every row is already implemented.
+This is a planning contract, not a release claim.
 
-## Phase 1 evidence baseline
+## Automated baselines
 
-The typed MAL details route and deterministic stored-session restoration are implemented on code head `686e95e7eecdb3b30bc8a0d455981668329751c6`. Exact-head run `30095988062` / number `211` passed with 416 Stable Debug unit tests, lint, APK, AndroidTest APK and all provider/security gates. Real-account and process-kill acceptance remains required before session/details rows can be treated as fully released.
+### Stability baseline
 
-| Area | Shared Kizomi target | MAL baseline | Required work |
+Typed MAL details and deterministic stored-session restoration are implemented on code head `686e95e7eecdb3b30bc8a0d455981668329751c6`. Exact-head run `30095988062` / number `211` passed 416 Stable Debug unit tests, lint, APK/AndroidTest APK, Room and every provider/security gate.
+
+### Shared-shell baseline
+
+The common adaptive `MainScreen`, provider capability projection and MAL-native supported-root graph are implemented on code head `5bd9aa79340f4fe0e0c3f40155a448d86f3a621d`. Exact-head run `30098259776` / number `225` passed 424 Stable Debug unit tests, lint, APK/AndroidTest APK, Room and every provider/security/readiness/signing gate. Its APK SHA-256 was independently verified as `536b6b792ccfb92c221ff2ff3e426f090e3815f7a44a18ca6ffa1980a1ad645a`.
+
+Later commits require new exact-head evidence. Real provider/device acceptance remains mandatory for account, process, traffic and visual claims.
+
+| Area | Shared Kizomi target | MAL status | Required work |
 |---|---|---:|---|
-| First run | Shared provider onboarding | READY | Preserve current choice and consent flow while applying shared styling/localization. |
-| OAuth login | Browser PKCE login | READY | Existing callback, replay and staged-continuation tests are green; complete real-client/device acceptance. |
-| Session persistence | Relaunch remains connected | PARTIAL | Automated active/expired/missing/corrupt restoration and startup-order tests are green; prove force-stop, reboot and vault behavior on the exact APK. |
-| Account deletion | Shared destructive disconnect/delete | READY | Add device acceptance and sanitized dashboard evidence. |
-| App shell | One Kizomi scaffold/navigation | PARTIAL | Phase 2 must route MAL through `MainScreen`, filter unsupported roots and remove the separate shell. |
-| Discover home | Existing Kizomi sections/cards | PARTIAL | Adapt rankings, popular and seasonal data to shared sections. |
-| Search | Shared search field/results | PARTIAL | Add shared filters, paging, cancellation and error recovery. |
-| Seasonal browsing | Shared seasonal experience | PARTIAL | Feed documented MAL seasonal requests into Kizomi UI. |
-| Ranking/charts | Shared charts sections | READY | Replace MAL-specific cards with shared components. |
-| Anime details | Shared media details screen | PARTIAL | Typed crash-free routing is green; map MAL fields into the shared Kizomi details hierarchy and complete device recreation acceptance. |
-| Manga details | Shared media details screen | PARTIAL | Typed crash-free routing is green; complete shared manga mapping and device recreation acceptance. |
-| Relations | Shared relations component | PARTIAL | Typed related-media navigation is implemented; reuse the shared component and prove correct-item navigation on device. |
-| Recommendations | Shared recommendation component | PARTIAL | Verify official availability/paging and reuse shared presentation. |
-| Characters/staff | Shared grids and detail entry points | BLOCKED | Implement only fields and routes verified in current official documentation. |
-| Reviews | Shared review section | BLOCKED | Do not add until official API capability is verified. |
-| Statistics | Shared statistics components | PARTIAL | Map documented ranking/score/list distribution fields. |
-| Trailers/videos | Shared media component | BLOCKED | Show only documented URLs supplied through official data. |
-| External links | Shared safe link component | PARTIAL | Allow only validated HTTPS targets and no credential forwarding. |
-| Anime library | Original Kizomi Library UI | PARTIAL | Adapt MAL pages/statuses to shared list/grid/filter/sort model. |
-| Manga library | Original Kizomi Library UI | PARTIAL | Same shared library contract with manga progress semantics. |
-| Library search | Search within loaded/remote list | PARTIAL | Add debounced list-local search and clear result state. |
-| Library sort | Shared sort sheet | PARTIAL | Support documented sort fields and stable local fallback for cached data. |
-| Status edit | Shared edit sheet | READY | Map MAL status values and verify write/read-back. |
+| First run | Shared provider onboarding | READY | Preserve current single-provider choice/consent and complete styling/localization acceptance. |
+| OAuth login | Browser PKCE login | READY | Callback, replay and staged-continuation tests are green; complete real-client/device acceptance. |
+| Session persistence | Relaunch remains connected | PARTIAL | Automated restoration/startup ordering is green; prove force-stop, reboot and vault behavior on exact APK. |
+| Account deletion | Shared destructive disconnect/delete | READY | Add real-device purge and dashboard evidence. |
+| App shell | One Kizomi bottom bar/rail/adaptive scaffold | READY | Code and architecture tests are green; complete real-device compact/wide and inactive-traffic acceptance. |
+| Root capability policy | Provider-supported tabs only | READY | MAL is limited to Library/Discover/Profile; verify preference fallback behavior on device. |
+| Discover home | Existing Kizomi sections/cards | PARTIAL | Replace transitional `MalCatalogScreen` presentation through neutral card/section adapters. |
+| Search | Shared search field/results | PARTIAL | Add shared filters, paging, cancellation, empty/error and retry states. |
+| Seasonal browsing | Shared seasonal experience | PARTIAL | Feed documented MAL seasonal requests into shared sections. |
+| Ranking/charts | Shared chart/section presentation | PARTIAL | Data path exists; replace MAL-specific cards with shared presentation contracts/components. |
+| Anime details | Shared media-details hierarchy | PARTIAL | Typed crash-free routing is green; map supported MAL fields into shared details UI and prove process restoration. |
+| Manga details | Shared media-details hierarchy | PARTIAL | Same as anime with manga-specific progress/metadata semantics. |
+| Relations | Shared relations component | PARTIAL | Typed navigation exists; adapt relation presentation and complete correct-item device tests. |
+| Recommendations | Shared recommendation component | PARTIAL | Verify current official capability/paging and adapt only documented data. |
+| Characters/staff | Shared grids/detail entry points | BLOCKED | Implement only after current official endpoint/field verification. |
+| Reviews | Shared review section | BLOCKED | Do not add without current official provider support. |
+| Statistics | Shared statistics components | PARTIAL | Map documented score/rank/popularity/list-distribution data. |
+| Trailers/videos | Shared safe media component | BLOCKED | Use only documented provider URLs. |
+| External links | Shared validated HTTPS links | PARTIAL | Add strict target validation and no credential forwarding. |
+| Anime library | Original Kizomi Library UI | PARTIAL | Transitional MAL root uses shared shell but not shared Library presentation/filter/edit experience. |
+| Manga library | Original Kizomi Library UI | PARTIAL | Same with manga-specific progress semantics. |
+| Library search | Shared list-local/remote search | PARTIAL | Add debouncing, clear state and tests. |
+| Library sort | Shared sort sheet | PARTIAL | Support documented fields plus stable cached fallback. |
+| Status edit | Shared edit sheet | READY | Provider write boundary exists; migrate presentation and verify read-back. |
 | Progress edit | Shared edit sheet | READY | Preserve bounds, retry and rollback behavior. |
-| Score edit | Shared score control | READY | Respect MAL score scale and optional zero/unset state. |
-| Dates | Shared start/end controls | PARTIAL | Verify formatting, nullable fields and update semantics. |
-| Rewatch/reread | Shared optional controls | BLOCKED | Implement only after endpoint/field verification. |
-| Notes | Shared optional control | BLOCKED | Do not expose if official MAL support is unavailable. |
-| Profile summary | Shared Account/Profile UI | PARTIAL | Load official self-profile fields and useful list statistics. |
-| Social feed | Shared destination only when supported | NOT APPLICABLE | Hide in MAL mode unless a documented official capability is introduced. |
-| Forums | Shared destination only when supported | BLOCKED | Public clients show user demand, but Kizomi may use only officially permitted provider access. |
-| Notifications/messages | Shared destination only when supported | BLOCKED | Do not imitate or scrape website features. |
-| Calendar | Shared calendar design | PARTIAL | Create MAL-native schedule data only from documented provider data. |
-| Widgets | Shared widget designs | PARTIAL | Add MAL-backed data sources and lifecycle tests. |
-| Background refresh | Capability-aware workers | PARTIAL | Add bounded MAL-native work without enabling AniList traffic. |
-| Theme/appearance | Existing Kizomi settings | READY | Route MAL through the shared shell so neutral preferences apply naturally. |
-| Language | Shared localization | PARTIAL | Remove hard-coded MAL UI strings. |
-| Tablet/foldable | Existing adaptive layouts | PARTIAL | Reuse the shared list-detail scaffold and wide navigation rail. |
-| Accessibility | Shared standards | PARTIAL | Add content descriptions, focus order, touch targets and contrast checks. |
-| Offline/cache | Shared resilient states | PARTIAL | Define TTL, stale-content labels and provider-bound cache cleanup. |
-| Debug dashboard | Sanitized integration view | NOT APPLICABLE | Implement the new debug-only destination from its contract. |
+| Score edit | Shared score control | READY | Preserve MAL scale and unset/zero semantics. |
+| Dates | Shared start/end controls | PARTIAL | Verify nullable formatting and update behavior. |
+| Rewatch/reread | Shared optional controls | BLOCKED | Implement only after current API evidence. |
+| Notes | Shared optional control | BLOCKED | Do not expose without official support. |
+| Profile summary | Shared Account/Profile UI | PARTIAL | Shared root exists, but profile/statistics and shared settings hierarchy remain. |
+| Social feed | Shared destination only when supported | NOT APPLICABLE | Feed is absent in MAL mode; never contact AniList as fallback. |
+| Forums | Shared destination only when supported | BLOCKED | Forum root is absent in MAL mode; no scraping or fallback. |
+| Notifications/messages | Shared destination only when supported | BLOCKED | Do not imitate website-only features. |
+| Notification badge | Provider-capability aware | READY | AniList refresh/display is hard-gated; MAL receives zero badge count. |
+| Calendar | Shared calendar design | PARTIAL | Create a MAL-native source only from documented provider data. |
+| Widgets | Shared widget designs | PARTIAL | Add MAL-backed data and lifecycle tests. |
+| Background refresh | Capability-aware workers | PARTIAL | Add bounded MAL-native work and prove no AniList worker/network in MAL mode. |
+| Theme/appearance | Existing neutral settings | READY | Both providers now enter the same shell; complete visual/device acceptance. |
+| Navigation preferences | Shared order/visibility/start | READY | Provider projection preserves stored preferences and provides deterministic temporary fallback. |
+| Language | Shared localization | PARTIAL | Remove hard-coded strings in transitional MAL root screens. |
+| Tablet/foldable | Existing bottom-bar/rail adaptation | PARTIAL | Shared scaffold is implemented; shared root content/list-detail layouts still require migration and screenshots. |
+| Accessibility | Shared semantics/touch standards | PARTIAL | Add content descriptions, focus order, touch targets and contrast coverage. |
+| Offline/cache | Shared resilient states | PARTIAL | Define TTL/stale labels and provider-bound cleanup in shared presentation. |
+| Provider-neutral media identity | Typed non-interchangeable identity | PARTIAL | MAL key is typed; introduce a shared sealed identity contract and AniList/MAL adapters. |
+| Provider-neutral presentation models | Shared cards/details/library/account values | PARTIAL | Phase 3 is next; transport/GraphQL types must remain below shared composables. |
+| Debug dashboard | Sanitized integration view | NOT APPLICABLE | Implement the debug-only contract. |
 
-## Feature inspiration from public MAL clients
+## Public feature inspiration boundary
 
-Public product references can inform priorities without being copied.
-
-### MoeList
-
-Useful expectation signals:
-
-- airing notifications and widget;
-- list management;
-- details, relations, recommendations and characters;
-- seasonal calendar and seasonal search;
-- top charts;
-- profile/statistics;
-- dynamic color, content filtering and tablet-oriented options.
-
-MoeList also documents API-limited areas. Kizomi must independently verify current official MAL capability and may not treat another application's implementation as API evidence.
-
-### DailyAL
-
-Useful expectation signals:
-
-- seasonal, upcoming, popular and ranking discovery;
-- synopses, related titles, recommendations, reviews and statistics;
-- theming and configurable navigation/cache behavior;
-- advanced search affordances;
-- fast list editing and list sorting;
-- forum-oriented discovery where legitimately supported.
-
-Kizomi's existing AniList interface remains the visual source of truth. These references are used only to avoid overlooking common tracker workflows.
+MoeList and DailyAL can inform omitted workflow discovery—seasonal/ranking browsing, calendar, profile statistics, list search/sort, quick edit, widgets and tablet options—but they are not API evidence or a visual/source template. Kizomi's existing UI remains the source of truth, and every request must be independently verified against current official MAL documentation.
 
 ## Completion rule
 
-A row becomes complete only when:
+A row is complete only when:
 
 1. the current official provider contract supports it;
-2. implementation uses the active provider only;
-3. the shared Kizomi UI is used;
-4. unit/UI tests cover success, loading, empty and error states;
-5. exact-head CI passes;
-6. real-device acceptance is documented for account-dependent behavior.
+2. implementation uses only the active provider;
+3. equivalent capability uses shared Kizomi presentation;
+4. typed adapters prevent provider-ID mixing;
+5. unit/UI tests cover loading, content, empty, unavailable and error behavior;
+6. exact-head CI and artifact verification pass;
+7. real-device acceptance is documented for account/process/network/visual behavior.
