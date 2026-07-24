@@ -1,28 +1,41 @@
 package com.anisync.android.presentation.diagnostics
 
+import com.anisync.android.data.diagnostics.DiagnosticParityStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DiagnosticsParityRegistryTest {
     @Test
-    fun `default parity items match the canonical typed key set`() {
+    fun `default parity items match the typed key set without overstating authentication`() {
         val items = DiagnosticsParityRegistry.defaultItems()
 
         assertEquals(DiagnosticsParityRegistry.knownKeys, items.map { it.key }.toSet())
         assertEquals(items.size, items.map { it.key }.distinct().size)
+        assertEquals(
+            DiagnosticParityStatus.IN_PROGRESS,
+            items.single { it.key == "authentication_session" }.status,
+        )
     }
 
     @Test
-    fun `initial acceptance checklist keys are unique and complete`() {
-        val checklist = DiagnosticsParityRegistry.checklist(
+    fun `acceptance checklist distinguishes available counter from zero traffic proof`() {
+        val unknownChecklist = DiagnosticsParityRegistry.checklist(
+            configurationPresent = true,
+            redirectConfigured = true,
+            accountRestored = true,
+            blockedInactiveRequestCount = null,
+        )
+        val knownZeroChecklist = DiagnosticsParityRegistry.checklist(
             configurationPresent = true,
             redirectConfigured = true,
             accountRestored = true,
             blockedInactiveRequestCount = 0L,
         )
-        val keys = checklist.map { it.key }
 
+        val keys = unknownChecklist.map { it.key }
         assertEquals(keys.size, keys.distinct().size)
         assertTrue("mal_configuration_present" in keys)
         assertTrue("oauth_redirect_registered" in keys)
@@ -32,7 +45,26 @@ class DiagnosticsParityRegistryTest {
         assertTrue("library_request_succeeds" in keys)
         assertTrue("tracking_write_read_back" in keys)
         assertTrue("provider_deletion_returns_to_onboarding" in keys)
-        assertTrue("inactive_provider_request_count_zero" in keys)
+        assertTrue("blocked_inactive_attempt_counter_available" in keys)
+        assertTrue("inactive_provider_traffic_zero" in keys)
         assertTrue("shared_ui_migration" in keys)
+
+        assertFalse(
+            unknownChecklist.single {
+                it.key == "blocked_inactive_attempt_counter_available"
+            }.passed == true,
+        )
+        assertTrue(
+            knownZeroChecklist.single {
+                it.key == "blocked_inactive_attempt_counter_available"
+            }.passed == true,
+        )
+        assertNull(
+            knownZeroChecklist.single { it.key == "inactive_provider_traffic_zero" }.passed,
+        )
+        assertEquals(
+            "unavailable_without_boundary_instrumentation",
+            knownZeroChecklist.single { it.key == "inactive_provider_traffic_zero" }.detail,
+        )
     }
 }
