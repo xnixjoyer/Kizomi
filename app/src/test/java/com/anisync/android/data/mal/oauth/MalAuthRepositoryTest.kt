@@ -1,5 +1,6 @@
 package com.anisync.android.data.mal.oauth
 
+import com.anisync.android.data.mal.account.MalTokenStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
@@ -125,7 +126,7 @@ class MalAuthRepositoryTest {
     @Test
     fun `relogin targets existing account and uses expected generation`() = runTest {
         val fixture = fixture()
-        val account = fixture.accounts.seed(generation = 7L, status = com.anisync.android.data.mal.account.MalTokenStatus.MISSING)
+        val account = fixture.accounts.seed(generation = 7L, status = MalTokenStatus.MISSING)
         fixture.accounts.logout(account.localAccountId)
         fixture.repository.startLogin(account.localAccountId)
         val session = requireNotNull(fixture.sessions.pending)
@@ -179,6 +180,63 @@ class MalAuthRepositoryTest {
 
         assertTrue(cancelled)
         assertTrue(requireNotNull(fixture.sessions.pending).isCallbackStaged)
+    }
+
+    @Test
+    fun `normal restart restores an active persisted MAL account`() = runTest {
+        val fixture = fixture()
+        val account = fixture.accounts.seed(status = MalTokenStatus.ACTIVE)
+        val recreated = fixture.repository()
+
+        assertTrue(recreated.state.value is MalAuthState.Disconnected)
+        assertNull(recreated.resumePendingLogin())
+
+        val connected = recreated.state.value as MalAuthState.Connected
+        assertEquals(account.localAccountId, connected.account.localAccountId)
+    }
+
+    @Test
+    fun `normal restart keeps an expired refreshable MAL account connected`() = runTest {
+        val fixture = fixture()
+        val account = fixture.accounts.seed(status = MalTokenStatus.EXPIRED)
+        val recreated = fixture.repository()
+
+        assertNull(recreated.resumePendingLogin())
+
+        val connected = recreated.state.value as MalAuthState.Connected
+        assertEquals(account.localAccountId, connected.account.localAccountId)
+        assertEquals(MalTokenStatus.EXPIRED, connected.account.tokenStatus)
+    }
+
+    @Test
+    fun `normal restart exposes missing corrupt and keystore-reset credentials as relogin required`() = runTest {
+        listOf(
+            MalTokenStatus.MISSING,
+            MalTokenStatus.CORRUPT,
+            MalTokenStatus.KEYSTORE_RESET,
+        ).forEach { status ->
+            val fixture = fixture()
+            val account = fixture.accounts.seed(status = status)
+            val recreated = fixture.repository()
+
+            assertNull(recreated.resumePendingLogin())
+
+            val relogin = recreated.state.value as MalAuthState.ReLoginRequired
+            assertEquals(account.localAccountId, relogin.localAccountId)
+        }
+    }
+
+    @Test
+    fun `startup restoration remains fail closed when the OAuth session store was reset`() = runTest {
+        val fixture = fixture()
+        fixture.accounts.seed(status = MalTokenStatus.ACTIVE)
+        fixture.sessions.initializationReset = true
+        val recreated = fixture.repository()
+
+        assertNull(recreated.resumePendingLogin())
+
+        val error = recreated.state.value as MalAuthState.Error
+        assertEquals(MalAuthFailureReason.SESSION_STORE_FAILED, error.reason)
     }
 
     private fun fixture(configured: Boolean = true): Fixture {
