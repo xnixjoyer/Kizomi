@@ -16,12 +16,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.anisync.android.R
 import com.anisync.android.data.diagnostics.DiagnosticsDashboardSection
 import com.anisync.android.data.diagnostics.IntegrationDiagnosticsSnapshot
 import com.anisync.android.presentation.settings.SettingsScreenScaffold
@@ -38,12 +40,12 @@ fun DebugIntegrationDashboardScreen(
     val clipboard = LocalClipboardManager.current
 
     SettingsScreenScaffold(
-        title = "Integration diagnostics",
+        title = stringResource(R.string.diagnostics_screen_title),
         onBackClick = onBackClick,
         modifier = modifier,
     ) {
         Text(
-            text = "Read-only local state. Opening this screen performs no provider request.",
+            text = stringResource(R.string.diagnostics_local_only_notice),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -56,7 +58,7 @@ fun DebugIntegrationDashboardScreen(
                 onClick = viewModel::refreshLocalSnapshot,
                 modifier = Modifier.weight(1f),
             ) {
-                Text("Reload local state")
+                Text(stringResource(R.string.diagnostics_reload_local_state))
             }
             FilledTonalButton(
                 onClick = {
@@ -65,7 +67,7 @@ fun DebugIntegrationDashboardScreen(
                 enabled = state.snapshot != null,
                 modifier = Modifier.weight(1f),
             ) {
-                Text("Copy sanitized summary")
+                Text(stringResource(R.string.diagnostics_copy_sanitized_summary))
             }
         }
 
@@ -75,7 +77,7 @@ fun DebugIntegrationDashboardScreen(
 
         state.error?.let {
             Text(
-                text = "Local diagnostics are unavailable.",
+                text = stringResource(R.string.diagnostics_local_unavailable),
                 color = MaterialTheme.colorScheme.error,
             )
         }
@@ -96,92 +98,194 @@ private fun DashboardContents(
     expandedSections: Set<DiagnosticsDashboardSection>,
     onToggleSection: (DiagnosticsDashboardSection) -> Unit,
 ) {
+    val none = stringResource(R.string.diagnostics_value_none)
+    val unknown = stringResource(R.string.diagnostics_value_unknown)
+    val never = stringResource(R.string.diagnostics_value_never)
+
     DashboardSection(
-        title = "Build and source",
+        title = stringResource(R.string.diagnostics_section_build_source),
         section = DiagnosticsDashboardSection.BUILD_AND_SOURCE,
         expanded = DiagnosticsDashboardSection.BUILD_AND_SOURCE in expandedSections,
         onToggle = onToggleSection,
     ) {
-        StatusRow("Version", "${snapshot.build.versionName} (${snapshot.build.versionCode})")
-        StatusRow("Build type", snapshot.build.buildType)
-        StatusRow("Source revision", snapshot.build.sourceRevision ?: "not embedded")
-        StatusRow("OAuth environment", snapshot.build.oauthEnvironment)
-        StatusRow("Redirect scheme", snapshot.build.redirectScheme)
-        StatusRow("Redirect host", snapshot.build.redirectHost)
-        StatusRow("Redirect path", snapshot.build.redirectPath)
-        StatusRow("Public client ID present", snapshot.build.clientIdPresent.toString())
         StatusRow(
-            "Database schema",
-            snapshot.build.databaseSchemaVersion?.toString() ?: "unknown",
+            stringResource(R.string.diagnostics_label_version),
+            stringResource(
+                R.string.diagnostics_value_version,
+                snapshot.build.versionName,
+                snapshot.build.versionCode,
+            ),
+        )
+        StatusRow(stringResource(R.string.diagnostics_label_build_type), snapshot.build.buildType)
+        StatusRow(
+            stringResource(R.string.diagnostics_label_source_revision),
+            snapshot.build.sourceRevision
+                ?: stringResource(R.string.diagnostics_value_not_embedded),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_oauth_environment),
+            snapshot.build.oauthEnvironment,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_redirect_scheme),
+            snapshot.build.redirectScheme,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_redirect_host),
+            snapshot.build.redirectHost,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_redirect_path),
+            snapshot.build.redirectPath,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_client_id_present),
+            snapshot.build.clientIdPresent.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_database_schema),
+            snapshot.build.databaseSchemaVersion?.toString() ?: unknown,
         )
     }
 
     DashboardSection(
-        title = "Authentication health",
+        title = stringResource(R.string.diagnostics_section_authentication),
         section = DiagnosticsDashboardSection.AUTHENTICATION,
         expanded = DiagnosticsDashboardSection.AUTHENTICATION in expandedSections,
         onToggle = onToggleSection,
     ) {
-        StatusRow("Active provider", snapshot.session.activeProvider.name)
-        StatusRow("Transition phase", snapshot.session.transitionPhase.name)
-        StatusRow("Configuration", snapshot.session.configuration.name)
-        StatusRow("Session", snapshot.session.sessionState.name)
-        StatusRow("Pending OAuth transaction", snapshot.session.pendingOAuthTransaction.name)
-        StatusRow("Token vault", snapshot.session.tokenVaultHealth.name)
-        StatusRow("Account record present", snapshot.session.accountRecordPresent.toString())
-        StatusRow("Last restoration", formatEpoch(snapshot.session.lastSuccessfulRestoreEpochMillis))
-        StatusRow("Last refresh outcome", snapshot.session.lastRefreshOutcome ?: "none")
-        StatusRow("Last refresh", formatEpoch(snapshot.session.lastRefreshEpochMillis))
+        StatusRow(
+            stringResource(R.string.diagnostics_label_active_provider),
+            snapshot.session.activeProvider.name,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_transition_phase),
+            snapshot.session.transitionPhase.name,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_configuration),
+            snapshot.session.configuration.name,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_session),
+            snapshot.session.sessionState.name,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_pending_oauth),
+            snapshot.session.pendingOAuthTransaction.name,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_token_vault),
+            snapshot.session.tokenVaultHealth.name,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_account_record_present),
+            snapshot.session.accountRecordPresent.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_last_restoration),
+            formatEpoch(snapshot.session.lastSuccessfulRestoreEpochMillis, never),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_last_refresh_outcome),
+            snapshot.session.lastRefreshOutcome ?: none,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_last_refresh),
+            formatEpoch(snapshot.session.lastRefreshEpochMillis, never),
+        )
     }
 
     DashboardSection(
-        title = "Provider isolation",
+        title = stringResource(R.string.diagnostics_section_provider_isolation),
         section = DiagnosticsDashboardSection.PROVIDER_ISOLATION,
         expanded = DiagnosticsDashboardSection.PROVIDER_ISOLATION in expandedSections,
         onToggle = onToggleSection,
     ) {
         StatusRow(
-            "Active-provider requests",
+            stringResource(R.string.diagnostics_label_active_provider_requests),
             snapshot.runtime.activeProviderRequestCount.toString(),
         )
         StatusRow(
-            "Blocked inactive-provider requests",
+            stringResource(R.string.diagnostics_label_blocked_inactive_requests),
             snapshot.runtime.blockedInactiveProviderRequestCount.toString(),
         )
-        StatusRow("Active workers", snapshot.runtime.activeWorkerCount.toString())
-        StatusRow("Provider-bound widgets", snapshot.runtime.providerBoundWidgetCount.toString())
-        StatusRow("Network kill switch", snapshot.runtime.networkKillSwitchEnabled.toString())
-        StatusRow("Last provider change", snapshot.runtime.lastProviderChangeResult ?: "none")
+        StatusRow(
+            stringResource(R.string.diagnostics_label_active_workers),
+            snapshot.runtime.activeWorkerCount.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_provider_bound_widgets),
+            snapshot.runtime.providerBoundWidgetCount.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_network_kill_switch),
+            snapshot.runtime.networkKillSwitchEnabled.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_last_provider_change),
+            snapshot.runtime.lastProviderChangeResult ?: none,
+        )
     }
 
     DashboardSection(
-        title = "Request and cache diagnostics",
+        title = stringResource(R.string.diagnostics_section_request_cache),
         section = DiagnosticsDashboardSection.REQUEST_AND_CACHE,
         expanded = DiagnosticsDashboardSection.REQUEST_AND_CACHE in expandedSections,
         onToggle = onToggleSection,
     ) {
-        StatusRow("Last request category", snapshot.runtime.lastSuccessfulRequestCategory ?: "none")
-        StatusRow("Last request", formatEpoch(snapshot.runtime.lastSuccessfulRequestEpochMillis))
-        StatusRow("Last failure category", snapshot.runtime.lastFailureCategory ?: "none")
-        StatusRow("Last failure HTTP class", snapshot.runtime.lastFailureHttpClass ?: "none")
-        StatusRow("Last failure", formatEpoch(snapshot.runtime.lastFailureEpochMillis))
-        StatusRow("Cache hits", snapshot.runtime.cacheHitCount.toString())
-        StatusRow("Cache misses", snapshot.runtime.cacheMissCount.toString())
-        StatusRow("Coalesced requests", snapshot.runtime.coalescedRequestCount.toString())
-        StatusRow("Retries", snapshot.runtime.retryCount.toString())
-        StatusRow("Writes", snapshot.runtime.writeCount.toString())
         StatusRow(
-            "Pending tracking commands",
+            stringResource(R.string.diagnostics_label_last_request_category),
+            snapshot.runtime.lastSuccessfulRequestCategory ?: none,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_last_request),
+            formatEpoch(snapshot.runtime.lastSuccessfulRequestEpochMillis, never),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_last_failure_category),
+            snapshot.runtime.lastFailureCategory ?: none,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_last_failure_http_class),
+            snapshot.runtime.lastFailureHttpClass ?: none,
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_last_failure),
+            formatEpoch(snapshot.runtime.lastFailureEpochMillis, never),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_cache_hits),
+            snapshot.runtime.cacheHitCount.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_cache_misses),
+            snapshot.runtime.cacheMissCount.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_coalesced_requests),
+            snapshot.runtime.coalescedRequestCount.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_retries),
+            snapshot.runtime.retryCount.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_writes),
+            snapshot.runtime.writeCount.toString(),
+        )
+        StatusRow(
+            stringResource(R.string.diagnostics_label_pending_tracking_commands),
             snapshot.runtime.pendingTrackingCommandCount.toString(),
         )
         StatusRow(
-            "Last write/read-back",
-            formatEpoch(snapshot.runtime.lastSuccessfulWriteReadBackEpochMillis),
+            stringResource(R.string.diagnostics_label_last_write_read_back),
+            formatEpoch(snapshot.runtime.lastSuccessfulWriteReadBackEpochMillis, never),
         )
     }
 
     DashboardSection(
-        title = "Feature coverage",
+        title = stringResource(R.string.diagnostics_section_feature_coverage),
         section = DiagnosticsDashboardSection.FEATURE_COVERAGE,
         expanded = DiagnosticsDashboardSection.FEATURE_COVERAGE in expandedSections,
         onToggle = onToggleSection,
@@ -189,20 +293,25 @@ private fun DashboardContents(
         snapshot.parity.forEach { item -> StatusRow(item.key, item.status.name) }
     }
 
+    val pass = stringResource(R.string.diagnostics_value_pass)
+    val pending = stringResource(R.string.diagnostics_value_pending)
     DashboardSection(
-        title = "Acceptance checklist",
+        title = stringResource(R.string.diagnostics_section_acceptance_checklist),
         section = DiagnosticsDashboardSection.ACCEPTANCE_CHECKLIST,
         expanded = DiagnosticsDashboardSection.ACCEPTANCE_CHECKLIST in expandedSections,
         onToggle = onToggleSection,
     ) {
         snapshot.checklist.forEach { item ->
             val value = buildString {
-                append(if (item.passed) "pass" else "pending")
+                append(if (item.passed) pass else pending)
                 item.detail?.let { append(" — ").append(it) }
             }
             StatusRow(item.key, value)
         }
-        StatusRow("Snapshot captured", formatEpoch(snapshot.capturedAtEpochMillis))
+        StatusRow(
+            stringResource(R.string.diagnostics_label_snapshot_captured),
+            formatEpoch(snapshot.capturedAtEpochMillis, never),
+        )
     }
 }
 
@@ -225,7 +334,14 @@ private fun DashboardSection(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = if (expanded) "$title — collapse" else "$title — expand",
+                    text = stringResource(
+                        if (expanded) {
+                            R.string.diagnostics_section_expanded
+                        } else {
+                            R.string.diagnostics_section_collapsed
+                        },
+                        title,
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -268,7 +384,7 @@ private fun StatusRow(label: String, value: String) {
     }
 }
 
-private fun formatEpoch(epochMillis: Long?): String = epochMillis
+private fun formatEpoch(epochMillis: Long?, never: String): String = epochMillis
     ?.takeIf { it > 0L }
     ?.let { DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(it)) }
-    ?: "never"
+    ?: never
