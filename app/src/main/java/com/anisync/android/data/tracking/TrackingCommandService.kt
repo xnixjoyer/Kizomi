@@ -246,8 +246,15 @@ private suspend fun MediaIdentityStore.ensureMalIdentity(
         is MediaIdentityResult.Conflict -> when (val winner = resolveByMalId(mediaType, malId)) {
             is MediaIdentityResult.Success -> winner.value?.let { MediaIdentityResult.Success(it) }
                 ?: attached
-            else -> attached
+            is MediaIdentityResult.NotFound -> attached
+            is MediaIdentityResult.Invalid -> attached
+            is MediaIdentityResult.Conflict -> attached
+            is MediaIdentityResult.Rejected -> attached
+            is MediaIdentityResult.StorageFailure -> attached
         }
-        else -> attached
+        is MediaIdentityResult.NotFound -> attached
+        is MediaIdentityResult.Invalid -> attached
+        is MediaIdentityResult.Rejected -> attached
+        is MediaIdentityResult.StorageFailure -> attached
     }
 }
