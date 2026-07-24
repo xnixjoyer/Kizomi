@@ -133,7 +133,7 @@ class MalCalendarRepository internal constructor(
             )
         }
 
-        val metadataStates = allMedia.map(MalCalendarMedia::broadcastMetadataState)
+        val metadataStates = allMedia.map { it.broadcastMetadataState() }
         val completeMetadataCount = metadataStates.count { it == BroadcastMetadataState.COMPLETE }
         if (allMedia.isNotEmpty() && completeMetadataCount == 0) {
             notices += ProviderCalendarNotice.BROADCAST_METADATA_UNAVAILABLE
