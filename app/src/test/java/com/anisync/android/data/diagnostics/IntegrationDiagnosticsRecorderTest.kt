@@ -2,12 +2,30 @@ package com.anisync.android.data.diagnostics
 
 import com.anisync.android.presentation.diagnostics.DiagnosticRedactor
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IntegrationDiagnosticsRecorderTest {
     @Test
-    fun `recorder keeps counters and strips unsafe categories`() {
+    fun `new recorder keeps every unwired runtime metric unknown`() {
+        val snapshot = IntegrationDiagnosticsRecorder().runtimeSnapshot()
+
+        assertNull(snapshot.activeProviderRequestCount)
+        assertNull(snapshot.blockedInactiveProviderRequestCount)
+        assertNull(snapshot.activeWorkerCount)
+        assertNull(snapshot.providerBoundWidgetCount)
+        assertNull(snapshot.networkKillSwitchEnabled)
+        assertNull(snapshot.cacheHitCount)
+        assertNull(snapshot.cacheMissCount)
+        assertNull(snapshot.coalescedRequestCount)
+        assertNull(snapshot.retryCount)
+        assertNull(snapshot.writeCount)
+        assertNull(snapshot.pendingTrackingCommandCount)
+    }
+
+    @Test
+    fun `recorder establishes known counters only after matching boundary events`() {
         val recorder = IntegrationDiagnosticsRecorder()
 
         recorder.recordActiveProviderRequest("library_read", nowEpochMillis = 10L)
@@ -39,8 +57,18 @@ class IntegrationDiagnosticsRecorderTest {
         assertEquals(0L, snapshot.pendingTrackingCommandCount)
         assertEquals(2L, snapshot.activeWorkerCount)
         assertEquals(1L, snapshot.providerBoundWidgetCount)
-        assertTrue(snapshot.networkKillSwitchEnabled)
+        assertTrue(snapshot.networkKillSwitchEnabled == true)
         assertEquals(DiagnosticRedactor.REDACTED, snapshot.lastFailureCategory)
         assertEquals("4xx", snapshot.lastFailureHttpClass)
+    }
+
+    @Test
+    fun `explicitly set zero is distinguishable from unavailable instrumentation`() {
+        val recorder = IntegrationDiagnosticsRecorder()
+
+        assertNull(recorder.runtimeSnapshot().activeWorkerCount)
+        recorder.setActiveWorkerCount(0L)
+
+        assertEquals(0L, recorder.runtimeSnapshot().activeWorkerCount)
     }
 }
