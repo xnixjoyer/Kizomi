@@ -4,15 +4,15 @@
 
 - Planning baseline: `59d5c3cd79f6f7f9a1c1e6d95f31341819dff4f1`
 - Working branch: `planning/mal-ui-feature-parity`
-- Current objective: stabilize MAL login/details, then migrate MAL onto Kizomi's shared AniList-era interface.
-- Production readiness: not ready. Real MAL catalogue and library data load, but details currently crash and session restoration is incomplete.
+- Current objective: migrate the now-stable MAL path onto Kizomi's shared AniList-era interface.
+- Production readiness: not ready. Phase 1 stability fixes are automated-test green; real-device MAL account acceptance and shared-UI migration remain.
 - Rule: never push directly to `main`, never merge automatically and never weaken single-provider isolation.
 
 ## Priority order
 
-Correctness comes before visual migration. The first implementation PR must make the existing MAL path restart-safe and crash-free, with regression tests. Shared UI work begins only after that foundation is green.
+Correctness comes before visual migration. Phase 1 has an independently verified exact-head build, so the next executable slice is the shared app shell. Real-device account acceptance remains mandatory and must not be replaced by automated evidence.
 
-## Implementation cycle 1 — verified Phase 1 slice
+## Implementation cycle 1 — Phase 1 stability foundation
 
 Remote state verified before implementation:
 
@@ -21,35 +21,52 @@ Remote state verified before implementation:
 - Draft PR: `#5 – MAL stability and shared Kizomi UI parity`;
 - baseline exact-head workflow: `Pull request and push CI`, run `30091835533` / run number `200`, result `success`.
 
-Current source findings:
+Verified pre-fix source findings:
 
-1. `MalProviderMainScreen` stores the selected `MalMediaKey` in local Compose state and calls `MalDetailsScreen` directly. This bypasses the existing typed `MalNativeDetails(mediaType, malId)` destination in `AniSyncNavHost`, so Hilt creates `MalDetailsViewModel` without the required saved-state route arguments.
-2. `MalDetailsViewModel` constructs `MalMediaKey` with constructor-time `checkNotNull` and `TrackingMediaType.valueOf`. Missing, malformed or non-positive route data therefore terminates ViewModel creation instead of producing recoverable UI state.
-3. `ProviderSessionCoordinator.initialize()` correctly reconciles persistent provider/account state before traffic, but normal activity startup then launches `MalAuthRepository.resumePendingLogin()` without awaiting it. When no OAuth transaction exists, that operation returns `null` and never restores the persisted active MAL account.
-4. `_providerStartupReady` is set before the separately launched MAL restoration completes. The root UI can therefore render onboarding while a valid stored MAL account still has the repository's initial `Disconnected` state.
-5. `MalAuthRepository.refreshState()` already provides the required fail-closed restoration semantics: active and expired accounts become `Connected`, missing credentials become `ReLoginRequired`, pending callbacks are resumed and session-store reset becomes an explicit error.
+1. `MalProviderMainScreen` stored the selected `MalMediaKey` in local Compose state and called `MalDetailsScreen` directly. That bypassed the existing typed `MalNativeDetails(mediaType, malId)` destination, so Hilt created `MalDetailsViewModel` without route arguments.
+2. `MalDetailsViewModel` constructed `MalMediaKey` with constructor-time `checkNotNull` and `TrackingMediaType.valueOf`. Missing, malformed or non-positive route data terminated ViewModel creation.
+3. `ProviderSessionCoordinator.initialize()` reconciled persistent provider/account state, but startup then launched `MalAuthRepository.resumePendingLogin()` without awaiting it. With no pending OAuth transaction, the repository never restored the persisted active MAL account.
+4. `_providerStartupReady` was set before MAL restoration completed, allowing a valid stored MAL account to fall into onboarding transiently.
 
-Concrete Phase 1 task for this cycle:
+Implemented Phase 1 corrections:
 
-- add regression tests for active, expired and missing persisted MAL credentials after repository recreation;
-- introduce a validated route-to-`MalMediaKey` parser and tests for anime, manga, malformed type, missing ID and non-positive ID;
-- make `MalDetailsViewModel` expose recoverable invalid-route state without repository/network access;
-- route the production MAL shell through `MalNativeDetails` using a process-restorable Navigation Compose back stack;
-- await `MalAuthRepository.refreshState()` after provider reconciliation and before releasing the startup loading gate;
-- keep cold-start MAL callback completion inside the same deterministic startup sequence;
-- update bug/parity evidence, then require exact-head CI and the GitHub-only MAL APK artifact before Phase 2.
+- `MalAuthRepository.resumePendingLogin()` now restores persistent auth state through `refreshState()` when no OAuth transaction is pending.
+- Active and expired accounts restore as connected; missing, corrupt and keystore-reset credentials remain fail-closed as re-login required; session-store reset remains an explicit error.
+- `MainActivity` now awaits provider reconciliation, cold-start MAL callback completion or pending-session/account restoration, and only then opens the startup readiness gate.
+- Successful staged callback restoration completes the pending `MAL_ONLY` provider transition before UI readiness.
+- `MalDetailsViewModel` now parses route values through a validated nullable route-to-`MalMediaKey` contract and exposes a recoverable `INVALID_MEDIA_IDENTITY` state instead of crashing.
+- `MalProviderMainScreen` now uses a Navigation Compose back stack with the existing typed `MalNativeDetails` route; catalogue, library and related-media entry points carry the exact MAL type and ID.
+- The MAL root tab uses saveable state and the details route is process-restorable through Navigation Compose/SavedStateHandle.
 
-Expected automated evidence:
+Regression evidence added:
 
-- route parser and invalid-ViewModel-state unit tests;
-- MAL authentication restoration unit tests;
-- existing OAuth replay/process-recovery tests remain green;
-- existing provider-isolation, purge, Room, compliance, lint and APK gates remain unchanged and green;
-- exact published head is the SHA tested by GitHub Actions.
+- `MalAuthRepositoryTest`: active/expired account restoration, missing/corrupt/keystore-reset re-login behavior and session-store reset failure.
+- `MalDetailsRouteTest`: anime, manga, missing, malformed and non-positive identities plus recoverable initial error state.
+- `MalStartupAndNavigationContractTest`: startup ordering, awaited restoration, typed production route and prohibition of local `detailsKey` navigation.
+- Existing OAuth replay/staged-continuation, provider-isolation, purge, Room, security and API tests remain enabled.
+
+Exact-head automated evidence for the code implementation:
+
+- exact head: `686e95e7eecdb3b30bc8a0d455981668329751c6`;
+- workflow: `Pull request and push CI`;
+- run ID / number: `30095988062` / `211`;
+- job ID / name: `89490116463` / `verify`;
+- conclusion: `success`;
+- Stable Debug unit tests: `416`;
+- diagnostic artifact: `Kizomi-686e95e7eecdb3b30bc8a0d455981668329751c6-run211-diagnostic-apk`;
+- artifact ZIP size: `39,553,596` bytes;
+- artifact ZIP SHA-256: `1e130d0e77916712d0544e764e72f0921831cf4d4dcc0aae48e90e7a4bd787b1`;
+- contained APK: `Kizomi-686e95e7-run211-diagnostic.apk`;
+- APK size: `42,137,784` bytes;
+- APK SHA-256: `cc96ccdffa3740be685c5b2a3e0e98e3b2e910e604f391a09b0934a2680fa596`.
+
+The ZIP was independently downloaded, extracted and hashed. Its `evidence.json`, test count, exact head, APK size and APK digest matched the workflow record.
+
+This documentation commit makes run 211 stale for the new branch head. A new exact-head CI run is required before relying on the current documentation head.
 
 ## Phase 0 — evidence and baseline
 
-Status: planning complete; implementation evidence still required.
+Status: automated architecture/source inventory and reproducible Phase 1 tests complete; visual reference capture remains.
 
 Tasks:
 
@@ -66,38 +83,58 @@ Exit gate:
 
 ## Phase 1 — emergency stability fixes
 
-Status: implementation cycle 1 in progress.
+Status: AI-executable implementation and exact-head code evidence complete; real-device/process-kill acceptance pending.
 
 ### 1A. Media details crash
 
-- Replace the local `MalCatalogSelection` details switch in `MalProviderMainScreen` with a real navigation destination, or introduce an explicit assisted argument contract.
-- Preferred direction: shared typed navigation route carrying a provider-neutral media key with provider, media type and provider media ID.
-- Never call `requireNotNull` on optional navigation state in a ViewModel constructor without a validated route contract.
-- Add a user-visible error state for malformed or missing media keys instead of crashing.
-- Verify related-media navigation, back navigation, process recreation and deep restoration.
+Completed automatically:
+
+- The production MAL shell enters typed `MalNativeDetails` navigation for catalogue, library and related items.
+- Route values are validated without constructor-time null assertions.
+- Invalid media identity produces recoverable state and no repository/network access.
+- Navigation state is owned by Navigation Compose rather than an unpersisted local details switch.
+
+Still required on a real device:
+
+- open anime, manga and related entries;
+- background/restore and kill/relaunch while details is visible;
+- confirm back restores the expected source tab, filters and scroll state;
+- confirm the user-visible malformed-route copy during a controlled test fixture.
 
 ### 1B. MAL session restoration
 
-- Initialize MAL authentication state from persistent account storage after `ProviderSessionCoordinator.initialize()`.
-- Ensure a normal restart calls `MalAuthRepository.refreshState()` when no OAuth callback is pending.
-- Make startup sequencing deterministic: provider reconciliation, vault reconciliation, OAuth pending-session recovery, active-account restoration, then UI readiness.
-- Prevent the UI from showing onboarding during a transient state restoration window.
-- Preserve fail-closed behavior for missing/corrupt credentials and keystore reset.
+Completed automatically:
 
-Tests:
+- Startup awaits persistent MAL account restoration before UI readiness.
+- Normal restart with no OAuth transaction invokes the existing `refreshState()` semantics.
+- Cold-start and staged callbacks complete before the readiness gate opens.
+- Active and expired states remain connected; invalid credentials fail closed.
 
-- Unit tests for `refreshState()` with active, expired, missing and corrupt credentials.
-- Activity/ViewModel startup tests for MAL-only state after process recreation.
-- Instrumentation test: login fixture -> kill process -> relaunch -> MAL home remains available.
-- Details navigation tests with anime, manga, related entries, invalid arguments and recreation.
+Still required on a real device:
+
+- login with the approved public client identifier;
+- force-stop/relaunch at least three times and after device reboot;
+- verify no repeated login while credentials remain valid;
+- verify credential corruption/reset presents re-login instead of content or a crash.
 
 Exit gate:
 
-- No crash when any visible MAL card is opened.
-- Closing and reopening the app does not request login again while valid local credentials exist.
-- Exact-head CI and cloud APK build are green.
+- Automated code, exact-head CI and cloud APK: complete on code head `686e95e7...`.
+- Real MAL account/device acceptance: pending.
+- Documentation-head exact CI: pending after this update.
 
 ## Phase 2 — shared app shell
+
+Status: next executable phase; source analysis started, no Phase 2 code published yet.
+
+Verified implementation direction:
+
+- `MainScreen` already owns the reusable adaptive scaffold, bottom bar, wide navigation rail, saved tab stacks, neutral appearance settings and status-bar behavior.
+- `MainDestinationRegistry` is the single current root-destination metadata source.
+- `AniSyncNavHost` currently binds `Library`, `Discover`, `Profile`, `Feed` and `Forum` roots to AniList-specific screens, while MAL catalogue/details routes already exist inside the same graph.
+- The first shared-shell slice should route both providers through `MainScreen`, filter unsupported MAL destinations through a provider capability policy, and render MAL-backed Library/Discover/Account roots without activating AniList-only screens or clients.
+
+Tasks:
 
 - Remove `MalProviderMainScreen` as the long-term top-level MAL shell.
 - Route each active provider through the existing `MainScreen` navigation framework.
@@ -105,11 +142,13 @@ Exit gate:
 - Build a provider capability policy that determines which destinations and actions are visible.
 - Preserve theme, typography, density, language, navigation order and accessibility preferences across provider changes.
 - Provider selection must never create an alternate visual brand.
+- Add tests for provider-capability destination filtering, valid start-destination fallback and zero inactive-provider root invocation.
 
 Exit gate:
 
 - MAL and AniList sessions enter the same Kizomi shell.
-- Screenshots show the same navigation structure, spacing, typography and component library for equivalent capabilities.
+- MAL mode exposes only provider-supported roots and never invokes AniList-only Feed/Forum/profile data paths.
+- Exact-head CI and diagnostic artifact pass for the shared-shell head.
 
 ## Phase 3 — provider-neutral presentation contracts
 
@@ -225,10 +264,12 @@ Exit gate:
 
 ## Immediate next task
 
-Implement Phase 1 in a focused commit sequence, starting with tests that fail for:
+Implement the first focused Phase 2 shared-shell slice:
 
-1. missing details route arguments;
-2. MAL active account after process restart;
-3. transient startup state incorrectly showing onboarding.
-
-Do not start broad UI migration until these tests pass and the exact published head is green.
+1. define a provider capability policy for root destinations;
+2. make `MainScreen` resolve visible/start destinations against the active provider;
+3. route connected MAL sessions through `MainScreen`;
+4. render MAL-backed Discover, Library and Account roots in `AniSyncNavHost` while Feed/Forum and other AniList-only roots remain unavailable and uninvoked;
+5. preserve typed `MalNativeDetails` navigation and all Phase 1 tests;
+6. add provider-filter/start-fallback/source-contract tests;
+7. run and independently verify exact-head CI/APK evidence.
